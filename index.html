@@ -112,12 +112,17 @@
     border-radius:50%;animation:spin .7s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
   .btn[disabled]{opacity:.6;cursor:default}
+  /* 단색 라인 아이콘 */
+  .ic{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8;
+    stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto;vertical-align:-2px}
+  .ic.muted{stroke:var(--sub)} .ic.ok{stroke:var(--accent)} .ic.warn{stroke:var(--warn)}
+  .ic.sm{width:13px;height:13px}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <h1>📖 문장 순서 맞추기</h1>
+    <h1>문장 순서 맞추기</h1>
     <p>흩어진 문장을 올바른 순서로 배열해보세요</p>
   </header>
 
@@ -153,12 +158,19 @@ let everWrong=new Set();   // 이번 세션에서 한 번이라도 자리를 틀
 
 function nat(a,b){return String(a||'').localeCompare(String(b||''),'ko',{numeric:true,sensitivity:'base'});}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+const PATHS={
+  book:'<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
+  rotate:'<polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>',
+  check:'<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
+  edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/>'
+};
+function ic(name,extra){return `<svg class="ic ${extra||''}" viewBox="0 0 24 24">${PATHS[name]||''}</svg>`;}
 
 // ---------- 인증 ----------
 async function init(){
   if(typeof SUPABASE_URL==='undefined'||SUPABASE_URL.includes('여기에')){
     app.style.display='block';
-    app.innerHTML=`<div class="empty">⚙️ 아직 Supabase 연결 전이에요.<br>config.js에 키를 넣어주세요.</div>`;
+    app.innerHTML=`<div class="empty">아직 Supabase 연결 전이에요.<br>config.js에 키를 넣어주세요.</div>`;
     return;
   }
   const { data:{ session:s } } = await db.auth.getSession();
@@ -235,7 +247,7 @@ async function loadList(){
   const wrongList=allP.filter(p=>wrongIds.has(p.id))
     .sort((a,b)=>nat(a.book,b.book)||nat(a.unit,b.unit)||nat(a.title,b.title));
   if(wrongList.length){
-    html+=`<div class="wrongpanel"><div class="wt">🔁 틀린 지문 다시 풀기 (${wrongList.length})</div>`;
+    html+=`<div class="wrongpanel"><div class="wt">${ic('rotate','warn')} 틀린 지문 다시 풀기 (${wrongList.length})</div>`;
     for(const p of wrongList){
       const label=[p.book,p.unit,p.title].filter(Boolean).join(' · ');
       html+=`<button class="psg wrong" onclick="pick('${p.id}')">${esc(label)}<span class="cnt">문장 ${p.sentences.length}</span></button>`;
@@ -250,11 +262,11 @@ async function loadList(){
   for(const [book,units] of groups){
     const total=Object.values(units).reduce((n,a)=>n+a.length,0);
     html+=`<div class="book${first?' open':''}"><button class="bookh" onclick="this.closest('.book').classList.toggle('open')">
-      <span class="chev">›</span> 📕 ${esc(book)} <span class="cnt">${total}개</span></button><div class="bookbody">`;
+      <span class="chev">›</span> ${ic('book','muted')} ${esc(book)} <span class="cnt">${total}개</span></button><div class="bookbody">`;
     for(const unit of Object.keys(units)){
       if(unit) html+=`<div class="unith">${esc(unit)}</div>`;
       for(const p of units[unit]){
-        const w=wrongIds.has(p.id)?' 🔁':'';
+        const w=wrongIds.has(p.id)?' '+ic('rotate','sm warn'):'';
         html+=`<button class="psg" onclick="pick('${p.id}')">${esc(p.title)}${w}<span class="cnt">문장 ${p.sentences.length}</span></button>`;
       }
     }
@@ -329,8 +341,8 @@ function updateBoard(checked){
 
   let done='';
   if(checked && state.every((s,i)=>s.idx===i)){
-    done=`<div class="done">🎉 완벽해요! 전부 맞았어요`;
-    if(everWrong.size>0) done+=`<div style="margin-top:12px"><button class="btn primary" onclick="renderReflection()">✍️ 틀렸던 문장, 왜 여기일까 써보기</button></div>`;
+    done=`<div class="done">${ic('check','ok')} 완벽해요! 전부 맞았어요`;
+    if(everWrong.size>0) done+=`<div style="margin-top:12px"><button class="btn primary" onclick="renderReflection()">${ic('edit')} 틀렸던 문장, 왜 여기일까 써보기</button></div>`;
     done+=`</div>`;
   }
   document.getElementById('done').innerHTML=done;
@@ -411,7 +423,7 @@ async function saveReflection(){
     $('reflmsg').innerHTML=`<div class="msg err">저장 실패: ${error.message}</div>`;
     return;
   }
-  app.innerHTML=`<div class="done" style="margin-top:30px">✅ 잘 제출했어요!<br>선생님이 확인할 거예요. 수고했어요 👏</div>
+  app.innerHTML=`<div class="done" style="margin-top:30px">${ic('check','ok')} 잘 제출했어요!<br>선생님이 확인할 거예요. 수고했어요</div>
     <button class="btn ghost full" style="margin-top:16px" onclick="loadList()">지문 목록으로</button>`;
 }
 
