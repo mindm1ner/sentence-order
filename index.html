@@ -168,6 +168,20 @@
   @keyframes write{0%{width:0;opacity:1}68%{width:150px}84%{width:150px;opacity:1}100%{width:150px;opacity:0}}
   .rpen{position:absolute;top:8px;left:8px;animation:penMove 2.8s ease-in-out infinite}
   @keyframes penMove{0%{transform:translateX(0)}68%{transform:translateX(150px)}84%,100%{transform:translateX(150px)}}
+
+  /* 하단 탭바 */
+  .tabbar{position:fixed;left:0;right:0;bottom:0;max-width:640px;margin:0 auto;
+    background:rgba(246,245,241,.96);backdrop-filter:blur(8px);border-top:1px solid var(--line);
+    display:flex;z-index:20}
+  .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;
+    border:none;padding:9px 0 11px;font-size:11px;color:var(--sub);cursor:pointer}
+  .tab .ic{width:21px;height:21px;stroke:currentColor}
+  .tab.active{color:var(--accent)}
+  .stats3{display:flex;gap:10px;margin-bottom:8px}
+  .stat{flex:1;background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:16px 8px;text-align:center;box-shadow:var(--shadow)}
+  .stat b{display:block;font-size:24px;color:var(--ink)}
+  .stat span{font-size:12px;color:var(--sub)}
 </style>
 </head>
 <body>
@@ -200,11 +214,18 @@
   <div id="app" style="display:none"></div>
 </div>
 
+<!-- 하단 탭바 -->
+<div id="tabbar" class="tabbar" style="display:none">
+  <button class="tab active" data-t="play" onclick="showTab('play')"><svg class="ic" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg><span>풀기</span></button>
+  <button class="tab" data-t="wrong" onclick="showTab('wrong')"><svg class="ic" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg><span>오답노트</span></button>
+  <button class="tab" data-t="me" onclick="showTab('me')"><svg class="ic" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span>내 기록</span></button>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script>
 const app=document.getElementById('app');
-let state=[], current=null, allP=[], session=null, wrongIds=new Set();
+let state=[], current=null, allP=[], session=null, wrongIds=new Set(), myAtts=[];
 let everWrong=new Set();   // 이번 세션에서 한 번이라도 자리를 틀린 문장(원래 인덱스)
 
 function nat(a,b){return String(a||'').localeCompare(String(b||''),'ko',{numeric:true,sensitivity:'base'});}
@@ -315,48 +336,47 @@ async function signup(){
 async function logout(){ await db.auth.signOut(); location.reload(); }
 function showLogin(){ $('login').style.display='block'; app.style.display='none'; }
 function enter(s){
-  session=s; $('login').style.display='none'; app.style.display='block'; loadList();
+  session=s; $('login').style.display='none'; app.style.display='block'; loadData();
   let seen=true; try{ seen=!!localStorage.getItem(OB_KEY); }catch(_){}
   if(!seen) showOnboarding();
 }
 function $(id){return document.getElementById(id);}
 
-// ---------- 도서관 목록 ----------
-async function loadList(){
+// ---------- 데이터 로드 + 탭 ----------
+let curTab='play';
+async function loadData(){
   app.innerHTML=`<div class="loading"><span class="spinner"></span>불러오는 중…</div>`;
   const [pRes,aRes]=await Promise.all([
     db.from('passages').select('*'),
-    db.from('attempts').select('passage_id,is_correct,created_at').order('created_at',{ascending:false})
+    db.from('attempts').select('*').order('created_at',{ascending:false})
   ]);
   if(pRes.error){ app.innerHTML=`<div class="empty">불러오기 실패 😢<br>${pRes.error.message}</div>`; return; }
   allP=pRes.data||[];
-
-  // 내 최신 시도 기준 오답 지문 계산
+  myAtts=(!aRes.error&&aRes.data)?aRes.data:[];
+  // 내 최신 시도 기준 오답 지문
   wrongIds=new Set();
-  if(!aRes.error && aRes.data){
-    const latest={};
-    for(const a of aRes.data){ if(!(a.passage_id in latest)) latest[a.passage_id]=a; }
-    for(const pid in latest){ if(!latest[pid].is_correct) wrongIds.add(pid); }
-  }
-
-  if(!allP.length){ app.innerHTML=`<div class="empty">아직 등록된 지문이 없어요.</div>`; renderWho(); return; }
-
-  let html='';
-  // 오답 패널
-  const wrongList=allP.filter(p=>wrongIds.has(p.id))
-    .sort((a,b)=>nat(a.book,b.book)||nat(a.unit,b.unit)||nat(a.title,b.title));
-  if(wrongList.length){
-    html+=`<div class="wrongpanel"><div class="wt">${ic('rotate','warn')} 틀린 지문 다시 풀기 (${wrongList.length})</div>`;
-    for(const p of wrongList){
-      const label=[p.book,p.unit,p.title].filter(Boolean).join(' · ');
-      html+=`<button class="psg wrong" onclick="pick('${p.id}')">${esc(label)}<span class="cnt">문장 ${p.sentences.length}</span></button>`;
-    }
-    html+=`</div>`;
-  }
-
-  // 교재별 패널
+  const latest={};
+  for(const a of myAtts){ if(!(a.passage_id in latest)) latest[a.passage_id]=a; }
+  for(const pid in latest){ if(!latest[pid].is_correct) wrongIds.add(pid); }
+  showTab(curTab);
+}
+function showTabBar(on){ const t=$('tabbar'); if(t) t.style.display=on?'flex':'none'; }
+function showTab(t){
+  curTab=t;
+  document.querySelectorAll('#tabbar .tab').forEach(b=>b.classList.toggle('active',b.dataset.t===t));
+  removeBar(); showTabBar(true);
+  if(t==='wrong') renderWrong();
+  else if(t==='me') renderMe();
+  else renderLibrary();
+}
+function topBar(){
+  const myName=session?((session.user.user_metadata&&session.user.user_metadata.name)||session.user.email):'';
+  return `<div class="who">${myName?esc(myName)+'님 · ':''}<a onclick="showOnboarding()">사용법</a> · <a onclick="logout()">로그아웃</a></div>`;
+}
+function renderLibrary(){
+  if(!allP.length){ app.innerHTML=topBar()+`<div class="empty">아직 등록된 지문이 없어요.</div>`; return; }
   const groups=buildGroups(allP);
-  html+=`<div class="ptitle">교재를 펼쳐 지문을 선택하세요</div>`;
+  let html=topBar()+`<div class="ptitle">교재를 펼쳐 지문을 선택하세요</div>`;
   let first=true;
   for(const [book,units] of groups){
     const total=Object.values(units).reduce((n,a)=>n+a.length,0);
@@ -373,15 +393,43 @@ async function loadList(){
     first=false;
   }
   app.innerHTML=html;
-  renderWho();
-  removeBar();
 }
-function renderWho(){
-  const who=document.createElement('div');
-  // 맨 위에 누구로 로그인했는지 + 로그아웃
-  const myName=session?((session.user.user_metadata&&session.user.user_metadata.name)||session.user.email):'';
-  const top=`<div class="who">${myName?esc(myName)+'님 · ':''}<a onclick="showOnboarding()">사용법</a> · <a onclick="logout()">로그아웃</a></div>`;
-  app.insertAdjacentHTML('afterbegin',top);
+function renderWrong(){
+  const wrongList=allP.filter(p=>wrongIds.has(p.id))
+    .sort((a,b)=>nat(a.book,b.book)||nat(a.unit,b.unit)||nat(a.title,b.title));
+  let html=topBar()+`<div class="ptitle">틀렸던 지문을 다시 풀어보세요</div>`;
+  if(!wrongList.length){ html+=`<div class="empty">${ic('check','ok')} 지금은 틀린 지문이 없어요!</div>`; }
+  else for(const p of wrongList){
+    const label=[p.book,p.unit,p.title].filter(Boolean).join(' · ');
+    html+=`<button class="psg wrong" onclick="pick('${p.id}')">${esc(label)}<span class="cnt">문장 ${p.sentences.length}</span></button>`;
+  }
+  app.innerHTML=html;
+}
+function renderMe(){
+  const latest={}, attempted=new Set();
+  for(const a of myAtts){ attempted.add(a.passage_id); if(!(a.passage_id in latest)) latest[a.passage_id]=a; }
+  const total=attempted.size;
+  const solved=Object.values(latest).filter(a=>a.is_correct).length;
+  const acc=total?Math.round(solved/total*100):0;
+  let html=topBar()+`<div class="ptitle">내 학습 기록</div>`;
+  html+=`<div class="stats3">
+    <div class="stat"><b>${total}</b><span>푼 지문</span></div>
+    <div class="stat"><b>${solved}</b><span>해결</span></div>
+    <div class="stat"><b>${acc}%</b><span>정답률</span></div>
+  </div>`;
+  if(!myAtts.length){ html+=`<div class="empty">아직 푼 기록이 없어요.<br>‘풀기’에서 시작해보세요!</div>`; }
+  else{
+    const solvedList=allP.filter(p=>latest[p.id]&&latest[p.id].is_correct)
+      .sort((a,b)=>nat(a.book,b.book)||nat(a.unit,b.unit)||nat(a.title,b.title));
+    if(solvedList.length){
+      html+=`<div class="ptitle" style="margin-top:18px">${ic('check','ok')} 해결한 지문</div>`;
+      for(const p of solvedList){
+        const label=[p.book,p.unit,p.title].filter(Boolean).join(' · ');
+        html+=`<button class="psg" onclick="pick('${p.id}')">${esc(label)}</button>`;
+      }
+    }
+  }
+  app.innerHTML=html;
 }
 
 function buildGroups(list){
@@ -398,6 +446,7 @@ function buildGroups(list){
 // ---------- 풀이 ----------
 function pick(id){
   current=allP.find(p=>p.id===id); if(!current) return;
+  showTabBar(false);
   everWrong=new Set();
   const sents=current.sentences;
   let order=sents.map((t,i)=>({idx:i,text:t}));
@@ -417,7 +466,7 @@ function render(checked){
   if(!document.getElementById('boardEl')){
     const head=[current.book,current.unit,current.title].filter(Boolean).join(' · ');
     app.innerHTML=`
-      <button class="back" onclick="loadList()">‹ 지문 목록</button>
+      <button class="back" onclick="loadData()">‹ 지문 목록</button>
       <div style="font-weight:600;margin:0 2px 12px">${esc(head)}</div>
       <div id="done"></div>
       <div class="board" id="boardEl"></div>`;
@@ -497,7 +546,7 @@ function renderReflection(){
       <textarea id="r_${idx}" rows="2" placeholder="왜 이 문장이 여기에 올까요? (연결어·지시어 this/it·시제·흐름 등 근거로)"></textarea>
     </div>`).join('');
   app.innerHTML=`
-    <button class="back" onclick="loadList()">‹ 지문 목록</button>
+    <button class="back" onclick="loadData()">‹ 지문 목록</button>
     <div style="font-weight:600;margin:0 2px 6px">${esc(head)}</div>
     <p class="hint" style="margin:0 2px 14px">틀렸던 문장이에요. 왜 그 자리에 오는지 직접 설명해보면 훨씬 오래 남아요.</p>
     ${items}
@@ -523,7 +572,7 @@ async function saveReflection(){
     return;
   }
   app.innerHTML=`<div class="done" style="margin-top:30px">${ic('check','ok')} 잘 제출했어요!<br>선생님이 확인할 거예요. 수고했어요</div>
-    <button class="btn ghost full" style="margin-top:16px" onclick="loadList()">지문 목록으로</button>`;
+    <button class="btn ghost full" style="margin-top:16px" onclick="loadData()">지문 목록으로</button>`;
 }
 
 // 포인터 기반 드래그 — 터치(폰)·마우스(노트북) 모두 작동
