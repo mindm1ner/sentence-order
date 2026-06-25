@@ -143,6 +143,31 @@
     92%{opacity:1} 100%{transform:translateY(-88px) scale(1);opacity:0}}
   .obpulse{animation:obpulse 1.6s ease-in-out infinite}
   @keyframes obpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+
+  /* 2단계: 끌기 + 화살표 둘 다 */
+  .demo2{display:flex;flex-direction:column;gap:14px;height:124px;justify-content:center}
+  .drow{display:flex;align-items:center;gap:10px}
+  .dcap{font-size:11px;color:var(--sub);width:46px;text-align:right;flex:0 0 auto}
+  .dcard{flex:1;height:38px;border-radius:9px;background:#fff;border:1px solid var(--accent);
+    box-shadow:var(--shadow);display:flex;align-items:center;gap:8px;padding:0 12px;font-size:12px;color:var(--ink)}
+  .dcard .g{color:#cfccc3;font-size:14px}
+  .dcard.drag{animation:dragY 1.7s ease-in-out infinite}
+  @keyframes dragY{0%,100%{transform:translateY(6px) scale(1)}50%{transform:translateY(-8px) scale(1.04)}}
+  .dcard.arr{justify-content:space-between;animation:nudge 1.7s ease-in-out infinite}
+  .dcard.arr .ac{display:flex;flex-direction:column;font-size:9px;line-height:1.1;color:var(--sub);align-items:center}
+  @keyframes nudge{0%,45%,100%{transform:translateY(6px)}62%,86%{transform:translateY(-9px)}}
+  .dcard.arr .up{display:inline-block;animation:press 1.7s ease-in-out infinite}
+  @keyframes press{0%,50%,100%{color:var(--sub);transform:scale(1)}60%{color:var(--accent);transform:scale(1.45)}}
+
+  /* 3단계: 이유 쓰기 */
+  .rdemo{height:124px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+  .rq{font-size:12px;color:var(--sub)}
+  .rwrite{position:relative;width:180px;height:34px;border:1px solid var(--line);border-radius:9px;background:#fff}
+  .rfill{position:absolute;left:12px;top:18px;height:2px;background:var(--accent);width:0;
+    animation:write 2.8s ease-in-out infinite}
+  @keyframes write{0%{width:0;opacity:1}68%{width:150px}84%{width:150px;opacity:1}100%{width:150px;opacity:0}}
+  .rpen{position:absolute;top:8px;left:8px;animation:penMove 2.8s ease-in-out infinite}
+  @keyframes penMove{0%{transform:translateX(0)}68%{transform:translateX(150px)}84%,100%{transform:translateX(150px)}}
 </style>
 </head>
 <body>
@@ -199,12 +224,18 @@ function demoHTML(){return `<div class="demo">
   <div class="demo-row"><span class="g">⠿</span> 두 번째 문장</div>
   <div class="demo-row move"><span class="g">⠿</span> 이 문장을 위로</div>
 </div>`;}
-function checkDemoHTML(){return `<div style="height:124px;display:flex;align-items:center;justify-content:center">
-  <svg class="ic ok obpulse" viewBox="0 0 24 24" style="width:54px;height:54px;stroke-width:1.5">${PATHS.check}</svg></div>`;}
+function motion2HTML(){return `<div class="demo2">
+  <div class="drow"><span class="dcap">끌어서</span><div class="dcard drag"><span class="g">⠿</span> 문장</div></div>
+  <div class="drow"><span class="dcap">또는</span><div class="dcard arr"><span>문장</span><span class="ac"><span class="up">▲</span><span>▼</span></span></div></div>
+</div>`;}
+function reflectDemoHTML(){return `<div class="rdemo">
+  <div class="rq">“왜 이 문장이 여기에 올까요?”</div>
+  <div class="rwrite"><div class="rfill"></div><svg class="ic ok rpen" viewBox="0 0 24 24" style="width:15px;height:15px">${PATHS.edit}</svg></div>
+</div>`;}
 const OB=[
   {v:demoHTML, t:'순서를 맞추는 연습', d:'흩어진 영어 문장을 올바른 순서로 배열하는 거예요.'},
-  {v:demoHTML, t:'끌거나 화살표로 이동', d:'문장의 ⠿ 손잡이를 잡고 끌거나, ▲ ▼ 버튼으로 위치를 옮기세요.'},
-  {v:checkDemoHTML, t:'확인하고 다시 도전', d:'순서를 맞췄으면 “확인”! 틀리면 다시, 다 맞히면 “왜 여기일까” 이유도 써봐요.'}
+  {v:motion2HTML, t:'끌거나 화살표로 이동', d:'⠿ 손잡이를 잡고 끌거나, ▲ ▼ 버튼으로 위치를 옮기세요.'},
+  {v:reflectDemoHTML, t:'왜 그런지 적어보기', d:'순서를 맞추면 “확인”! 틀렸던 문장은 왜 그 자리인지 이유도 적어봐요.'}
 ];
 let obStep=0;
 function showOnboarding(){
