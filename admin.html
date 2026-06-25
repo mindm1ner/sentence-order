@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>출제 관리 · 문장 순서</title>
+<style>
+  :root{
+    --bg:#f6f5f1; --card:#fff; --ink:#2b2a27; --sub:#8a877f; --line:#e7e4dc;
+    --accent:#3a7d5d; --accent-soft:#e4f0e9; --no:#c0584b; --no-bg:#f7e6e3;
+    --shadow:0 1px 2px rgba(0,0,0,.04),0 6px 18px rgba(0,0,0,.05);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR",sans-serif;line-height:1.6}
+  .wrap{max-width:680px;margin:0 auto;padding:24px 18px 60px}
+  h1{font-size:19px;margin:0 0 2px}
+  .sub{font-size:13px;color:var(--sub);margin:0 0 22px}
+  label{display:block;font-size:13px;color:var(--sub);margin:14px 2px 5px}
+  input,textarea{width:100%;border:1px solid var(--line);border-radius:11px;
+    padding:12px 13px;font-size:15px;font-family:inherit;background:var(--card);color:var(--ink)}
+  textarea{resize:vertical;line-height:1.7}
+  .row{display:flex;gap:10px}.row>div{flex:1}
+  .btn{border:none;border-radius:11px;padding:12px 18px;font-size:15px;font-weight:600;cursor:pointer}
+  .btn.primary{background:var(--accent);color:#fff}
+  .btn.ghost{background:var(--card);border:1px solid var(--line);color:var(--ink)}
+  .btn.small{padding:7px 12px;font-size:13px}
+  .btn.danger{background:none;border:1px solid #eecbc4;color:var(--no)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;
+    padding:18px;box-shadow:var(--shadow);margin-bottom:16px}
+  .hint{font-size:12px;color:var(--sub);margin:4px 2px 0}
+  .topbar{display:flex;align-items:center;margin-bottom:18px}
+  .topbar .who{font-size:13px;color:var(--sub);margin-left:auto}
+  .msg{font-size:13px;padding:10px 13px;border-radius:10px;margin:10px 0}
+  .msg.ok{background:var(--accent-soft);color:var(--accent)}
+  .msg.err{background:#f7e6e3;color:var(--no)}
+  .sectiontitle{font-size:14px;font-weight:700;margin:26px 2px 12px}
+
+  /* 자동완성 클립 */
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 2px 0}
+  .chip{border:1px solid var(--line);background:var(--bg);border-radius:999px;
+    padding:5px 12px;font-size:12px;color:var(--ink);cursor:pointer;transition:.12s}
+  .chip:hover{border-color:var(--accent);color:var(--accent)}
+  .chip.empty{color:var(--sub);border-style:dashed;cursor:default}
+
+  /* 도서관 목록 */
+  .book{border:1px solid var(--line);border-radius:14px;background:var(--card);
+    margin-bottom:12px;overflow:hidden;box-shadow:var(--shadow)}
+  .bookh{width:100%;display:flex;align-items:center;gap:8px;background:none;border:none;
+    padding:14px 16px;font-size:15px;font-weight:700;color:var(--ink);cursor:pointer;text-align:left}
+  .bookh .cnt{font-size:12px;font-weight:500;color:var(--sub);margin-left:auto;margin-right:6px}
+  .bookh .chev{transition:transform .2s;color:var(--sub)}
+  .book.open .bookh .chev{transform:rotate(90deg)}
+  .bookbody{display:none;padding:0 14px 12px}
+  .book.open .bookbody{display:block}
+  .unith{font-size:12px;color:var(--accent);font-weight:600;margin:10px 4px 6px;
+    border-left:3px solid var(--accent-soft);padding-left:8px}
+  .pi{display:flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid var(--line);
+    border-radius:10px;background:var(--bg);margin-bottom:7px}
+  .pi .t{flex:1;font-size:14px}.pi .c{font-size:11px;color:var(--sub);margin-left:6px}
+
+  /* 풀이 기록 / 오답 */
+  .rec{border:1px solid #eecbc4;background:var(--no-bg);border-radius:14px;padding:14px 16px;margin-bottom:12px}
+  .rec.solved{border-color:#bfe0cf;background:var(--accent-soft)}
+  .rec .rh{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600}
+  .rec .rh .badge{font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;color:#fff;background:var(--no)}
+  .rec.solved .rh .badge{background:var(--accent)}
+  .rec .rh .when{margin-left:auto;font-size:11px;color:var(--sub);font-weight:500}
+  .ord{display:flex;gap:8px;font-size:13px;padding:6px 9px;border-radius:8px;margin-top:6px;background:#fff}
+  .ord .p{flex:0 0 auto;width:20px;text-align:center;color:var(--sub);font-size:12px;align-self:center}
+  .ord .s{flex:1}
+  .ord .fix{flex:0 0 auto;font-size:11px;color:var(--no);align-self:center}
+  .ord.good{opacity:.6}
+  .toggle{font-size:12px;color:var(--accent);cursor:pointer;margin-top:8px;display:inline-block}
+
+  /* 통계 대시보드 */
+  .statrow{border:1px solid var(--line);background:var(--card);border-radius:12px;
+    padding:12px 14px;margin-bottom:8px;box-shadow:var(--shadow)}
+  .statrow .top{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+  .statrow .top b{font-size:14px}
+  .statrow .top .pct{margin-left:auto;font-weight:700;font-size:15px}
+  .sbarbg{height:8px;background:var(--bg);border-radius:999px;overflow:hidden}
+  .sbar{height:100%;border-radius:999px;transition:width .3s}
+  .statrow .c{margin-top:7px;font-size:11px;color:var(--sub)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- 로그인 -->
+  <div id="login" style="display:none">
+    <h1>🔐 출제 관리 로그인</h1>
+    <p class="sub">채영님만 접속하는 화면이에요</p>
+    <div class="card">
+      <label>이메일</label>
+      <input id="email" type="email" placeholder="chaeyeong03@gmail.com">
+      <label>비밀번호</label>
+      <input id="pw" type="password" placeholder="Supabase에서 만든 비밀번호">
+      <div id="loginmsg"></div>
+      <button class="btn primary" style="width:100%;margin-top:12px" onclick="login()">로그인</button>
+    </div>
+  </div>
+
+  <!-- 관리 -->
+  <div id="admin" style="display:none">
+    <div class="topbar">
+      <div><h1>✍️ 지문 출제 관리</h1><p class="sub" style="margin:0">교재·강 입력 → 붙여넣기 → 문장 확인 → 저장</p></div>
+      <span class="who" id="who"></span>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <div>
+          <label>교재</label>
+          <input id="book" placeholder="예: 수능특강" autocomplete="off" oninput="renderUnitChips()">
+          <div class="chips" id="bookChips"></div>
+        </div>
+        <div>
+          <label>강 · 챕터</label>
+          <input id="unit" placeholder="예: 3강" autocomplete="off">
+          <div class="chips" id="unitChips"></div>
+        </div>
+      </div>
+      <label>지문 번호 · 제목</label>
+      <input id="title" placeholder="예: 2번 지문">
+
+      <label>지문 붙여넣기</label>
+      <textarea id="raw" rows="5" placeholder="여기에 영어 지문을 붙여넣으세요."></textarea>
+      <button class="btn ghost small" style="margin-top:10px" onclick="splitText()">✂️ 문장으로 쪼개기</button>
+
+      <div id="splitwrap" style="display:none">
+        <label style="margin-top:18px">문장 확인 · 수정 <span class="hint">(한 줄 = 한 문장. 잘못 끊겼으면 줄을 합치거나 나누세요)</span></label>
+        <textarea id="split" rows="8"></textarea>
+        <div id="formmsg"></div>
+        <div class="row" style="margin-top:12px">
+          <button class="btn primary" onclick="save()">💾 저장하기</button>
+          <button class="btn ghost" onclick="resetForm()">취소</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="sectiontitle">📈 지문별 난이도 (어려운 순)</div>
+    <div id="stats"></div>
+
+    <div class="sectiontitle">📊 학생 풀이 기록 · 오답</div>
+    <div id="records"></div>
+
+    <div class="sectiontitle">📝 학생이 쓴 이유 (메타인지)</div>
+    <div id="reflections"></div>
+
+    <div class="sectiontitle">📚 등록된 지문</div>
+    <div id="list"></div>
+
+    <button class="btn ghost small" style="margin-top:18px" onclick="logout()">로그아웃</button>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+let editingId=null, allP=[];
+
+function nat(a,b){return String(a||'').localeCompare(String(b||''),'ko',{numeric:true,sensitivity:'base'});}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function jsStr(s){return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
+
+// ---------- 인증 ----------
+async function init(){
+  if(typeof SUPABASE_URL==='undefined'||SUPABASE_URL.includes('여기에')){
+    document.body.innerHTML='<div style="text-align:center;padding:60px;color:#8a877f">⚙️ config.js에 Supabase 키를 먼저 넣어주세요.</div>';return;
+  }
+  const { data:{ session } } = await db.auth.getSession();
+  session ? showAdmin(session) : showLogin();
+}
+async function login(){
+  const email=$('email').value.trim(), password=$('pw').value;
+  const { data, error } = await db.auth.signInWithPassword({ email, password });
+  if(error){ $('loginmsg').innerHTML=`<div class="msg err">${error.message}</div>`; return; }
+  showAdmin(data.session);
+}
+async function logout(){ await db.auth.signOut(); showLogin(); }
+function showLogin(){ $('login').style.display='block'; $('admin').style.display='none'; }
+function showAdmin(session){
+  $('login').style.display='none'; $('admin').style.display='block';
+  $('who').textContent=session.user.email;
+  loadAll();
+}
+
+// ---------- 문장 쪼개기 ----------
+function splitText(){
+  const raw=$('raw').value.trim(); if(!raw) return;
+  const cleaned=raw.replace(/\s+/g,' ').trim();
+  const parts=cleaned.match(/[^.!?]+[.!?]+["'”’)\]]*|\S.+$/g) || [cleaned];
+  $('split').value=parts.map(s=>s.trim()).filter(Boolean).join('\n');
+  $('splitwrap').style.display='block';
+}
+
+// ---------- 저장 ----------
+async function save(){
+  const book=$('book').value.trim();
+  const unit=$('unit').value.trim();
+  const title=$('title').value.trim();
+  const sentences=$('split').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  if(!book){ msg('formmsg','교재명을 입력하세요','err'); return; }
+  if(!title){ msg('formmsg','지문 번호·제목을 입력하세요','err'); return; }
+  if(sentences.length<2){ msg('formmsg','문장이 2개 이상이어야 해요','err'); return; }
+
+  let res;
+  if(editingId){
+    res=await db.from('passages').update({book,unit,title,sentences}).eq('id',editingId);
+  }else{
+    res=await db.from('passages').insert({book,unit,title,sentences});
+  }
+  if(res.error){ msg('formmsg',res.error.message,'err'); return; }
+  msg('formmsg','저장됐어요 ✓','ok');
+  $('title').value=''; $('raw').value=''; $('split').value='';
+  $('splitwrap').style.display='none'; editingId=null;
+  loadAll();
+}
+function resetForm(){
+  editingId=null;
+  $('title').value=''; $('raw').value=''; $('split').value='';
+  $('splitwrap').style.display='none'; $('formmsg').innerHTML='';
+}
+
+// ---------- 데이터 로드 ----------
+async function loadAll(){
+  const { data, error } = await db.from('passages').select('*');
+  if(error){ $('list').innerHTML=`<div class="msg err">${error.message}</div>`; return; }
+  allP=data||[];
+  renderChips();
+  renderList();
+  loadStats();
+  loadRecords();
+  loadReflections();
+}
+
+// ---------- 지문별 난이도 통계 ----------
+async function loadStats(){
+  const { data:atts, error } = await db.from('attempts').select('passage_id,score,total,is_correct,user_id');
+  if(error){ $('stats').innerHTML=`<div class="msg err">통계를 불러오지 못했어요.<br>${error.message}</div>`; return; }
+  if(!atts || !atts.length){ $('stats').innerHTML='<p class="sub">아직 풀이 데이터가 없어요.</p>'; return; }
+  const byP={};
+  for(const a of atts){
+    const s=byP[a.passage_id]=byP[a.passage_id]||{att:0,ratio:0,students:new Set(),solved:new Set()};
+    s.att++; s.ratio += a.total ? a.score/a.total : 0; s.students.add(a.user_id);
+    if(a.is_correct) s.solved.add(a.user_id);
+  }
+  const rows=Object.keys(byP).map(pid=>{
+    const p=allP.find(x=>x.id===pid); if(!p) return null;
+    const s=byP[pid];
+    return {p, avg:Math.round(s.ratio/s.att*100), att:s.att, students:s.students.size, solved:s.solved.size};
+  }).filter(Boolean).sort((a,b)=>a.avg-b.avg); // 어려운(낮은) 순
+
+  let html='';
+  for(const r of rows){
+    const label=[r.p.book,r.p.unit,r.p.title].filter(Boolean).join(' · ');
+    const color=r.avg<50?'var(--no)':r.avg<80?'#c98a2b':'var(--accent)';
+    html+=`<div class="statrow">
+      <div class="top"><b>${esc(label)}</b><span class="pct" style="color:${color}">${r.avg}%</span></div>
+      <div class="sbarbg"><div class="sbar" style="width:${r.avg}%;background:${color}"></div></div>
+      <div class="c">평균 정답률 · 시도 ${r.att}회 · 학생 ${r.students}명 · 해결 ${r.solved}명</div>
+    </div>`;
+  }
+  $('stats').innerHTML=html;
+}
+
+// ---------- 자동완성 클립 ----------
+function renderChips(){
+  const books=[...new Set(allP.map(p=>p.book).filter(Boolean))].sort(nat);
+  $('bookChips').innerHTML = books.length
+    ? books.map(b=>`<span class="chip" onclick="setField('book','${jsStr(b)}')">${esc(b)}</span>`).join('')
+    : `<span class="chip empty">아직 없음 — 새로 입력하면 다음부터 여기 떠요</span>`;
+  renderUnitChips();
+}
+function renderUnitChips(){
+  const book=$('book').value.trim();
+  const pool=book ? allP.filter(p=>p.book===book) : allP;
+  const units=[...new Set(pool.map(p=>p.unit).filter(Boolean))].sort(nat);
+  $('unitChips').innerHTML = units.length
+    ? units.map(u=>`<span class="chip" onclick="setField('unit','${jsStr(u)}')">${esc(u)}</span>`).join('')
+    : `<span class="chip empty">${book?'이 교재의 강 없음':'교재 선택 시 해당 강이 떠요'}</span>`;
+}
+function setField(id,val){ $(id).value=val; if(id==='book') renderUnitChips(); }
+
+// ---------- 등록된 지문(도서관) ----------
+function renderList(){
+  if(!allP.length){ $('list').innerHTML='<p class="sub">아직 없어요. 위에서 추가해보세요.</p>'; return; }
+  const groups=buildGroups(allP);
+  let html='';
+  for(const [book,units] of groups){
+    const total=Object.values(units).reduce((n,a)=>n+a.length,0);
+    html+=`<div class="book open"><button class="bookh" onclick="this.closest('.book').classList.toggle('open')">
+      <span class="chev">›</span> 📕 ${esc(book)} <span class="cnt">${total}개</span></button><div class="bookbody">`;
+    for(const unit of Object.keys(units)){
+      if(unit) html+=`<div class="unith">${esc(unit)}</div>`;
+      for(const p of units[unit]){
+        html+=`<div class="pi"><span class="t">${esc(p.title)}</span><span class="c">문장 ${p.sentences.length}</span>
+          <button class="btn ghost small" onclick='edit("${p.id}")'>수정</button>
+          <button class="btn danger small" onclick='del("${p.id}")'>삭제</button></div>`;
+      }
+    }
+    html+='</div></div>';
+  }
+  $('list').innerHTML=html;
+}
+function buildGroups(list){
+  const sorted=[...list].sort((a,b)=> nat(a.book,b.book)||nat(a.unit,b.unit)||nat(a.title,b.title));
+  const map=new Map();
+  for(const p of sorted){
+    const b=p.book||'미분류', u=p.unit||'';
+    if(!map.has(b)) map.set(b,{});
+    const units=map.get(b); (units[u]=units[u]||[]).push(p);
+  }
+  return map;
+}
+
+// ---------- 풀이 기록 / 오답 (학생별 · 모든 시도) ----------
+function orderLines(p,a){
+  return (a.submitted||[]).map((origIdx,pos)=>{
+    const ok=origIdx===pos;
+    return `<div class="ord ${ok?'good':''}">
+      <span class="p">${pos+1}</span>
+      <span class="s">${esc(p.sentences[origIdx]||'')}</span>
+      ${ok?'<span class="fix" style="color:var(--accent)">✓</span>':`<span class="fix">→ 원래 ${origIdx+1}번</span>`}</div>`;
+  }).join('');
+}
+async function loadRecords(){
+  const { data:atts, error } = await db.from('attempts').select('*').order('created_at',{ascending:true});
+  if(error){ $('records').innerHTML=`<div class="msg err">기록 표(attempts)가 아직 없어요. SQL을 실행했는지 확인하세요.<br>${error.message}</div>`; return; }
+  if(!atts || !atts.length){ $('records').innerHTML='<p class="sub">아직 학생이 푼 기록이 없어요.</p>'; return; }
+
+  // 계정ID 기준으로 학생 구분(동명이인 안 섞이게), 이름은 표시용
+  const tree={}, nameOf={};
+  for(const a of atts){
+    const uid=a.user_id||a.student_email||'unknown';
+    nameOf[uid]=a.student_name||a.student_email||'학생'; // 시간 오름차순이라 마지막=최신 이름
+    (tree[uid]=tree[uid]||{});
+    (tree[uid][a.passage_id]=tree[uid][a.passage_id]||[]).push(a);
+  }
+
+  let html='';
+  const uids=Object.keys(tree).sort((x,y)=>nat(nameOf[x],nameOf[y]));
+  for(const uid of uids){
+    const who=nameOf[uid];
+    const byP=tree[uid];
+    const entries=Object.keys(byP).map(pid=>{
+      const list=byP[pid]; const p=allP.find(x=>x.id===pid);
+      return {p,list,latest:list[list.length-1]};
+    }).filter(e=>e.p);
+    entries.sort((x,y)=>nat(x.p.book,y.p.book)||nat(x.p.unit,y.p.unit)||nat(x.p.title,y.p.title));
+    const solvedCnt=entries.filter(e=>e.latest.is_correct).length;
+    const wrongCnt=entries.length-solvedCnt;
+    html+=`<div style="font-weight:700;font-size:14px;margin:16px 2px 8px">🧑‍🎓 ${esc(who)}
+      <span style="color:var(--sub);font-weight:500;font-size:12px">· 오답 ${wrongCnt} · 해결 ${solvedCnt}</span></div>`;
+
+    for(const {p,list,latest} of entries){
+      const label=[p.book,p.unit,p.title].filter(Boolean).join(' · ');
+      const solved=latest.is_correct;
+      const wrongTries=list.filter(a=>!a.is_correct).length;
+      const tries=list.map((a,n)=>`
+        <div style="margin-top:10px">
+          <div style="font-size:12px;color:var(--sub);font-weight:600">${n+1}차 · ${fmt(a.created_at)} · ${a.score}/${a.total} ${a.is_correct?'✅ 정답':'❌ 오답'}</div>
+          ${orderLines(p,a)}
+        </div>`).join('');
+      html+=`<div class="rec${solved?' solved':''}">
+        <div class="rh"><span class="badge">${solved?'해결':'오답'} ${latest.score}/${latest.total}</span> ${esc(label)}
+          <span class="when">시도 ${list.length}회 · 오답 ${wrongTries}회</span></div>
+        <span class="toggle" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display==='none'?'block':'none'">시도별 풀이 모두 보기 ▾</span>
+        <div style="display:none">${tries}</div>
+      </div>`;
+    }
+  }
+  $('records').innerHTML=html;
+}
+function fmt(ts){ try{const d=new Date(ts);return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;}catch(e){return '';} }
+
+// ---------- 학생이 쓴 이유 ----------
+async function loadReflections(){
+  const { data:refs, error } = await db.from('reflections').select('*').order('created_at',{ascending:false});
+  if(error){ $('reflections').innerHTML=`<div class="msg err">이유 표(reflections)가 아직 없어요. SQL을 실행했는지 확인하세요.<br>${error.message}</div>`; return; }
+  if(!refs || !refs.length){ $('reflections').innerHTML='<p class="sub">아직 학생이 쓴 이유가 없어요.</p>'; return; }
+  let html='';
+  for(const r of refs){
+    const p=allP.find(x=>x.id===r.passage_id);
+    const label=p?[p.book,p.unit,p.title].filter(Boolean).join(' · '):'(삭제된 지문)';
+    const who=r.student_name||r.student_email||'학생';
+    const items=(r.notes||[]).map(n=>`<div class="ord">
+      <span class="p">${n.position}</span>
+      <span class="s"><b>${esc(n.sentence||'')}</b><br><span style="color:var(--sub)">→ ${esc(n.reason||'(미작성)')}</span></span></div>`).join('');
+    html+=`<div class="rec solved">
+      <div class="rh"><span class="badge">이유</span> ${esc(who)} · ${esc(label)}
+        <span class="when">${fmt(r.created_at)}</span></div>
+      <div style="margin-top:8px">${items}</div></div>`;
+  }
+  $('reflections').innerHTML=html;
+}
+
+// ---------- 수정 / 삭제 ----------
+function edit(id){
+  const p=allP.find(x=>x.id===id); if(!p) return;
+  editingId=p.id;
+  $('book').value=p.book||''; $('unit').value=p.unit||''; $('title').value=p.title||'';
+  $('raw').value=''; $('split').value=p.sentences.join('\n');
+  $('splitwrap').style.display='block'; renderUnitChips();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+async function del(id){
+  const p=allP.find(x=>x.id===id); if(!p) return;
+  if(!confirm(`"${p.title}" 지문을 삭제할까요?`)) return;
+  const { error } = await db.from('passages').delete().eq('id',id);
+  if(error){ alert(error.message); return; }
+  loadAll();
+}
+
+function msg(el,text,kind){ $(el).innerHTML=`<div class="msg ${kind}">${text}</div>`; }
+
+init();
+</script>
+</body>
+</html>

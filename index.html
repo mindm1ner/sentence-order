@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>문장 순서 맞추기</title>
+<style>
+  :root{
+    --bg:#f6f5f1; --card:#ffffff; --ink:#2b2a27; --sub:#8a877f;
+    --line:#e7e4dc; --accent:#3a7d5d; --accent-soft:#e4f0e9;
+    --ok:#3a7d5d; --ok-bg:#e4f0e9; --no:#c0584b; --no-bg:#f7e6e3;
+    --warn:#c98a2b; --warn-bg:#f8efdd;
+    --shadow:0 1px 2px rgba(0,0,0,.04),0 6px 18px rgba(0,0,0,.05);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+    line-height:1.6}
+  .wrap{max-width:640px;margin:0 auto;padding:24px 18px 90px}
+  header{text-align:center;margin:8px 0 22px}
+  header h1{font-size:20px;margin:0;letter-spacing:-.02em}
+  header p{font-size:13px;color:var(--sub);margin:6px 0 0}
+
+  label{display:block;font-size:13px;color:var(--sub);margin:14px 2px 5px}
+  input,textarea{width:100%;border:1px solid var(--line);border-radius:11px;
+    padding:12px 13px;font-size:15px;font-family:inherit;background:var(--card);color:var(--ink)}
+  textarea{resize:vertical;line-height:1.6}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;
+    padding:18px;box-shadow:var(--shadow)}
+  .msg{font-size:13px;padding:10px 13px;border-radius:10px;margin:10px 0}
+  .msg.err{background:var(--no-bg);color:var(--no)}
+  .msg.okmsg{background:var(--accent-soft);color:var(--accent)}
+  .authtabs{display:flex;gap:6px;margin-bottom:14px}
+  .authtab{flex:1;padding:9px;border:1px solid var(--line);background:var(--bg);
+    border-radius:10px;font-size:14px;font-weight:600;color:var(--sub);cursor:pointer}
+  .authtab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .hint{font-size:12px;color:var(--sub)}
+
+  .ptitle{font-size:13px;color:var(--sub);margin:4px 2px 12px}
+  .who{font-size:12px;color:var(--sub);text-align:right;margin-bottom:10px}
+  .who a{color:var(--accent);cursor:pointer;text-decoration:underline}
+
+  /* 오답 패널 */
+  .wrongpanel{border:1px solid #f0d9b8;background:var(--warn-bg);border-radius:16px;
+    padding:14px 16px;margin-bottom:18px}
+  .wrongpanel .wt{font-size:14px;font-weight:700;color:var(--warn);margin-bottom:10px}
+
+  /* 도서관 */
+  .book{border:1px solid var(--line);border-radius:16px;background:var(--card);
+    margin-bottom:12px;overflow:hidden;box-shadow:var(--shadow)}
+  .bookh{width:100%;display:flex;align-items:center;gap:9px;background:none;border:none;
+    padding:16px 18px;font-size:16px;font-weight:700;color:var(--ink);cursor:pointer;text-align:left}
+  .bookh .cnt{font-size:12px;font-weight:500;color:var(--sub);margin-left:auto;margin-right:4px}
+  .bookh .chev{transition:transform .2s;color:var(--sub);font-size:18px}
+  .book.open .bookh .chev{transform:rotate(90deg)}
+  .bookbody{display:none;padding:0 16px 14px}
+  .book.open .bookbody{display:block}
+  .unith{font-size:12px;color:var(--accent);font-weight:700;margin:12px 4px 8px;
+    border-left:3px solid var(--accent-soft);padding-left:9px}
+  .psg{display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+    background:var(--bg);border:1px solid var(--line);border-radius:12px;
+    padding:13px 15px;font-size:15px;color:var(--ink);cursor:pointer;margin-bottom:8px;
+    transition:border-color .15s,transform .08s}
+  .psg:hover{border-color:var(--accent)}.psg:active{transform:scale(.99)}
+  .psg .cnt{font-size:11px;color:var(--sub);margin-left:auto}
+  .psg.wrong{border-color:#f0d9b8;background:#fff}
+
+  /* 풀이 보드 */
+  .board{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+  .cardx{display:flex;align-items:stretch;gap:10px;background:var(--card);
+    border:1px solid var(--line);border-radius:14px;padding:12px 12px 12px 14px;
+    box-shadow:var(--shadow);transition:border-color .15s,background .2s}
+  .cardx.dragging{opacity:.45}
+  .cardx.over{border-color:var(--accent);border-style:dashed}
+  .cardx .num{flex:0 0 26px;height:26px;border-radius:8px;background:var(--bg);
+    color:var(--sub);font-size:13px;font-weight:600;display:flex;align-items:center;
+    justify-content:center;align-self:center}
+  .cardx .txt{flex:1;font-size:15px;padding:2px 0;word-break:break-word}
+  .cardx .arrows{display:flex;flex-direction:column;gap:4px;justify-content:center}
+  .cardx .arrows button{width:34px;height:26px;border:1px solid var(--line);
+    background:var(--bg);border-radius:8px;font-size:13px;color:var(--ink);cursor:pointer;line-height:1}
+  .cardx .arrows button:active{background:var(--accent-soft)}
+  .cardx .grip{flex:0 0 18px;align-self:center;color:#cfccc3;cursor:grab;font-size:16px;
+    user-select:none;touch-action:none;padding:4px 2px}
+  .cardx .grip:active{cursor:grabbing}
+  .cardx .mark{align-self:center;font-weight:700;font-size:15px}
+  .cardx .mark.ok{color:var(--ok)} .cardx .mark.no{color:var(--no)}
+  .cardx.ok{background:var(--ok-bg);border-color:#bfe0cf}
+  .cardx.ok .num{background:var(--ok);color:#fff}
+  .cardx.no{background:var(--no-bg);border-color:#eecbc4}
+  .cardx.no .num{background:var(--no);color:#fff}
+
+  .bar{position:fixed;left:0;right:0;bottom:0;background:rgba(246,245,241,.92);
+    backdrop-filter:blur(8px);border-top:1px solid var(--line);padding:12px 18px;
+    display:flex;gap:10px;max-width:640px;margin:0 auto;align-items:center}
+  .bar .result{flex:1;font-size:14px;color:var(--sub)}
+  .bar .result b{color:var(--ink)}
+  .btn{border:none;border-radius:12px;padding:13px 18px;font-size:15px;font-weight:600;cursor:pointer}
+  .btn.primary{background:var(--accent);color:#fff}
+  .btn.ghost{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+  .btn:active{transform:scale(.98)}
+  .btn.full{width:100%;margin-top:12px}
+
+  .back{display:inline-flex;align-items:center;gap:6px;background:none;border:none;
+    color:var(--sub);font-size:14px;cursor:pointer;padding:6px 2px;margin-bottom:8px}
+  .empty{text-align:center;color:var(--sub);font-size:14px;padding:50px 0}
+  .done{text-align:center;background:var(--accent-soft);border:1px solid #bfe0cf;
+    border-radius:14px;padding:16px;color:var(--accent);font-weight:600;margin-top:4px}
+  .loading{display:flex;align-items:center;justify-content:center;gap:9px;
+    color:var(--sub);padding:50px 0;font-size:14px}
+  .spinner{width:18px;height:18px;border:2px solid var(--line);border-top-color:var(--accent);
+    border-radius:50%;animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .btn[disabled]{opacity:.6;cursor:default}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>📖 문장 순서 맞추기</h1>
+    <p>흩어진 문장을 올바른 순서로 배열해보세요</p>
+  </header>
+
+  <!-- 로그인 / 회원가입 -->
+  <div id="login" style="display:none">
+    <div class="card">
+      <div class="authtabs">
+        <button id="tabLogin" class="authtab active" onclick="setMode('login')">로그인</button>
+        <button id="tabSignup" class="authtab" onclick="setMode('signup')">회원가입</button>
+      </div>
+      <label id="nameLabel" style="display:none">이름</label>
+      <input id="name" placeholder="이름" style="display:none">
+      <label>이메일</label>
+      <input id="email" type="email" placeholder="이메일">
+      <label>비밀번호</label>
+      <input id="pw" type="password" placeholder="비밀번호 (6자 이상)">
+      <div id="loginmsg"></div>
+      <button id="authbtn" class="btn primary full" onclick="submitAuth()">로그인</button>
+      <p id="authhint" class="hint" style="text-align:center;margin-top:10px"></p>
+    </div>
+  </div>
+
+  <!-- 본문 -->
+  <div id="app" style="display:none"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script>
+const app=document.getElementById('app');
+let state=[], current=null, allP=[], session=null, wrongIds=new Set();
+let everWrong=new Set();   // 이번 세션에서 한 번이라도 자리를 틀린 문장(원래 인덱스)
+
+function nat(a,b){return String(a||'').localeCompare(String(b||''),'ko',{numeric:true,sensitivity:'base'});}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// ---------- 인증 ----------
+async function init(){
+  if(typeof SUPABASE_URL==='undefined'||SUPABASE_URL.includes('여기에')){
+    app.style.display='block';
+    app.innerHTML=`<div class="empty">⚙️ 아직 Supabase 연결 전이에요.<br>config.js에 키를 넣어주세요.</div>`;
+    return;
+  }
+  const { data:{ session:s } } = await db.auth.getSession();
+  s ? enter(s) : showLogin();
+}
+let authMode='login';
+function setMode(m){
+  authMode=m;
+  $('tabLogin').classList.toggle('active',m==='login');
+  $('tabSignup').classList.toggle('active',m==='signup');
+  $('authbtn').textContent = m==='login' ? '로그인' : '회원가입';
+  $('authhint').textContent = m==='signup' ? '가입하면 바로 시작할 수 있어요.' : '';
+  $('name').style.display = m==='signup' ? 'block' : 'none';
+  $('nameLabel').style.display = m==='signup' ? 'block' : 'none';
+  $('loginmsg').innerHTML='';
+}
+function submitAuth(){ authMode==='login' ? login() : signup(); }
+function setBusy(btn,on,txt){
+  if(!btn) return;
+  if(on){ btn.dataset.label=btn.textContent; btn.textContent=txt||'처리 중…'; btn.disabled=true; }
+  else { btn.textContent=btn.dataset.label||btn.textContent; btn.disabled=false; }
+}
+
+async function login(){
+  const email=$('email').value.trim(), password=$('pw').value;
+  const btn=$('authbtn'); setBusy(btn,true,'로그인 중…');
+  const { data, error } = await db.auth.signInWithPassword({ email, password });
+  if(error){ setBusy(btn,false); $('loginmsg').innerHTML=`<div class="msg err">${error.message}</div>`; return; }
+  enter(data.session);
+}
+async function signup(){
+  const name=$('name').value.trim();
+  const email=$('email').value.trim(), password=$('pw').value;
+  if(!name){ $('loginmsg').innerHTML=`<div class="msg err">이름을 입력하세요</div>`; return; }
+  if(!email){ $('loginmsg').innerHTML=`<div class="msg err">이메일을 입력하세요</div>`; return; }
+  if(password.length<6){ $('loginmsg').innerHTML=`<div class="msg err">비밀번호는 6자 이상이어야 해요</div>`; return; }
+  const btn=$('authbtn'); setBusy(btn,true,'가입 중…');
+  const { data, error } = await db.auth.signUp({ email, password, options:{ data:{ name } } });
+  if(error){ setBusy(btn,false); $('loginmsg').innerHTML=`<div class="msg err">${error.message}</div>`; return; }
+  if(data.session){ enter(data.session); }          // 이메일 확인 OFF → 바로 입장
+  else {                                            // 이메일 확인 ON → 안내
+    setBusy(btn,false);
+    $('loginmsg').innerHTML=`<div class="msg okmsg">가입됐어요! 이제 '로그인' 탭에서 로그인하세요.</div>`;
+    setMode('login');
+  }
+}
+async function logout(){ await db.auth.signOut(); location.reload(); }
+function showLogin(){ $('login').style.display='block'; app.style.display='none'; }
+function enter(s){ session=s; $('login').style.display='none'; app.style.display='block'; loadList(); }
+function $(id){return document.getElementById(id);}
+
+// ---------- 도서관 목록 ----------
+async function loadList(){
+  app.innerHTML=`<div class="loading"><span class="spinner"></span>불러오는 중…</div>`;
+  const [pRes,aRes]=await Promise.all([
+    db.from('passages').select('*'),
+    db.from('attempts').select('passage_id,is_correct,created_at').order('created_at',{ascending:false})
+  ]);
+  if(pRes.error){ app.innerHTML=`<div class="empty">불러오기 실패 😢<br>${pRes.error.message}</div>`; return; }
+  allP=pRes.data||[];
+
+  // 내 최신 시도 기준 오답 지문 계산
+  wrongIds=new Set();
+  if(!aRes.error && aRes.data){
+    const latest={};
+    for(const a of aRes.data){ if(!(a.passage_id in latest)) latest[a.passage_id]=a; }
+    for(const pid in latest){ if(!latest[pid].is_correct) wrongIds.add(pid); }
+  }
+
+  if(!allP.length){ app.innerHTML=`<div class="empty">아직 등록된 지문이 없어요.</div>`; renderWho(); return; }
+
+  let html='';
+  // 오답 패널
+  const wrongList=allP.filter(p=>wrongIds.has(p.id))
+    .sort((a,b)=>nat(a.book,b.book)||nat(a.unit,b.unit)||nat(a.title,b.title));
+  if(wrongList.length){
+    html+=`<div class="wrongpanel"><div class="wt">🔁 틀린 지문 다시 풀기 (${wrongList.length})</div>`;
+    for(const p of wrongList){
+      const label=[p.book,p.unit,p.title].filter(Boolean).join(' · ');
+      html+=`<button class="psg wrong" onclick="pick('${p.id}')">${esc(label)}<span class="cnt">문장 ${p.sentences.length}</span></button>`;
+    }
+    html+=`</div>`;
+  }
+
+  // 교재별 패널
+  const groups=buildGroups(allP);
+  html+=`<div class="ptitle">교재를 펼쳐 지문을 선택하세요</div>`;
+  let first=true;
+  for(const [book,units] of groups){
+    const total=Object.values(units).reduce((n,a)=>n+a.length,0);
+    html+=`<div class="book${first?' open':''}"><button class="bookh" onclick="this.closest('.book').classList.toggle('open')">
+      <span class="chev">›</span> 📕 ${esc(book)} <span class="cnt">${total}개</span></button><div class="bookbody">`;
+    for(const unit of Object.keys(units)){
+      if(unit) html+=`<div class="unith">${esc(unit)}</div>`;
+      for(const p of units[unit]){
+        const w=wrongIds.has(p.id)?' 🔁':'';
+        html+=`<button class="psg" onclick="pick('${p.id}')">${esc(p.title)}${w}<span class="cnt">문장 ${p.sentences.length}</span></button>`;
+      }
+    }
+    html+=`</div></div>`;
+    first=false;
+  }
+  app.innerHTML=html;
+  renderWho();
+  removeBar();
+}
+function renderWho(){
+  const who=document.createElement('div');
+  // 맨 위에 누구로 로그인했는지 + 로그아웃
+  const myName=session?((session.user.user_metadata&&session.user.user_metadata.name)||session.user.email):'';
+  const top=`<div class="who">${myName?esc(myName)+'님 · ':''}<a onclick="logout()">로그아웃</a></div>`;
+  app.insertAdjacentHTML('afterbegin',top);
+}
+
+function buildGroups(list){
+  const sorted=[...list].sort((a,b)=> nat(a.book,b.book)||nat(a.unit,b.unit)||nat(a.title,b.title));
+  const map=new Map();
+  for(const p of sorted){
+    const b=p.book||'미분류', u=p.unit||'';
+    if(!map.has(b)) map.set(b,{});
+    const units=map.get(b); (units[u]=units[u]||[]).push(p);
+  }
+  return map;
+}
+
+// ---------- 풀이 ----------
+function pick(id){
+  current=allP.find(p=>p.id===id); if(!current) return;
+  everWrong=new Set();
+  const sents=current.sentences;
+  let order=sents.map((t,i)=>({idx:i,text:t}));
+  state=shuffle(order, sents.length);
+  render();
+}
+function shuffle(arr,n){
+  let a=arr.slice();
+  if(n>1){ do{ for(let i=a.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[a[i],a[j]]=[a[j],a[i]];} }while(a.every((x,i)=>x.idx===i)); }
+  return a;
+}
+let _seed=(new Date().getTime?new Date().getTime():12345)%2147483647;
+function rnd(){ _seed=(_seed*16807)%2147483647; return (_seed-1)/2147483646; }
+
+// 셸(뒤로가기·제목·보드틀)은 한 번만, 이후엔 보드만 갱신 → 깜빡임·스크롤 튐 방지
+function render(checked){
+  if(!document.getElementById('boardEl')){
+    const head=[current.book,current.unit,current.title].filter(Boolean).join(' · ');
+    app.innerHTML=`
+      <button class="back" onclick="loadList()">‹ 지문 목록</button>
+      <div style="font-weight:600;margin:0 2px 12px">${esc(head)}</div>
+      <div id="done"></div>
+      <div class="board" id="boardEl"></div>`;
+  }
+  updateBoard(!!checked);
+}
+function updateBoard(checked){
+  const cards=state.map((s,i)=>{
+    let cls='cardx'; if(checked){ cls+= s.idx===i?' ok':' no'; }
+    const mark=checked?(s.idx===i?'<span class="mark ok">✓</span>':'<span class="mark no">✗</span>'):'';
+    return `<div class="${cls}" data-pos="${i}" data-idx="${s.idx}">
+      <span class="grip" aria-label="끌어서 이동">⠿</span><span class="num">${i+1}</span>
+      <span class="txt">${esc(s.text)}</span>${mark}
+      <span class="arrows">
+        <button onclick="move(${i},-1)" ${i===0?'disabled style=opacity:.3':''} aria-label="위로">▲</button>
+        <button onclick="move(${i},1)" ${i===state.length-1?'disabled style=opacity:.3':''} aria-label="아래로">▼</button>
+      </span></div>`;
+  }).join('');
+  document.getElementById('boardEl').innerHTML=cards;
+
+  let done='';
+  if(checked && state.every((s,i)=>s.idx===i)){
+    done=`<div class="done">🎉 완벽해요! 전부 맞았어요`;
+    if(everWrong.size>0) done+=`<div style="margin-top:12px"><button class="btn primary" onclick="renderReflection()">✍️ 틀렸던 문장, 왜 여기일까 써보기</button></div>`;
+    done+=`</div>`;
+  }
+  document.getElementById('done').innerHTML=done;
+
+  let bar=document.getElementById('bar');
+  if(!bar){ bar=document.createElement('div'); bar.id='bar'; bar.className='bar'; document.body.appendChild(bar); }
+  const correct=state.filter((s,i)=>s.idx===i).length;
+  const allCorrect=correct===state.length;
+  let actions;
+  if(!checked){
+    actions=`<button class="btn ghost" onclick="pick(current.id)">섞기</button>
+             <button class="btn primary" onclick="check()">확인</button>`;
+  }else if(allCorrect){
+    actions=`<button class="btn primary" onclick="pick(current.id)">새로 섞어 다시 풀기</button>`;
+  }else{
+    actions=`<button class="btn ghost" onclick="pick(current.id)">새로 섞기</button>
+             <button class="btn primary" onclick="render()">재시도</button>`;
+  }
+  bar.innerHTML=`
+    <div class="result">${checked?`<b>${correct}/${state.length}</b> 맞았어요`:'순서를 맞춘 뒤 확인하세요'}</div>
+    ${actions}`;
+  enableDrag();
+}
+function removeBar(){ const b=document.getElementById('bar'); if(b) b.remove(); }
+function move(i,dir){ const j=i+dir; if(j<0||j>=state.length) return; [state[i],state[j]]=[state[j],state[i]]; render(); }
+
+async function check(){
+  const submitted=state.map(s=>s.idx);
+  const correct=state.filter((s,i)=>s.idx===i).length;
+  const isC=correct===state.length;
+  // 자리를 틀린 문장 기록(원래 인덱스)
+  state.forEach((s,i)=>{ if(s.idx!==i) everWrong.add(s.idx); });
+  render(true);
+  // 결과 저장(정답·오답 모두)
+  const studentName=(session.user.user_metadata&&session.user.user_metadata.name)||session.user.email;
+  try{
+    await db.from('attempts').insert({
+      passage_id:current.id, score:correct, total:state.length, is_correct:isC,
+      submitted, user_id:session.user.id, student_email:session.user.email, student_name:studentName
+    });
+  }catch(e){ /* 저장 실패해도 풀이는 계속 */ }
+}
+
+// ---------- 이유 쓰기(메타인지) ----------
+function renderReflection(){
+  removeBar();
+  const targets=[...everWrong].sort((a,b)=>a-b); // 정답 순서대로
+  const head=[current.book,current.unit,current.title].filter(Boolean).join(' · ');
+  const items=targets.map(idx=>`
+    <div class="card" style="margin-bottom:10px">
+      <div style="font-size:12px;color:var(--sub)">정답 ${idx+1}번째 문장</div>
+      <div style="margin:6px 0 10px">${esc(current.sentences[idx])}</div>
+      <textarea id="r_${idx}" rows="2" placeholder="왜 이 문장이 여기에 올까요? (연결어·지시어 this/it·시제·흐름 등 근거로)"></textarea>
+    </div>`).join('');
+  app.innerHTML=`
+    <button class="back" onclick="loadList()">‹ 지문 목록</button>
+    <div style="font-weight:600;margin:0 2px 6px">${esc(head)}</div>
+    <p class="hint" style="margin:0 2px 14px">틀렸던 문장이에요. 왜 그 자리에 오는지 직접 설명해보면 훨씬 오래 남아요.</p>
+    ${items}
+    <div id="reflmsg"></div>
+    <button class="btn primary full" onclick="saveReflection()">제출하기</button>`;
+}
+
+async function saveReflection(){
+  const targets=[...everWrong].sort((a,b)=>a-b);
+  const notes=targets.map(idx=>({
+    position:idx+1, sentence:current.sentences[idx],
+    reason:(document.getElementById('r_'+idx).value||'').trim()
+  }));
+  const studentName=(session.user.user_metadata&&session.user.user_metadata.name)||session.user.email;
+  const btn=event&&event.target; setBusy(btn,true,'제출 중…');
+  const { error } = await db.from('reflections').insert({
+    passage_id:current.id, user_id:session.user.id,
+    student_email:session.user.email, student_name:studentName, notes
+  });
+  if(error){
+    setBusy(btn,false);
+    $('reflmsg').innerHTML=`<div class="msg err">저장 실패: ${error.message}</div>`;
+    return;
+  }
+  app.innerHTML=`<div class="done" style="margin-top:30px">✅ 잘 제출했어요!<br>선생님이 확인할 거예요. 수고했어요 👏</div>
+    <button class="btn ghost full" style="margin-top:16px" onclick="loadList()">지문 목록으로</button>`;
+}
+
+// 포인터 기반 드래그 — 터치(폰)·마우스(노트북) 모두 작동
+let dragEl=null;
+function enableDrag(){
+  const board=document.getElementById('boardEl'); if(!board) return;
+  board.querySelectorAll('.grip').forEach(g=>g.addEventListener('pointerdown',gripDown));
+}
+function gripDown(e){
+  e.preventDefault();
+  const grip=e.currentTarget;
+  dragEl=grip.closest('.cardx'); if(!dragEl) return;
+  dragEl.classList.add('dragging');
+  try{ grip.setPointerCapture(e.pointerId); }catch(_){}
+  grip.addEventListener('pointermove',gripMove);
+  grip.addEventListener('pointerup',gripUp);
+  grip.addEventListener('pointercancel',gripUp);
+}
+function gripMove(e){
+  if(!dragEl) return;
+  const board=document.getElementById('boardEl'); if(!board) return;
+  const y=e.clientY;
+  const cards=[...board.querySelectorAll('.cardx')];
+  const di=cards.indexOf(dragEl);
+  for(let k=0;k<cards.length;k++){
+    if(cards[k]===dragEl) continue;
+    const r=cards[k].getBoundingClientRect();
+    const mid=r.top+r.height/2;
+    if(di<k && y>mid){ board.insertBefore(dragEl,cards[k].nextSibling); break; }
+    if(di>k && y<mid){ board.insertBefore(dragEl,cards[k]); break; }
+  }
+}
+function gripUp(e){
+  const grip=e.currentTarget;
+  grip.removeEventListener('pointermove',gripMove);
+  grip.removeEventListener('pointerup',gripUp);
+  grip.removeEventListener('pointercancel',gripUp);
+  try{ grip.releasePointerCapture(e.pointerId); }catch(_){}
+  if(!dragEl) return;
+  dragEl.classList.remove('dragging');
+  const board=document.getElementById('boardEl');
+  const order=[...board.querySelectorAll('.cardx')].map(c=>+c.dataset.idx);
+  state=order.map(idx=>({idx,text:current.sentences[idx]}));
+  dragEl=null;
+  updateBoard(false); // 번호 갱신(셸 유지)
+}
+
+init();
+</script>
+</body>
+</html>
