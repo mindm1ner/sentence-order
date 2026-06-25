@@ -416,6 +416,7 @@ async function saveReflection(){
 }
 
 // 포인터 기반 드래그 — 터치(폰)·마우스(노트북) 모두 작동
+// 이벤트를 문서 전체에서 받아, 카드가 이동해도 놓기를 놓치지 않음
 let dragEl=null;
 function enableDrag(){
   const board=document.getElementById('boardEl'); if(!board) return;
@@ -423,16 +424,15 @@ function enableDrag(){
 }
 function gripDown(e){
   e.preventDefault();
-  const grip=e.currentTarget;
-  dragEl=grip.closest('.cardx'); if(!dragEl) return;
+  dragEl=e.currentTarget.closest('.cardx'); if(!dragEl) return;
   dragEl.classList.add('dragging');
-  try{ grip.setPointerCapture(e.pointerId); }catch(_){}
-  grip.addEventListener('pointermove',gripMove);
-  grip.addEventListener('pointerup',gripUp);
-  grip.addEventListener('pointercancel',gripUp);
+  document.addEventListener('pointermove',gripMove,{passive:false});
+  document.addEventListener('pointerup',gripUp);
+  document.addEventListener('pointercancel',gripUp);
 }
 function gripMove(e){
   if(!dragEl) return;
+  e.preventDefault();
   const board=document.getElementById('boardEl'); if(!board) return;
   const y=e.clientY;
   const cards=[...board.querySelectorAll('.cardx')];
@@ -441,23 +441,24 @@ function gripMove(e){
     if(cards[k]===dragEl) continue;
     const r=cards[k].getBoundingClientRect();
     const mid=r.top+r.height/2;
-    if(di<k && y>mid){ board.insertBefore(dragEl,cards[k].nextSibling); break; }
-    if(di>k && y<mid){ board.insertBefore(dragEl,cards[k]); break; }
+    if(di<k && y>mid){ board.insertBefore(dragEl,cards[k].nextSibling); renumber(board); break; }
+    if(di>k && y<mid){ board.insertBefore(dragEl,cards[k]); renumber(board); break; }
   }
 }
-function gripUp(e){
-  const grip=e.currentTarget;
-  grip.removeEventListener('pointermove',gripMove);
-  grip.removeEventListener('pointerup',gripUp);
-  grip.removeEventListener('pointercancel',gripUp);
-  try{ grip.releasePointerCapture(e.pointerId); }catch(_){}
+function renumber(board){
+  [...board.querySelectorAll('.cardx')].forEach((c,i)=>{ const n=c.querySelector('.num'); if(n) n.textContent=i+1; });
+}
+function gripUp(){
+  document.removeEventListener('pointermove',gripMove);
+  document.removeEventListener('pointerup',gripUp);
+  document.removeEventListener('pointercancel',gripUp);
   if(!dragEl) return;
   dragEl.classList.remove('dragging');
   const board=document.getElementById('boardEl');
   const order=[...board.querySelectorAll('.cardx')].map(c=>+c.dataset.idx);
   state=order.map(idx=>({idx,text:current.sentences[idx]}));
   dragEl=null;
-  updateBoard(false); // 번호 갱신(셸 유지)
+  updateBoard(false); // 상태 확정 + 번호 갱신
 }
 
 init();
