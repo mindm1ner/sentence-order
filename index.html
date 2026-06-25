@@ -194,6 +194,14 @@
   .ord .s{flex:1}
   .ord .fix{flex:0 0 auto;font-size:11px;color:var(--no);align-self:center}
   .ord.good{opacity:.55}
+  /* 확인 모달 */
+  .modal{position:fixed;inset:0;background:rgba(43,42,39,.45);display:none;
+    align-items:center;justify-content:center;z-index:60;padding:24px}
+  .modal-card{background:#fff;border-radius:18px;padding:24px 22px 18px;max-width:320px;width:100%;
+    box-shadow:0 14px 48px rgba(0,0,0,.2);text-align:center;animation:modalIn .18s ease}
+  .modal-msg{margin:4px 0 18px;font-size:15px;line-height:1.6;color:var(--ink)}
+  .modal-btns{display:flex;gap:8px}
+  @keyframes modalIn{from{transform:scale(.94);opacity:0}to{transform:scale(1);opacity:1}}
 </style>
 </head>
 <body>
@@ -468,10 +476,33 @@ function showMyRecord(pid){
   html+=`<button class="btn primary full" style="margin-top:14px;margin-bottom:80px" onclick="pick('${p.id}')">이 지문 다시 풀기</button>`;
   app.innerHTML=html;
 }
+// 커스텀 확인 모달
+let _modalYes=null;
+function confirmModal(msg, onYes){
+  let el=document.getElementById('cmodal');
+  if(!el){ el=document.createElement('div'); el.id='cmodal'; el.className='modal'; document.body.appendChild(el); }
+  el.innerHTML=`<div class="modal-card">
+    <p class="modal-msg">${msg}</p>
+    <div class="modal-btns">
+      <button class="btn ghost" style="flex:1" onclick="closeModal()">계속 풀기</button>
+      <button class="btn primary" style="flex:1" onclick="closeModal(true)">나가기</button>
+    </div>
+  </div>`;
+  el.style.display='flex';
+  el.onclick=(e)=>{ if(e.target===el) closeModal(); };
+  _modalYes=onYes;
+}
+function closeModal(yes){
+  const el=document.getElementById('cmodal'); if(el) el.style.display='none';
+  const cb=_modalYes; _modalYes=null;
+  if(yes && cb) cb();
+}
+
 // 풀이 화면 떠나기 가드
 function tryLeave(go){
   if(solving && !(state.length && state.every((s,i)=>s.idx===i))){
-    if(!confirm('아직 다 맞히지 못했어요. 나가면 지금 배열은 저장되지 않아요. 나갈까요?')) return;
+    confirmModal('아직 다 맞히지 못했어요.<br>나가면 지금 배열은 저장되지 않아요.', ()=>{ solving=false; go(); });
+    return;
   }
   solving=false; go();
 }
