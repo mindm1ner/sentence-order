@@ -90,9 +90,9 @@
   .cardx.no{background:var(--no-bg);border-color:#eecbc4}
   .cardx.no .num{background:var(--no);color:#fff}
 
-  .bar{position:fixed;left:0;right:0;bottom:0;background:rgba(246,245,241,.92);
+  .bar{position:fixed;left:0;right:0;bottom:58px;background:rgba(246,245,241,.96);
     backdrop-filter:blur(8px);border-top:1px solid var(--line);padding:12px 18px;
-    display:flex;gap:10px;max-width:640px;margin:0 auto;align-items:center}
+    display:flex;gap:10px;max-width:640px;margin:0 auto;align-items:center;z-index:21}
   .bar .result{flex:1;font-size:14px;color:var(--sub)}
   .bar .result b{color:var(--ink)}
   .btn{border:none;border-radius:12px;padding:13px 18px;font-size:15px;font-weight:600;cursor:pointer}
@@ -182,6 +182,18 @@
     padding:16px 8px;text-align:center;box-shadow:var(--shadow)}
   .stat b{display:block;font-size:24px;color:var(--ink)}
   .stat span{font-size:12px;color:var(--sub)}
+  /* 내 기록 상세 */
+  .rec{border:1px solid #eecbc4;background:var(--no-bg);border-radius:14px;padding:12px 14px;margin-bottom:10px}
+  .rec.solved{border-color:#bfe0cf;background:var(--accent-soft)}
+  .rec .rh{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600}
+  .rec .badge{font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;color:#fff;background:var(--no)}
+  .rec .badge.ok{background:var(--accent)}
+  .rec .when{margin-left:auto;font-size:11px;color:var(--sub);font-weight:500}
+  .ord{display:flex;gap:8px;font-size:13px;padding:6px 9px;border-radius:8px;margin-top:6px;background:#fff}
+  .ord .p{flex:0 0 20px;text-align:center;color:var(--sub);font-size:12px;align-self:center}
+  .ord .s{flex:1}
+  .ord .fix{flex:0 0 auto;font-size:11px;color:var(--no);align-self:center}
+  .ord.good{opacity:.55}
 </style>
 </head>
 <body>
@@ -216,16 +228,16 @@
 
 <!-- 하단 탭바 -->
 <div id="tabbar" class="tabbar" style="display:none">
-  <button class="tab active" data-t="play" onclick="showTab('play')"><svg class="ic" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg><span>풀기</span></button>
-  <button class="tab" data-t="wrong" onclick="showTab('wrong')"><svg class="ic" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg><span>오답노트</span></button>
-  <button class="tab" data-t="me" onclick="showTab('me')"><svg class="ic" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span>내 기록</span></button>
+  <button class="tab active" data-t="play" onclick="navTab('play')"><svg class="ic" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg><span>풀기</span></button>
+  <button class="tab" data-t="wrong" onclick="navTab('wrong')"><svg class="ic" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg><span>오답노트</span></button>
+  <button class="tab" data-t="me" onclick="navTab('me')"><svg class="ic" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span>내 기록</span></button>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script>
 const app=document.getElementById('app');
-let state=[], current=null, allP=[], session=null, wrongIds=new Set(), myAtts=[];
+let state=[], current=null, allP=[], session=null, wrongIds=new Set(), myAtts=[], solving=false;
 let everWrong=new Set();   // 이번 세션에서 한 번이라도 자리를 틀린 문장(원래 인덱스)
 
 function nat(a,b){return String(a||'').localeCompare(String(b||''),'ko',{numeric:true,sensitivity:'base'});}
@@ -419,18 +431,52 @@ function renderMe(){
   </div>`;
   if(!myAtts.length){ html+=`<div class="empty">아직 푼 기록이 없어요.<br>‘풀기’에서 시작해보세요!</div>`; }
   else{
-    const solvedList=allP.filter(p=>latest[p.id]&&latest[p.id].is_correct)
+    const attemptedList=allP.filter(p=>latest[p.id])
       .sort((a,b)=>nat(a.book,b.book)||nat(a.unit,b.unit)||nat(a.title,b.title));
-    if(solvedList.length){
-      html+=`<div class="ptitle" style="margin-top:18px">${ic('check','ok')} 해결한 지문</div>`;
-      for(const p of solvedList){
-        const label=[p.book,p.unit,p.title].filter(Boolean).join(' · ');
-        html+=`<button class="psg" onclick="pick('${p.id}')">${esc(label)}</button>`;
-      }
+    html+=`<div class="ptitle" style="margin-top:18px">지문별 기록 (눌러서 풀이 보기)</div>`;
+    for(const p of attemptedList){
+      const ok=latest[p.id].is_correct;
+      const label=[p.book,p.unit,p.title].filter(Boolean).join(' · ');
+      html+=`<button class="psg" onclick="showMyRecord('${p.id}')">${esc(label)}<span class="cnt">${ok?ic('check','ok'):ic('rotate','warn')}</span></button>`;
     }
   }
   app.innerHTML=html;
 }
+function fmt(ts){ try{const d=new Date(ts);return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;}catch(e){return '';} }
+function myOrderLines(p,a){
+  return (a.submitted||[]).map((origIdx,pos)=>{
+    const ok=origIdx===pos;
+    return `<div class="ord ${ok?'good':''}"><span class="p">${pos+1}</span>
+      <span class="s">${esc(p.sentences[origIdx]||'')}</span>
+      ${ok?'':`<span class="fix">→ ${origIdx+1}번</span>`}</div>`;
+  }).join('');
+}
+function showMyRecord(pid){
+  const p=allP.find(x=>x.id===pid); if(!p) return;
+  removeBar(); showTabBar(true);
+  const list=myAtts.filter(a=>a.passage_id===pid).slice().reverse(); // 시간순
+  const label=[p.book,p.unit,p.title].filter(Boolean).join(' · ');
+  let html=`<button class="back" onclick="showTab('me')">‹ 내 기록</button>
+    <div style="font-weight:600;margin:0 2px 12px">${esc(label)}</div>`;
+  if(!list.length) html+=`<div class="empty">이 지문 기록이 없어요.</div>`;
+  else list.forEach((a,n)=>{
+    html+=`<div class="rec ${a.is_correct?'solved':''}">
+      <div class="rh"><span class="badge ${a.is_correct?'ok':''}">${a.is_correct?'정답':'오답'} ${a.score}/${a.total}</span>
+        <span class="when">${n+1}차 · ${fmt(a.created_at)}</span></div>
+      <div style="margin-top:6px">${myOrderLines(p,a)}</div></div>`;
+  });
+  html+=`<button class="btn primary full" style="margin-top:14px;margin-bottom:80px" onclick="pick('${p.id}')">이 지문 다시 풀기</button>`;
+  app.innerHTML=html;
+}
+// 풀이 화면 떠나기 가드
+function tryLeave(go){
+  if(solving && !(state.length && state.every((s,i)=>s.idx===i))){
+    if(!confirm('아직 다 맞히지 못했어요. 나가면 지금 배열은 저장되지 않아요. 나갈까요?')) return;
+  }
+  solving=false; go();
+}
+function leaveSolve(){ tryLeave(()=>loadData()); }
+function navTab(t){ if(solving) tryLeave(()=>{ curTab=t; loadData(); }); else showTab(t); }
 
 function buildGroups(list){
   const sorted=[...list].sort((a,b)=> nat(a.book,b.book)||nat(a.unit,b.unit)||nat(a.title,b.title));
@@ -446,7 +492,7 @@ function buildGroups(list){
 // ---------- 풀이 ----------
 function pick(id){
   current=allP.find(p=>p.id===id); if(!current) return;
-  showTabBar(false);
+  solving=true; showTabBar(true);
   everWrong=new Set();
   const sents=current.sentences;
   let order=sents.map((t,i)=>({idx:i,text:t}));
@@ -466,10 +512,11 @@ function render(checked){
   if(!document.getElementById('boardEl')){
     const head=[current.book,current.unit,current.title].filter(Boolean).join(' · ');
     app.innerHTML=`
-      <button class="back" onclick="loadData()">‹ 지문 목록</button>
+      <button class="back" onclick="leaveSolve()">‹ 지문 목록</button>
       <div style="font-weight:600;margin:0 2px 12px">${esc(head)}</div>
       <div id="done"></div>
-      <div class="board" id="boardEl"></div>`;
+      <div class="board" id="boardEl"></div>
+      <div style="height:150px"></div>`;
   }
   updateBoard(!!checked);
 }
@@ -536,7 +583,7 @@ async function check(){
 
 // ---------- 이유 쓰기(메타인지) ----------
 function renderReflection(){
-  removeBar();
+  solving=false; removeBar();
   const targets=[...everWrong].sort((a,b)=>a-b); // 정답 순서대로
   const head=[current.book,current.unit,current.title].filter(Boolean).join(' · ');
   const items=targets.map(idx=>`
