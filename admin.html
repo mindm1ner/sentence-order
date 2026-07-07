@@ -142,6 +142,7 @@
         <button class="navbtn" data-v="stats" onclick="showView('stats')"><svg class="ic" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>통계</button>
         <button class="navbtn" data-v="records" onclick="showView('records')"><svg class="ic" viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>학생 기록</button>
         <button class="navbtn" data-v="reflections" onclick="showView('reflections')"><svg class="ic" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>이유</button>
+        <button class="navbtn" data-v="readings" onclick="showView('readings')"><svg class="ic" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>독해</button>
       </nav>
 
       <main class="main">
@@ -195,6 +196,11 @@
         <section class="view" data-view="reflections">
           <h2 class="vtitle">학생이 쓴 이유 (메타인지)</h2>
           <div id="reflections"></div>
+        </section>
+
+        <section class="view" data-view="readings">
+          <h2 class="vtitle">학생 독해 · 해석 · 단어장</h2>
+          <div id="readings"></div>
         </section>
       </main>
     </div>
@@ -291,6 +297,7 @@ async function loadAll(){
   loadStats();
   loadRecords();
   loadReflections();
+  loadReadings();
 }
 
 // ---------- 지문별 난이도 통계 ----------
@@ -452,6 +459,38 @@ async function loadReflections(){
       <div style="margin-top:8px">${items}</div></div>`;
   }
   $('reflections').innerHTML=html;
+}
+
+// ---------- 학생 독해 · 해석 · 단어장 ----------
+async function loadReadings(){
+  const { data:rs, error } = await db.from('readings').select('*').order('created_at',{ascending:false});
+  if(error){ $('readings').innerHTML=`<div class="msg err">독해 표(readings)가 아직 없어요. SQL을 실행했는지 확인하세요.<br>${error.message}</div>`; return; }
+  if(!rs || !rs.length){ $('readings').innerHTML='<p class="sub">아직 학생이 독해한 기록이 없어요.</p>'; return; }
+  let html='';
+  for(const r of rs){
+    const p=allP.find(x=>x.id===r.passage_id);
+    const label=p?[p.book,p.unit,p.title].filter(Boolean).join(' · '):'(삭제된 지문)';
+    const who=r.student_name||r.student_email||'학생';
+    const lines=(r.interpretations||[]).map(it=>{
+      const marks=(it.unknown_words||[]);
+      return `<div class="ord">
+        <span class="p">${(it.index!=null?it.index:0)+1}</span>
+        <span class="s"><b>${esc(it.sentence||'')}</b><br>
+          <span style="color:var(--sub)">해석 → ${esc(it.my_reading||'(미작성)')}</span>
+          ${it.reaction?`<br><span style="color:#c98a2b">반응 → ${esc(it.reaction)}</span>`:''}
+          ${marks.length?`<br><span style="font-size:11px;color:var(--no)">모르는 단어: ${marks.map(esc).join(', ')}</span>`:''}
+        </span></div>`;
+    }).join('');
+    const allWords=[...new Set((r.interpretations||[]).flatMap(it=>it.unknown_words||[]))];
+    html+=`<div class="rec solved">
+      <div class="rh"><span class="badge">독해</span> ${esc(who)} · ${esc(label)}<span class="when">${fmt(r.created_at)}</span></div>
+      <div style="margin-top:8px;font-size:13px;background:#fff;border-radius:8px;padding:8px 10px"><b>주제:</b> ${esc(r.topic||'(미작성)')}</div>
+      <span class="toggle" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display==='none'?'block':'none'">문장별 해석 보기 ▾</span>
+      <div style="display:none;margin-top:6px">${lines}</div>
+      ${allWords.length?`<div style="margin-top:10px;font-size:12px;color:var(--sub)">📒 표시한 단어 ${allWords.length}개: ${allWords.map(esc).join(', ')}</div>`:''}
+    </div>`;
+  }
+  $('readings').innerHTML=html;
 }
 
 // ---------- 수정 / 삭제 ----------

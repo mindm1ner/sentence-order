@@ -9,7 +9,7 @@
     --bg:#f6f5f1; --card:#ffffff; --ink:#2b2a27; --sub:#8a877f;
     --line:#e7e4dc; --accent:#3a7d5d; --accent-soft:#e4f0e9;
     --ok:#3a7d5d; --ok-bg:#e4f0e9; --no:#c0584b; --no-bg:#f7e6e3;
-    --warn:#c98a2b; --warn-bg:#f8efdd;
+    --warn:#c98a2b; --warn-bg:#f8efdd; --hl:#ffe9a8;
     --shadow:0 1px 2px rgba(0,0,0,.04),0 6px 18px rgba(0,0,0,.05);
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -202,6 +202,39 @@
   .modal-msg{margin:4px 0 18px;font-size:15px;line-height:1.6;color:var(--ink)}
   .modal-btns{display:flex;gap:8px}
   @keyframes modalIn{from{transform:scale(.94);opacity:0}to{transform:scale(1);opacity:1}}
+
+  /* ---------- 독해 모드 ---------- */
+  .rprog{display:flex;align-items:center;gap:10px;margin:2px 2px 14px}
+  .rprog .bar2{flex:1;height:7px;background:var(--line);border-radius:999px;overflow:hidden}
+  .rprog .fill2{height:100%;background:var(--accent);border-radius:999px;transition:width .25s}
+  .rprog .cnt{font-size:12px;color:var(--sub);font-weight:600;flex:0 0 auto}
+  .rsent{background:var(--card);border:1px solid var(--line);border-radius:16px;
+    padding:20px 18px;box-shadow:var(--shadow);font-size:19px;line-height:1.95;
+    letter-spacing:-.01em;margin-bottom:4px}
+  .rword{cursor:pointer;border-radius:5px;padding:1px 1px;transition:background .12s;
+    -webkit-tap-highlight-color:transparent}
+  .rword:hover{background:#efece4}
+  .rword.mark{background:var(--hl);box-shadow:inset 0 -2px 0 #f2c94c}
+  .rword.mark:hover{background:var(--hl)}
+  .rhelp{font-size:12px;color:var(--sub);margin:9px 4px 14px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .rinput{width:100%;min-height:72px;border:1px solid var(--line);border-radius:12px;
+    padding:13px 14px;font-size:15px;font-family:inherit;line-height:1.6;background:var(--card);color:var(--ink)}
+  .rinput:focus{outline:none;border-color:var(--accent)}
+  .rrecap{margin-top:4px}
+  .rritem{border:1px solid var(--line);background:var(--card);border-radius:12px;padding:11px 14px;margin-bottom:8px}
+  .rritem .en{font-size:14px}
+  .rritem .ko{font-size:13px;color:var(--accent);margin-top:6px;padding-top:7px;border-top:1px dashed var(--line)}
+  .rritem .re{font-size:13px;color:var(--warn);margin-top:5px}
+  .rritem .lb{font-size:11px;font-weight:700;opacity:.7;margin-right:5px}
+  /* 단어장 */
+  .vocab{border:1px solid #f0d9b8;background:#fff;border-radius:12px;padding:11px 14px;margin-bottom:8px}
+  .vocab .w{font-size:16px;font-weight:700;color:var(--ink)}
+  .vocab .ex{font-size:13px;color:var(--sub);margin-top:5px;line-height:1.6}
+  .vocab .ex mark{background:var(--hl);padding:0 2px;border-radius:3px;color:var(--ink)}
+  .vocabbtn{display:flex;align-items:center;gap:9px;width:100%;text-align:left;background:var(--card);
+    border:1px solid #f0d9b8;border-radius:12px;padding:13px 15px;font-size:14px;color:var(--ink);
+    cursor:pointer;margin-bottom:14px;font-weight:600;box-shadow:var(--shadow)}
+  .vocabbtn .cnt{margin-left:auto;color:var(--warn);font-weight:700}
 </style>
 </head>
 <body>
@@ -236,7 +269,8 @@
 
 <!-- 하단 탭바 -->
 <div id="tabbar" class="tabbar" style="display:none">
-  <button class="tab active" data-t="play" onclick="navTab('play')"><svg class="ic" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg><span>풀기</span></button>
+  <button class="tab active" data-t="play" onclick="navTab('play')"><svg class="ic" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg><span>순서</span></button>
+  <button class="tab" data-t="read" onclick="navTab('read')"><svg class="ic" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg><span>독해</span></button>
   <button class="tab" data-t="wrong" onclick="navTab('wrong')"><svg class="ic" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg><span>오답노트</span></button>
   <button class="tab" data-t="me" onclick="navTab('me')"><svg class="ic" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span>내 기록</span></button>
 </div>
@@ -247,6 +281,9 @@
 const app=document.getElementById('app');
 let state=[], current=null, allP=[], session=null, wrongIds=new Set(), myAtts=[], solving=false;
 let everWrong=new Set();   // 이번 세션에서 한 번이라도 자리를 틀린 문장(원래 인덱스)
+// 독해 모드
+let myReadings=[], vocab=[], readIds=new Set();
+let rP=null, rIdx=0, rInterp=[], rReact=[], rMarks=[], rTopic='', rActive=false;
 
 function nat(a,b){return String(a||'').localeCompare(String(b||''),'ko',{numeric:true,sensitivity:'base'});}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
@@ -254,7 +291,9 @@ const PATHS={
   book:'<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
   rotate:'<polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>',
   check:'<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
-  edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/>'
+  edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+  cursor:'<path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/>',
+  bookmark:'<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>'
 };
 function ic(name,extra){return `<svg class="ic ${extra||''}" viewBox="0 0 24 24">${PATHS[name]||''}</svg>`;}
 
@@ -366,13 +405,16 @@ function $(id){return document.getElementById(id);}
 let curTab='play';
 async function loadData(){
   app.innerHTML=`<div class="loading"><span class="spinner"></span>불러오는 중…</div>`;
-  const [pRes,aRes]=await Promise.all([
+  const [pRes,aRes,rRes]=await Promise.all([
     db.from('passages').select('*'),
-    db.from('attempts').select('*').order('created_at',{ascending:false})
+    db.from('attempts').select('*').order('created_at',{ascending:false}),
+    db.from('readings').select('*').order('created_at',{ascending:false})
   ]);
   if(pRes.error){ app.innerHTML=`<div class="empty">불러오기 실패 😢<br>${pRes.error.message}</div>`; return; }
   allP=pRes.data||[];
   myAtts=(!aRes.error&&aRes.data)?aRes.data:[];
+  myReadings=(!rRes.error&&rRes.data)?rRes.data:[];   // readings 표 없으면 조용히 빈 배열
+  readIds=new Set(myReadings.map(r=>r.passage_id));
   // 내 최신 시도 기준 오답 지문
   wrongIds=new Set();
   const latest={};
@@ -387,6 +429,7 @@ function showTab(t){
   removeBar(); showTabBar(true);
   if(t==='wrong') renderWrong();
   else if(t==='me') renderMe();
+  else if(t==='read') renderRead();
   else renderLibrary();
 }
 function topBar(){
@@ -437,7 +480,7 @@ function renderMe(){
     <div class="stat"><b>${solved}</b><span>해결</span></div>
     <div class="stat"><b>${acc}%</b><span>정답률</span></div>
   </div>`;
-  if(!myAtts.length){ html+=`<div class="empty">아직 푼 기록이 없어요.<br>‘풀기’에서 시작해보세요!</div>`; }
+  if(!myAtts.length){ html+=`<div class="empty">아직 푼 기록이 없어요.<br>‘순서’에서 시작해보세요!</div>`; }
   else{
     const attemptedList=allP.filter(p=>latest[p.id])
       .sort((a,b)=>nat(a.book,b.book)||nat(a.unit,b.unit)||nat(a.title,b.title));
@@ -500,6 +543,10 @@ function closeModal(yes){
 
 // 풀이 화면 떠나기 가드
 function tryLeave(go){
+  if(rActive){
+    confirmModal('독해를 아직 제출하지 않았어요.<br>나가면 지금 쓴 해석은 저장되지 않아요.', ()=>{ rActive=false; go(); });
+    return;
+  }
   if(solving && !(state.length && state.every((s,i)=>s.idx===i))){
     confirmModal('아직 다 맞히지 못했어요.<br>나가면 지금 배열은 저장되지 않아요.', ()=>{ solving=false; go(); });
     return;
@@ -507,7 +554,8 @@ function tryLeave(go){
   solving=false; go();
 }
 function leaveSolve(){ tryLeave(()=>loadData()); }
-function navTab(t){ if(solving) tryLeave(()=>{ curTab=t; loadData(); }); else showTab(t); }
+function leaveRead(){ tryLeave(()=>{ curTab='read'; loadData(); }); }
+function navTab(t){ if(solving||rActive) tryLeave(()=>{ curTab=t; loadData(); }); else showTab(t); }
 
 function buildGroups(list){
   const sorted=[...list].sort((a,b)=> nat(a.book,b.book)||nat(a.unit,b.unit)||nat(a.title,b.title));
@@ -697,6 +745,199 @@ function gripUp(){
   state=order.map(idx=>({idx,text:current.sentences[idx]}));
   dragEl=null;
   updateBoard(false); // 상태 확정 + 번호 갱신
+}
+
+// ================= 독해 모드 =================
+function cleanWord(t){ return String(t).replace(/^[^A-Za-z0-9']+|[^A-Za-z0-9']+$/g,''); }
+function placeCaretEnd(el){ try{ el.selectionStart=el.selectionEnd=el.value.length; }catch(_){} }
+function hlWord(sentence,w){
+  const safe=esc(sentence);
+  if(!w) return safe;
+  try{
+    const re=new RegExp('('+w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');
+    return safe.replace(re,'<mark>$1</mark>');
+  }catch(e){ return safe; }
+}
+
+// ----- 독해 도서관 + 단어장 버튼 -----
+function renderRead(){
+  buildVocab();
+  let html=topBar()+`<div class="ptitle">한 문장씩 읽고, 내 말로 해석해봐요</div>`;
+  html+=`<button class="vocabbtn" onclick="showVocab()">${ic('bookmark','warn')} 내 단어장 <span class="cnt">${vocab.length}개 ›</span></button>`;
+  if(!allP.length){ html+=`<div class="empty">아직 등록된 지문이 없어요.</div>`; app.innerHTML=html; return; }
+  const groups=buildGroups(allP);
+  let first=true;
+  for(const [book,units] of groups){
+    const total=Object.values(units).reduce((n,a)=>n+a.length,0);
+    html+=`<div class="book${first?' open':''}"><button class="bookh" onclick="this.closest('.book').classList.toggle('open')">
+      <span class="chev">›</span> ${ic('book','muted')} ${esc(book)} <span class="cnt">${total}개</span></button><div class="bookbody">`;
+    for(const unit of Object.keys(units)){
+      if(unit) html+=`<div class="unith">${esc(unit)}</div>`;
+      for(const p of units[unit]){
+        const done=readIds.has(p.id)?' '+ic('check','sm ok'):'';
+        html+=`<button class="psg" onclick="pickRead('${p.id}')">${esc(p.title)}${done}<span class="cnt">문장 ${p.sentences.length}</span></button>`;
+      }
+    }
+    html+=`</div></div>`;
+    first=false;
+  }
+  app.innerHTML=html;
+}
+
+// ----- 단어장(전체 모아보기) -----
+function buildVocab(){
+  const seen=new Map();
+  for(const r of myReadings){
+    for(const it of (r.interpretations||[])){
+      for(const w of (it.unknown_words||[])){
+        const k=String(w).toLowerCase().trim(); if(!k) continue;
+        if(!seen.has(k)) seen.set(k,{w:String(w), ex:it.sentence||''});
+      }
+    }
+  }
+  vocab=[...seen.values()].sort((a,b)=>a.w.toLowerCase().localeCompare(b.w.toLowerCase()));
+}
+function showVocab(){
+  buildVocab(); removeBar(); showTabBar(true);
+  let html=`<button class="back" onclick="showTab('read')">‹ 독해</button>
+    <div style="font-weight:600;margin:0 2px 12px">내 단어장</div>`;
+  if(!vocab.length){
+    html+=`<div class="empty">아직 표시한 단어가 없어요.<br>독해하면서 모르는 단어를 눌러 형광펜 표시해봐요.</div>`;
+  }else{
+    html+=`<div class="ptitle">독해하며 표시한 단어 ${vocab.length}개</div>`;
+    html+=vocab.map(v=>`<div class="vocab"><div class="w">${esc(v.w)}</div><div class="ex">${hlWord(v.ex,v.w)}</div></div>`).join('');
+  }
+  app.innerHTML=html;
+}
+
+// ----- 독해 풀이 -----
+function pickRead(id){
+  rP=allP.find(p=>p.id===id); if(!rP) return;
+  rIdx=0; rInterp=[]; rReact=[]; rMarks=[]; rTopic=''; rActive=true;
+  removeBar(); showTabBar(true);
+  renderReadStep();
+}
+function renderReadStep(){
+  const N=rP.sentences.length;
+  const toks=rP.sentences[rIdx].split(/\s+/);
+  const marked=new Set((rMarks[rIdx]||[]).map(m=>m.i));
+  const words=toks.map((t,wi)=>`<span class="rword${marked.has(wi)?' mark':''}" onclick="toggleWord(${wi})">${esc(t)}</span>`).join(' ');
+  const head=[rP.book,rP.unit,rP.title].filter(Boolean).join(' · ');
+  const last=rIdx+1>=N;
+  app.innerHTML=`
+    <button class="back" onclick="leaveRead()">‹ 지문 목록</button>
+    <div style="font-weight:600;margin:0 2px 12px">${esc(head)}</div>
+    <div class="rprog"><div class="bar2"><div class="fill2" style="width:${rIdx/N*100}%"></div></div><span class="cnt">${rIdx+1} / ${N}</span></div>
+    <div class="rsent" id="rsent">${words}</div>
+    <div class="rhelp" id="rhelp"></div>
+    <label style="margin-top:2px">① 이 문장, 내 말로 해석해보기</label>
+    <textarea class="rinput" id="rinput" placeholder="예: 이 문장은 ~라는 뜻인 것 같아 (엔터 → 아래 반응칸)">${esc(rInterp[rIdx]||'')}</textarea>
+    <label style="margin-top:12px">② 그 해석에 대한 내 생각·반응 <span class="hint">(선택 — 엔터로 다음 문장)</span></label>
+    <textarea class="rinput" id="rreact" placeholder="예: 이건 좀 의외인데? / 내 경험이랑 비슷해 / 왜 그럴까?">${esc(rReact[rIdx]||'')}</textarea>
+    <div id="rmsg"></div>
+    <button class="btn primary full" style="margin-top:12px" onclick="readNext()">${last?'주제 쓰러 가기 →':'다음 문장 →'}</button>
+    ${rIdx>0?`<button class="btn ghost full" style="margin-top:8px" onclick="readPrev()">← 이전 문장</button>`:''}
+    <div style="height:40px"></div>`;
+  updateMarkHelp();
+  const inp=$('rinput'), rea=$('rreact');
+  if(inp){ inp.addEventListener('keydown',readKey); inp.focus(); placeCaretEnd(inp); }
+  if(rea){ rea.addEventListener('keydown',readKey); }
+}
+function updateMarkHelp(){
+  const el=$('rhelp'); if(!el) return;
+  const c=(rMarks[rIdx]||[]).length;
+  el.innerHTML=`${ic('cursor','muted')} 모르는 단어를 눌러 형광펜으로 표시해요${c?` · <span style="color:var(--warn)">${c}개 표시됨</span>`:''}`;
+}
+function toggleWord(wi){
+  const marks=rMarks[rIdx]||(rMarks[rIdx]=[]);
+  const at=marks.findIndex(m=>m.i===wi);
+  const span=document.querySelectorAll('#rsent .rword')[wi];
+  if(at>=0){ marks.splice(at,1); if(span) span.classList.remove('mark'); }
+  else{
+    const w=cleanWord(rP.sentences[rIdx].split(/\s+/)[wi]);
+    if(!w) return;                       // 순수 기호는 표시 안 함
+    marks.push({i:wi,w}); if(span) span.classList.add('mark');
+  }
+  updateMarkHelp();
+}
+function readKey(e){
+  if(e.isComposing) return;              // 한글 입력 중이면 무시
+  const t=e.target, onRead=(t.id==='rinput');   // 해석칸이면 반응칸으로, 반응칸이면 다음 문장
+  const go=()=>{ onRead ? focusReact() : readNext(); };
+  if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); go(); }
+  else if(e.key==='ArrowRight'){
+    if(t.selectionStart===t.value.length && t.selectionStart===t.selectionEnd){ e.preventDefault(); go(); }
+  }
+}
+function focusReact(){ const r=$('rreact'); if(r){ r.focus(); placeCaretEnd(r); } }
+function saveReadInputs(){
+  const inp=$('rinput'), rea=$('rreact');
+  if(inp) rInterp[rIdx]=inp.value.trim();
+  if(rea) rReact[rIdx]=rea.value.trim();
+}
+function readNext(){
+  const inp=$('rinput'); const val=(inp?inp.value:'').trim();
+  if(!val){ $('rmsg').innerHTML=`<div class="msg err">이 문장을 내 말로 한 마디라도 적어야 넘어갈 수 있어요.</div>`; if(inp) inp.focus(); return; }
+  saveReadInputs();
+  if(rIdx+1<rP.sentences.length){ rIdx++; renderReadStep(); window.scrollTo({top:0}); }
+  else renderTopic();
+}
+function readPrev(){
+  saveReadInputs();
+  if(rIdx>0){ rIdx--; renderReadStep(); window.scrollTo({top:0}); }
+}
+function renderTopic(){
+  const head=[rP.book,rP.unit,rP.title].filter(Boolean).join(' · ');
+  const recap=rP.sentences.map((s,i)=>`<div class="rritem"><div class="en">${esc(s)}</div>
+    <div class="ko"><span class="lb">해석</span>${esc(rInterp[i]||'')}</div>
+    ${rReact[i]?`<div class="re"><span class="lb">반응</span>${esc(rReact[i])}</div>`:''}</div>`).join('');
+  app.innerHTML=`
+    <button class="back" onclick="backToLast()">‹ 마지막 문장</button>
+    <div style="font-weight:600;margin:0 2px 12px">${esc(head)}</div>
+    <div class="rprog"><div class="bar2"><div class="fill2" style="width:100%"></div></div><span class="cnt">주제 쓰기</span></div>
+    <p class="hint" style="margin:0 2px 12px">문장을 다 읽었어요! 전체 흐름을 보고 <b>이 글의 주제</b>를 한 문장으로 정리해봐요.</p>
+    <div class="rrecap">${recap}</div>
+    <label style="margin-top:14px">이 글의 주제 (한 문장)</label>
+    <textarea class="rinput" id="rtopic" placeholder="예: 이 글은 ~에 대해 말하고 있다">${esc(rTopic||'')}</textarea>
+    <div id="rmsg"></div>
+    <button class="btn primary full" onclick="submitReading()">제출하기</button>
+    <div style="height:40px"></div>`;
+  const t=$('rtopic'); if(t){ t.focus(); placeCaretEnd(t); }
+}
+function backToLast(){ const t=$('rtopic'); if(t) rTopic=t.value.trim(); rIdx=rP.sentences.length-1; renderReadStep(); window.scrollTo({top:0}); }
+async function submitReading(){
+  const t=$('rtopic'); const topic=(t?t.value:'').trim();
+  if(!topic){ $('rmsg').innerHTML=`<div class="msg err">이 글의 주제를 한 문장으로 적어주세요.</div>`; if(t) t.focus(); return; }
+  rTopic=topic;
+  const interpretations=rP.sentences.map((s,i)=>({
+    index:i, sentence:s, my_reading:rInterp[i]||'', reaction:rReact[i]||'',
+    unknown_words:(rMarks[i]||[]).map(m=>m.w)
+  }));
+  const studentName=(session.user.user_metadata&&session.user.user_metadata.name)||session.user.email;
+  const btn=event&&event.target; setBusy(btn,true,'제출 중…');
+  const { error } = await db.from('readings').insert({
+    passage_id:rP.id, user_id:session.user.id,
+    student_email:session.user.email, student_name:studentName,
+    interpretations, topic
+  });
+  if(error){ setBusy(btn,false); $('rmsg').innerHTML=`<div class="msg err">저장 실패: ${error.message}</div>`; return; }
+  rActive=false;
+  showReadDone();
+}
+function showReadDone(){
+  const uniq=[], seen=new Set();
+  rP.sentences.forEach((s,i)=>{
+    (rMarks[i]||[]).forEach(m=>{ const k=m.w.toLowerCase(); if(!seen.has(k)){ seen.add(k); uniq.push({w:m.w,ex:s}); } });
+  });
+  const vhtml=uniq.length
+    ? uniq.map(x=>`<div class="vocab"><div class="w">${esc(x.w)}</div><div class="ex">${hlWord(x.ex,x.w)}</div></div>`).join('')
+    : `<p class="hint" style="margin:8px 2px">이번엔 표시한 단어가 없었어요.</p>`;
+  app.innerHTML=`
+    <div class="done" style="margin-top:20px">${ic('check','ok')} 독해 완료! 잘했어요<br><span style="font-weight:400;font-size:13px">선생님이 해석을 확인할 거예요</span></div>
+    <div class="ptitle" style="margin-top:22px">${ic('bookmark','warn')} 오늘 표시한 단어 (내 단어장에 담겼어요)</div>
+    ${vhtml}
+    <button class="btn primary full" style="margin-top:14px" onclick="loadData()">지문 목록으로</button>
+    <div style="height:40px"></div>`;
 }
 
 init();
