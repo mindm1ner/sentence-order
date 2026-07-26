@@ -212,10 +212,19 @@
     padding:20px 18px;box-shadow:var(--shadow);font-size:19px;line-height:1.95;
     letter-spacing:-.01em;margin-bottom:4px}
   .rword{cursor:pointer;border-radius:5px;padding:1px 1px;transition:background .12s;
-    -webkit-tap-highlight-color:transparent}
+    -webkit-tap-highlight-color:transparent;position:relative}
   .rword:hover{background:#efece4}
   .rword.mark{background:var(--hl);box-shadow:inset 0 -2px 0 #f2c94c}
   .rword.mark:hover{background:var(--hl)}
+  /* 단어장에 뜻이 있는 단어: 점선 밑줄 + 커서 올리면 뜻 말풍선 */
+  .rword.known{border-bottom:2px dotted #cdbf9a}
+  .rword.known:hover::after{content:attr(data-mean);position:absolute;bottom:calc(100% + 5px);
+    left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;font-size:12px;
+    font-weight:500;line-height:1.4;padding:5px 10px;border-radius:8px;white-space:nowrap;
+    max-width:220px;overflow:hidden;text-overflow:ellipsis;z-index:6;pointer-events:none;
+    box-shadow:0 4px 14px rgba(0,0,0,.18)}
+  .rword.known:hover::before{content:'';position:absolute;bottom:100%;left:50%;
+    transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--ink);z-index:6;pointer-events:none}
   .rhelp{font-size:12px;color:var(--sub);margin:9px 4px 14px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
   .rinput{width:100%;min-height:72px;border:1px solid var(--line);border-radius:12px;
     padding:13px 14px;font-size:15px;font-family:inherit;line-height:1.6;background:var(--card);color:var(--ink)}
@@ -1133,11 +1142,21 @@ function startRetryRead(fbId){
   removeBar(); showTabBar(true);
   renderReadStep();
 }
+function vocabMeaningOf(token){
+  const k=cleanWord(token).toLowerCase(); if(!k) return null;
+  const v=myVocab.find(x=>x.word_key===k&&x.meaning);
+  return v?v.meaning:null;
+}
 function renderReadStep(){
+  rTip='';
   const N=rSeq.length, si=rSeq[rIdx];
   const toks=rP.sentences[si].split(/\s+/);
   const marked=new Set((rMarks[rIdx]||[]).map(m=>m.i));
-  const words=toks.map((t,wi)=>`<span class="rword${marked.has(wi)?' mark':''}" onclick="toggleWord(${wi})">${esc(t)}</span>`).join(' ');
+  const words=toks.map((t,wi)=>{
+    const mean=vocabMeaningOf(t);
+    const known=mean?` known" data-mean="${esc(mean)}`:'';
+    return `<span class="rword${marked.has(wi)?' mark':''}${known}" onclick="toggleWord(${wi})">${esc(t)}</span>`;
+  }).join(' ');
   const head=[rP.book,rP.unit,rP.title].filter(Boolean).join(' · ');
   const last=rIdx+1>=N;
   let retryNote='';
@@ -1165,20 +1184,25 @@ function renderReadStep(){
   if(inp){ inp.addEventListener('keydown',readKey); inp.focus(); placeCaretEnd(inp); }
   if(rea){ rea.addEventListener('keydown',readKey); }
 }
+let rTip='';   // 탭한 단어의 단어장 뜻 (폰에서는 hover가 없어서 여기로 보여줌)
 function updateMarkHelp(){
   const el=$('rhelp'); if(!el) return;
   const c=(rMarks[rIdx]||[]).length;
-  el.innerHTML=`${ic('cursor','muted')} 모르는 단어를 눌러 형광펜으로 표시해요${c?` · <span style="color:var(--warn)">${c}개 표시됨</span>`:''}`;
+  el.innerHTML=`${ic('cursor','muted')} 모르는 단어를 눌러 형광펜으로 표시해요${c?` · <span style="color:var(--warn)">${c}개 표시됨</span>`:''}`
+    +(rTip?` · <span style="color:var(--accent)">${ic('bookmark','sm ok')} ${esc(rTip)}</span>`:'');
 }
 function toggleWord(wi){
   const marks=rMarks[rIdx]||(rMarks[rIdx]=[]);
   const at=marks.findIndex(m=>m.i===wi);
   const span=document.querySelectorAll('#rsent .rword')[wi];
-  if(at>=0){ marks.splice(at,1); if(span) span.classList.remove('mark'); }
+  const tok=rP.sentences[rSeq[rIdx]].split(/\s+/)[wi];
+  if(at>=0){ marks.splice(at,1); if(span) span.classList.remove('mark'); rTip=''; }
   else{
-    const w=cleanWord(rP.sentences[rSeq[rIdx]].split(/\s+/)[wi]);
+    const w=cleanWord(tok);
     if(!w) return;                       // 순수 기호는 표시 안 함
     marks.push({i:wi,w}); if(span) span.classList.add('mark');
+    const mean=vocabMeaningOf(tok);      // 단어장에 뜻이 있으면 같이 보여주기
+    rTip=mean?`${w}: ${mean}`:'';
   }
   updateMarkHelp();
 }
