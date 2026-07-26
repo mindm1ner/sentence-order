@@ -233,6 +233,7 @@
   .rritem{border:1px solid var(--line);background:var(--card);border-radius:12px;padding:11px 14px;margin-bottom:8px}
   .rritem .en{font-size:14px}
   .rritem .ko{font-size:13px;color:var(--accent);margin-top:6px;padding-top:7px;border-top:1px dashed var(--line)}
+  .rritem .un{font-size:13px;color:var(--ink);margin-top:5px}
   .rritem .re{font-size:13px;color:var(--warn);margin-top:5px}
   .rritem .lb{font-size:11px;font-weight:700;opacity:.7;margin-right:5px}
   /* 단어장 */
@@ -325,7 +326,7 @@ let state=[], current=null, allP=[], session=null, wrongIds=new Set(), myAtts=[]
 let everWrong=new Set();   // 이번 세션에서 한 번이라도 자리를 틀린 문장(원래 인덱스)
 // 독해 모드
 let myReadings=[], vocab=[], readIds=new Set();
-let rP=null, rIdx=0, rInterp=[], rReact=[], rMarks=[], rTopic='', rActive=false;
+let rP=null, rIdx=0, rInterp=[], rUnder=[], rReact=[], rMarks=[], rTopic='', rActive=false;
 let rSeq=[], rRetryFb=null;   // rSeq: 이번에 읽을 문장 번호들(다시 독해면 일부만)
 // 단어장·복습 퀴즈
 let myVocab=[], vocabLegacy=false;
@@ -582,6 +583,7 @@ function showFeedback(fbId){
     html+=`<div class="fb ${v.cls}"><span class="vlb">${v.lb}</span>
       <div class="en">${esc(n.sentence||p.sentences[n.index]||'')}</div>
       ${my&&my.my_reading?`<div class="my"><span class="lb">내 해석</span>${esc(my.my_reading)}</div>`:''}
+      ${my&&my.my_understanding?`<div class="my"><span class="lb">내 설명</span>${esc(my.my_understanding)}</div>`:''}
       ${n.note?`<div class="note"><span class="lb">코치</span>${esc(n.note)}</div>`:''}</div>`;
   }
   if(flagged.length&&notCleared)
@@ -1128,7 +1130,7 @@ function renderQuizEnd(){
 function pickRead(id){
   rP=allP.find(p=>p.id===id); if(!rP) return;
   rSeq=rP.sentences.map((_,i)=>i); rRetryFb=null;
-  rIdx=0; rInterp=[]; rReact=[]; rMarks=[]; rTopic=''; rActive=true;
+  rIdx=0; rInterp=[]; rUnder=[]; rReact=[]; rMarks=[]; rTopic=''; rActive=true;
   removeBar(); showTabBar(true);
   renderReadStep();
 }
@@ -1138,7 +1140,7 @@ function startRetryRead(fbId){
   rSeq=[...(fb.flagged||[])].sort((a,b)=>a-b).filter(i=>i>=0&&i<rP.sentences.length);
   if(!rSeq.length) return;
   rRetryFb=fb;
-  rIdx=0; rInterp=[]; rReact=[]; rMarks=[]; rTopic=''; rActive=true;
+  rIdx=0; rInterp=[]; rUnder=[]; rReact=[]; rMarks=[]; rTopic=''; rActive=true;
   removeBar(); showTabBar(true);
   renderReadStep();
 }
@@ -1172,16 +1174,19 @@ function renderReadStep(){
     <div class="rsent" id="rsent">${words}</div>
     <div class="rhelp" id="rhelp"></div>
     <label style="margin-top:2px">① 이 문장, 내 말로 해석해보기</label>
-    <textarea class="rinput" id="rinput" placeholder="예: 이 문장은 ~라는 뜻인 것 같아 (엔터 → 아래 반응칸)">${esc(rInterp[rIdx]||'')}</textarea>
-    <label style="margin-top:12px">② 그 해석에 대한 내 생각·반응 <span class="hint">(선택 — 엔터로 다음 문장)</span></label>
-    <textarea class="rinput" id="rreact" placeholder="예: 이건 좀 의외인데? / 내 경험이랑 비슷해 / 왜 그럴까?">${esc(rReact[rIdx]||'')}</textarea>
+    <textarea class="rinput" id="rinput" placeholder="예: 이 문장은 ~라는 뜻인 것 같아 (엔터 → 다음 칸)">${esc(rInterp[rIdx]||'')}</textarea>
+    <label style="margin-top:12px">② 그래서 이 문장이 하고 싶은 말은? <span class="hint">(번역 말고, 네 말로 설명)</span></label>
+    <textarea class="rinput" id="runder" placeholder="예: 한마디로 ~가 중요하다는 말 / 앞 문장을 반박하려고 예를 드는 거야">${esc(rUnder[rIdx]||'')}</textarea>
+    <label style="margin-top:12px">③ 내 생각·반응 <span class="hint">(선택 — 엔터로 다음 문장)</span></label>
+    <textarea class="rinput" id="rreact" placeholder="예: 이건 좀 의외인데? / 왜 그럴까? / 아까 내 질문의 답이 나왔네!">${esc(rReact[rIdx]||'')}</textarea>
     <div id="rmsg"></div>
     <button class="btn primary full" style="margin-top:12px" onclick="readNext()">${last?(rRetryFb?'다시 독해 제출하기':'주제 쓰러 가기 →'):'다음 문장 →'}</button>
     ${rIdx>0?`<button class="btn ghost full" style="margin-top:8px" onclick="readPrev()">← 이전 문장</button>`:''}
     <div style="height:40px"></div>`;
   updateMarkHelp();
-  const inp=$('rinput'), rea=$('rreact');
+  const inp=$('rinput'), und=$('runder'), rea=$('rreact');
   if(inp){ inp.addEventListener('keydown',readKey); inp.focus(); placeCaretEnd(inp); }
+  if(und){ und.addEventListener('keydown',readKey); }
   if(rea){ rea.addEventListener('keydown',readKey); }
 }
 let rTip='';   // 탭한 단어의 단어장 뜻 (폰에서는 hover가 없어서 여기로 보여줌)
@@ -1208,22 +1213,25 @@ function toggleWord(wi){
 }
 function readKey(e){
   if(e.isComposing) return;              // 한글 입력 중이면 무시
-  const t=e.target, onRead=(t.id==='rinput');   // 해석칸이면 반응칸으로, 반응칸이면 다음 문장
-  const go=()=>{ onRead ? focusReact() : readNext(); };
+  const t=e.target;                      // 해석 → 설명 → 반응 → 다음 문장 순으로 이동
+  const go=()=>{ t.id==='rinput' ? focusEl('runder') : t.id==='runder' ? focusEl('rreact') : readNext(); };
   if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); go(); }
   else if(e.key==='ArrowRight'){
     if(t.selectionStart===t.value.length && t.selectionStart===t.selectionEnd){ e.preventDefault(); go(); }
   }
 }
-function focusReact(){ const r=$('rreact'); if(r){ r.focus(); placeCaretEnd(r); } }
+function focusEl(id){ const r=$(id); if(r){ r.focus(); placeCaretEnd(r); } }
 function saveReadInputs(){
-  const inp=$('rinput'), rea=$('rreact');
+  const inp=$('rinput'), und=$('runder'), rea=$('rreact');
   if(inp) rInterp[rIdx]=inp.value.trim();
+  if(und) rUnder[rIdx]=und.value.trim();
   if(rea) rReact[rIdx]=rea.value.trim();
 }
 function readNext(){
   const inp=$('rinput'); const val=(inp?inp.value:'').trim();
   if(!val){ $('rmsg').innerHTML=`<div class="msg err">이 문장을 내 말로 한 마디라도 적어야 넘어갈 수 있어요.</div>`; if(inp) inp.focus(); return; }
+  const und=$('runder'); const uval=(und?und.value:'').trim();
+  if(!uval){ $('rmsg').innerHTML=`<div class="msg err">②에 이 문장이 하고 싶은 말을 네 말로 적어봐요. 번역이 아니어도, 틀려도 괜찮아요!</div>`; if(und) und.focus(); return; }
   saveReadInputs();
   if(rIdx+1<rSeq.length){ rIdx++; renderReadStep(); window.scrollTo({top:0}); }
   else if(rRetryFb) submitReading();     // 다시 독해는 주제 생략, 바로 제출
@@ -1237,6 +1245,7 @@ function renderTopic(){
   const head=[rP.book,rP.unit,rP.title].filter(Boolean).join(' · ');
   const recap=rSeq.map((si,i)=>`<div class="rritem"><div class="en">${esc(rP.sentences[si])}</div>
     <div class="ko"><span class="lb">해석</span>${esc(rInterp[i]||'')}</div>
+    ${rUnder[i]?`<div class="un"><span class="lb">하고싶은말</span>${esc(rUnder[i])}</div>`:''}
     ${rReact[i]?`<div class="re"><span class="lb">반응</span>${esc(rReact[i])}</div>`:''}</div>`).join('');
   app.innerHTML=`
     <button class="back" onclick="backToLast()">‹ 마지막 문장</button>
@@ -1260,7 +1269,8 @@ async function submitReading(){
     rTopic=topic;
   }
   const interpretations=rSeq.map((si,i)=>({
-    index:si, sentence:rP.sentences[si], my_reading:rInterp[i]||'', reaction:rReact[i]||'',
+    index:si, sentence:rP.sentences[si], my_reading:rInterp[i]||'',
+    my_understanding:rUnder[i]||'', reaction:rReact[i]||'',
     unknown_words:(rMarks[i]||[]).map(m=>m.w)
   }));
   const studentName=(session.user.user_metadata&&session.user.user_metadata.name)||session.user.email;

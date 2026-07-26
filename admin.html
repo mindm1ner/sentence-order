@@ -546,6 +546,7 @@ async function loadReadings(){
         <span class="p">${(it.index!=null?it.index:0)+1}</span>
         <span class="s"><b>${esc(it.sentence||'')}</b><br>
           <span style="color:var(--sub)">해석 → ${esc(it.my_reading||'(미작성)')}</span>
+          ${it.my_understanding?`<br><span style="color:#3a7d5d">하고싶은말 → ${esc(it.my_understanding)}</span>`:''}
           ${it.reaction?`<br><span style="color:#c98a2b">반응 → ${esc(it.reaction)}</span>`:''}
           ${marks.length?`<br><span style="font-size:11px;color:var(--no)">모르는 단어: ${marks.map(esc).join(', ')}</span>`:''}
         </span></div>`;
