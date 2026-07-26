@@ -235,6 +235,38 @@
     border:1px solid #f0d9b8;border-radius:12px;padding:13px 15px;font-size:14px;color:var(--ink);
     cursor:pointer;margin-bottom:14px;font-weight:600;box-shadow:var(--shadow)}
   .vocabbtn .cnt{margin-left:auto;color:var(--warn);font-weight:700}
+  /* 단어장 탭: 레벨 점·뜻 편집 */
+  .vocab .vrow{display:flex;align-items:center;gap:8px}
+  .vocab .lv{display:flex;gap:3px;margin-left:auto}
+  .vocab .lv i{width:6px;height:6px;border-radius:50%;background:var(--line)}
+  .vocab .lv i.on{background:var(--accent)}
+  .vocab .mean{font-size:13px;color:var(--ink);margin-top:6px;padding-top:7px;border-top:1px dashed var(--line)}
+  .vocab .mean .lb{font-size:11px;font-weight:700;color:var(--accent);margin-right:5px}
+  .vocab .mlink{font-size:12px;color:var(--sub);text-decoration:underline;cursor:pointer;margin-right:10px}
+  .vocab .defbox{font-size:12px;color:var(--sub);margin-top:6px;line-height:1.55}
+  .vocab input{margin-top:6px;font-size:14px;padding:9px 11px}
+  /* 복습 퀴즈 */
+  .qblank{display:inline-block;min-width:64px;border-bottom:2px solid var(--warn);
+    color:var(--warn);text-align:center;font-weight:700;letter-spacing:2px}
+  .qhint{font-size:13px;color:var(--sub);margin:10px 2px 4px}
+  .qres{border-radius:12px;padding:12px 14px;margin-top:12px;font-size:14px;font-weight:600}
+  .qres.ok{background:var(--ok-bg);color:var(--ok)} .qres.no{background:var(--no-bg);color:var(--no)}
+  .qres .qa{display:block;font-weight:400;color:var(--ink);margin-top:6px;font-size:13px}
+  /* AI 진단 */
+  .fb{border:1px solid var(--line);border-left:4px solid var(--line);background:var(--card);
+    border-radius:12px;padding:11px 14px;margin-bottom:8px}
+  .fb.good{border-left-color:var(--ok)} .fb.partial{border-left-color:var(--warn)} .fb.missed{border-left-color:var(--no)}
+  .fb .vlb{font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px;color:#fff;background:var(--sub)}
+  .fb.good .vlb{background:var(--ok)} .fb.partial .vlb{background:var(--warn)} .fb.missed .vlb{background:var(--no)}
+  .fb .en{font-size:14px;margin-top:7px}
+  .fb .my{font-size:13px;color:var(--sub);margin-top:5px}
+  .fb .note{font-size:13px;color:var(--ink);margin-top:7px;padding-top:7px;border-top:1px dashed var(--line);line-height:1.6}
+  .fb .note .lb,.fb .my .lb{font-size:11px;font-weight:700;opacity:.7;margin-right:5px}
+  .fbsum{border:1px solid #bfe0cf;background:var(--accent-soft);border-radius:14px;padding:14px 16px;margin-bottom:12px;font-size:14px;line-height:1.7}
+  .fbsum .t{font-weight:700;color:var(--accent);margin-bottom:6px;display:flex;align-items:center;gap:6px}
+  .retryhint{border:1px solid #f0d9b8;background:var(--warn-bg);border-radius:12px;
+    padding:10px 13px;margin:0 0 12px;font-size:13px;color:var(--ink);line-height:1.6}
+  .retryhint .lb{font-weight:700;color:var(--warn);margin-right:5px}
 </style>
 </head>
 <body>
@@ -271,6 +303,7 @@
 <div id="tabbar" class="tabbar" style="display:none">
   <button class="tab active" data-t="play" onclick="navTab('play')"><svg class="ic" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg><span>순서</span></button>
   <button class="tab" data-t="read" onclick="navTab('read')"><svg class="ic" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg><span>독해</span></button>
+  <button class="tab" data-t="vocab" onclick="navTab('vocab')"><svg class="ic" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><span>단어장</span></button>
   <button class="tab" data-t="wrong" onclick="navTab('wrong')"><svg class="ic" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg><span>오답노트</span></button>
   <button class="tab" data-t="me" onclick="navTab('me')"><svg class="ic" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span>내 기록</span></button>
 </div>
@@ -284,9 +317,15 @@ let everWrong=new Set();   // 이번 세션에서 한 번이라도 자리를 틀
 // 독해 모드
 let myReadings=[], vocab=[], readIds=new Set();
 let rP=null, rIdx=0, rInterp=[], rReact=[], rMarks=[], rTopic='', rActive=false;
+let rSeq=[], rRetryFb=null;   // rSeq: 이번에 읽을 문장 번호들(다시 독해면 일부만)
+// 단어장·복습 퀴즈
+let myVocab=[], vocabLegacy=false;
+let qDeck=[], qIdx=0, qCur=null, qRight=[], qWrongList=[], qActive=false, qAnswered=false, qPractice=false;
+// AI 독해 진단
+let myFeedback=[];
 
 function nat(a,b){return String(a||'').localeCompare(String(b||''),'ko',{numeric:true,sensitivity:'base'});}
-function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 const PATHS={
   book:'<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
   rotate:'<polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>',
@@ -405,16 +444,22 @@ function $(id){return document.getElementById(id);}
 let curTab='play';
 async function loadData(){
   app.innerHTML=`<div class="loading"><span class="spinner"></span>불러오는 중…</div>`;
-  const [pRes,aRes,rRes]=await Promise.all([
+  const [pRes,aRes,rRes,vRes,fRes]=await Promise.all([
     db.from('passages').select('*'),
     db.from('attempts').select('*').order('created_at',{ascending:false}),
-    db.from('readings').select('*').order('created_at',{ascending:false})
+    db.from('readings').select('*').order('created_at',{ascending:false}),
+    db.from('vocab_words').select('*').eq('user_id',session.user.id),
+    db.from('reading_feedback').select('*').order('created_at',{ascending:false})
   ]);
   if(pRes.error){ app.innerHTML=`<div class="empty">불러오기 실패 😢<br>${pRes.error.message}</div>`; return; }
   allP=pRes.data||[];
   myAtts=(!aRes.error&&aRes.data)?aRes.data:[];
   myReadings=(!rRes.error&&rRes.data)?rRes.data:[];   // readings 표 없으면 조용히 빈 배열
   readIds=new Set(myReadings.map(r=>r.passage_id));
+  vocabLegacy=!!vRes.error;                            // vocab_words 표 없으면 옛 방식으로
+  myVocab=(!vRes.error&&vRes.data)?vRes.data:[];
+  myFeedback=(!fRes.error&&fRes.data)?fRes.data.filter(f=>f.user_id===session.user.id):[];
+  if(!vocabLegacy) await syncVocab();                  // 예전 형광펜 단어 자동 이전
   // 내 최신 시도 기준 오답 지문
   wrongIds=new Set();
   const latest={};
@@ -430,6 +475,7 @@ function showTab(t){
   if(t==='wrong') renderWrong();
   else if(t==='me') renderMe();
   else if(t==='read') renderRead();
+  else if(t==='vocab') renderVocabTab();
   else renderLibrary();
 }
 function topBar(){
@@ -460,12 +506,78 @@ function renderLibrary(){
 function renderWrong(){
   const wrongList=allP.filter(p=>wrongIds.has(p.id))
     .sort((a,b)=>nat(a.book,b.book)||nat(a.unit,b.unit)||nat(a.title,b.title));
-  let html=topBar()+`<div class="ptitle">틀렸던 지문을 다시 풀어보세요</div>`;
+  let html=topBar()+`<div class="ptitle">순서 맞추기 — 틀렸던 지문 다시 풀기</div>`;
   if(!wrongList.length){ html+=`<div class="empty">${ic('check','ok')} 지금은 틀린 지문이 없어요!</div>`; }
   else for(const p of wrongList){
     const label=[p.book,p.unit,p.title].filter(Boolean).join(' · ');
     html+=`<button class="psg wrong" onclick="pick('${p.id}')">${esc(label)}<span class="cnt">문장 ${p.sentences.length}</span></button>`;
   }
+  // ---- 독해 오답노트 (AI 진단이 짚어준 문장) ----
+  const retries=readingRetryList();
+  const fbDone=diagnosedList();
+  if(retries.length||fbDone.length){
+    html+=`<div class="ptitle" style="margin-top:22px">독해 — AI 진단</div>`;
+    for(const {p,fb} of retries){
+      const label=[p.book,p.unit,p.title].filter(Boolean).join(' · ');
+      html+=`<button class="psg wrong" onclick="showFeedback('${fb.id}')">${esc(label)}<span class="cnt">다시 읽을 문장 ${(fb.flagged||[]).length}</span></button>`;
+    }
+    for(const {p,fb} of fbDone){
+      const label=[p.book,p.unit,p.title].filter(Boolean).join(' · ');
+      html+=`<button class="psg" onclick="showFeedback('${fb.id}')">${esc(label)}<span class="cnt">${ic('check','sm ok')} 진단 보기</span></button>`;
+    }
+  }
+  app.innerHTML=html;
+}
+// 지문별 최신 진단 중, 다시 읽을 문장이 남아 있는 것
+function readingRetryList(){
+  const seen=new Set(), out=[];
+  for(const fb of myFeedback){
+    if(seen.has(fb.passage_id)) continue; seen.add(fb.passage_id);
+    const p=allP.find(x=>x.id===fb.passage_id); if(!p) continue;
+    if(!(fb.flagged||[]).length) continue;
+    const cleared=myReadings.some(r=>r.user_id===session.user.id&&r.passage_id===fb.passage_id
+      &&new Date(r.created_at)>new Date(fb.created_at));   // 진단 이후 다시 제출했으면 해결로 봄
+    if(!cleared) out.push({p,fb});
+  }
+  return out;
+}
+// 다시 읽을 문장 없이 통과했거나 이미 재제출한 진단들 (열람용)
+function diagnosedList(){
+  const retryIds=new Set(readingRetryList().map(x=>x.fb.id));
+  const seen=new Set(), out=[];
+  for(const fb of myFeedback){
+    if(seen.has(fb.passage_id)) continue; seen.add(fb.passage_id);
+    if(retryIds.has(fb.id)) continue;
+    const p=allP.find(x=>x.id===fb.passage_id); if(!p) continue;
+    out.push({p,fb});
+  }
+  return out;
+}
+const VERDICT={good:{lb:'잘 읽었어요',cls:'good'},partial:{lb:'절반쯤',cls:'partial'},missed:{lb:'다시 보기',cls:'missed'}};
+function showFeedback(fbId){
+  const fb=myFeedback.find(f=>f.id===fbId); if(!fb) return;
+  const p=allP.find(x=>x.id===fb.passage_id); if(!p) return;
+  removeBar(); showTabBar(true);
+  const reading=myReadings.find(r=>r.id===fb.reading_id);
+  const label=[p.book,p.unit,p.title].filter(Boolean).join(' · ');
+  const flagged=(fb.flagged||[]);
+  const notCleared=readingRetryList().some(x=>x.fb.id===fb.id);
+  let html=`<button class="back" onclick="showTab('wrong')">‹ 오답노트</button>
+    <div style="font-weight:600;margin:0 2px 12px">${esc(label)}</div>
+    <div class="fbsum"><div class="t">🤖 AI 선생님 진단</div>${esc(fb.summary||'')}
+    ${fb.strengths?`<div style="margin-top:8px"><b>👍 잘한 점</b> — ${esc(fb.strengths)}</div>`:''}</div>`;
+  const notes=(fb.sentence_notes||[]).slice().sort((a,b)=>a.index-b.index);
+  for(const n of notes){
+    const v=VERDICT[n.verdict]||VERDICT.partial;
+    const my=reading&&(reading.interpretations||[]).find(it=>it.index===n.index);
+    html+=`<div class="fb ${v.cls}"><span class="vlb">${v.lb}</span>
+      <div class="en">${esc(n.sentence||p.sentences[n.index]||'')}</div>
+      ${my&&my.my_reading?`<div class="my"><span class="lb">내 해석</span>${esc(my.my_reading)}</div>`:''}
+      ${n.note?`<div class="note"><span class="lb">코치</span>${esc(n.note)}</div>`:''}</div>`;
+  }
+  if(flagged.length&&notCleared)
+    html+=`<button class="btn primary full" style="margin-top:14px" onclick="startRetryRead('${fb.id}')">${ic('edit')} 표시된 문장 다시 독해하기 (${flagged.length}문장)</button>`;
+  html+=`<div style="height:80px"></div>`;
   app.innerHTML=html;
 }
 function renderMe(){
@@ -544,7 +656,11 @@ function closeModal(yes){
 // 풀이 화면 떠나기 가드
 function tryLeave(go){
   if(rActive){
-    confirmModal('독해를 아직 제출하지 않았어요.<br>나가면 지금 쓴 해석은 저장되지 않아요.', ()=>{ rActive=false; go(); });
+    confirmModal('독해를 아직 제출하지 않았어요.<br>나가면 지금 쓴 해석은 저장되지 않아요.', ()=>{ rActive=false; rRetryFb=null; go(); });
+    return;
+  }
+  if(qActive){
+    confirmModal('복습 퀴즈가 진행 중이에요.<br>지금까지 푼 단어까지만 기록돼요.', ()=>{ qActive=false; go(); });
     return;
   }
   if(solving && !(state.length && state.every((s,i)=>s.idx===i))){
@@ -554,8 +670,8 @@ function tryLeave(go){
   solving=false; go();
 }
 function leaveSolve(){ tryLeave(()=>loadData()); }
-function leaveRead(){ tryLeave(()=>{ curTab='read'; loadData(); }); }
-function navTab(t){ if(solving||rActive) tryLeave(()=>{ curTab=t; loadData(); }); else showTab(t); }
+function leaveRead(){ const t=rRetryFb?'wrong':'read'; tryLeave(()=>{ curTab=t; loadData(); }); }
+function navTab(t){ if(solving||rActive||qActive) tryLeave(()=>{ curTab=t; loadData(); }); else showTab(t); }
 
 function buildGroups(list){
   const sorted=[...list].sort((a,b)=> nat(a.book,b.book)||nat(a.unit,b.unit)||nat(a.title,b.title));
@@ -762,8 +878,9 @@ function hlWord(sentence,w){
 // ----- 독해 도서관 + 단어장 버튼 -----
 function renderRead(){
   buildVocab();
+  const vCnt=vocabLegacy?vocab.length:myVocab.length;
   let html=topBar()+`<div class="ptitle">한 문장씩 읽고, 내 말로 해석해봐요</div>`;
-  html+=`<button class="vocabbtn" onclick="showVocab()">${ic('bookmark','warn')} 내 단어장 <span class="cnt">${vocab.length}개 ›</span></button>`;
+  html+=`<button class="vocabbtn" onclick="showTab('vocab')">${ic('bookmark','warn')} 내 단어장 <span class="cnt">${vCnt}개 ›</span></button>`;
   if(!allP.length){ html+=`<div class="empty">아직 등록된 지문이 없어요.</div>`; app.innerHTML=html; return; }
   const groups=buildGroups(allP);
   let first=true;
@@ -797,37 +914,242 @@ function buildVocab(){
   }
   vocab=[...seen.values()].sort((a,b)=>a.w.toLowerCase().localeCompare(b.w.toLowerCase()));
 }
-function showVocab(){
-  buildVocab(); removeBar(); showTabBar(true);
-  let html=`<button class="back" onclick="showTab('read')">‹ 독해</button>
-    <div style="font-weight:600;margin:0 2px 12px">내 단어장</div>`;
-  if(!vocab.length){
-    html+=`<div class="empty">아직 표시한 단어가 없어요.<br>독해하면서 모르는 단어를 눌러 형광펜 표시해봐요.</div>`;
-  }else{
-    html+=`<div class="ptitle">독해하며 표시한 단어 ${vocab.length}개</div>`;
-    html+=vocab.map(v=>`<div class="vocab"><div class="w">${esc(v.w)}</div><div class="ex">${hlWord(v.ex,v.w)}</div></div>`).join('');
+// ---------- 단어장 탭 (뜻 채우기 + 간격 반복 퀴즈) ----------
+function todayStr(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+function dueWords(){const t=todayStr();return myVocab.filter(v=>!v.next_due||v.next_due<=t);}
+async function syncVocab(){
+  // 예전에 독해에서 형광펜 친 단어들을 단어장 표로 자동 이전
+  const have=new Set(myVocab.map(v=>v.word_key)), seen=new Set(), rows=[];
+  for(const r of myReadings){
+    if(r.user_id!==session.user.id) continue;
+    for(const it of (r.interpretations||[])) for(const w of (it.unknown_words||[])){
+      const k=String(w).toLowerCase().trim();
+      if(!k||have.has(k)||seen.has(k)) continue;
+      seen.add(k);
+      rows.push({user_id:session.user.id,word:cleanWord(w)||String(w),word_key:k,
+        example:it.sentence||'',passage_id:r.passage_id||null});
+    }
   }
-  app.innerHTML=html;
+  if(!rows.length) return;
+  try{
+    const {data,error}=await db.from('vocab_words')
+      .upsert(rows,{onConflict:'user_id,word_key',ignoreDuplicates:true}).select();
+    if(!error&&data) myVocab=myVocab.concat(data);
+  }catch(_){}
+}
+function vocabCardHTML(v){
+  const lv=Math.min(v.level||0,5);
+  const dots=`<span class="lv">${Array.from({length:5},(_,i)=>`<i class="${i<lv?'on':''}"></i>`).join('')}</span>`;
+  const mean=v.meaning
+    ? `<div class="mean"><span class="lb">뜻</span>${esc(v.meaning)} <span class="mlink" onclick="editMeaning('${v.id}')">고치기</span></div>`
+    : `<div class="mean"><span class="mlink" onclick="editMeaning('${v.id}')">＋ 뜻 적기</span><span class="mlink" onclick="lookupDef('${v.id}')">영영사전</span><span class="hint">뜻을 적어두면 퀴즈 힌트로 나와요</span></div>`;
+  return `<div class="vocab" id="vc_${v.id}">
+    <div class="vrow"><div class="w">${esc(v.word)}</div>${dots}</div>
+    <div class="ex">${hlWord(v.example||'',v.word)}</div>
+    ${mean}<div class="defbox" id="vd_${v.id}"></div></div>`;
+}
+function renderVocabTab(){
+  removeBar(); showTabBar(true);
+  if(vocabLegacy){ // vocab_words 표가 아직 없을 때: 예전 방식으로 보여주기
+    buildVocab();
+    let html=topBar()+`<div class="ptitle">독해하며 표시한 단어 ${vocab.length}개</div>`;
+    html+= vocab.length
+      ? vocab.map(v=>`<div class="vocab"><div class="w">${esc(v.w)}</div><div class="ex">${hlWord(v.ex,v.w)}</div></div>`).join('')
+      : `<div class="empty">아직 표시한 단어가 없어요.<br>독해하면서 모르는 단어를 눌러 형광펜 표시해봐요.</div>`;
+    app.innerHTML=html; return;
+  }
+  const due=dueWords();
+  let html=topBar()+`<div class="ptitle">형광펜 친 단어들 — 뜻을 채우고, 퀴즈로 복습해요</div>`;
+  html+=`<div class="stats3">
+    <div class="stat"><b>${myVocab.length}</b><span>전체 단어</span></div>
+    <div class="stat"><b>${due.length}</b><span>오늘 복습</span></div>
+    <div class="stat"><b>${myVocab.filter(v=>(v.level||0)>=3).length}</b><span>익숙해진 단어</span></div>
+  </div>`;
+  if(due.length) html+=`<button class="btn primary full" style="margin:2px 0 16px" onclick="startQuiz(false)">${ic('edit')} 오늘 복습 퀴즈 (${due.length}단어)</button>`;
+  else if(myVocab.length) html+=`<button class="btn ghost full" style="margin:2px 0 16px" onclick="startQuiz(true)">오늘 복습은 끝! 전체에서 무작위 복습하기</button>`;
+  if(!myVocab.length) html+=`<div class="empty">아직 단어가 없어요.<br>독해하면서 모르는 단어를 눌러 형광펜 표시하면 여기에 쌓여요.</div>`;
+  else{
+    const sorted=[...myVocab].sort((a,b)=>a.word_key.localeCompare(b.word_key));
+    html+=sorted.map(vocabCardHTML).join('');
+  }
+  app.innerHTML=html+`<div style="height:20px"></div>`;
+}
+function editMeaning(id){
+  const v=myVocab.find(x=>x.id===id); if(!v) return;
+  const el=document.getElementById('vc_'+id); if(!el) return;
+  el.querySelector('.mean').outerHTML=`<div class="mean">
+    <input id="vm_${id}" placeholder="내 말로 뜻 적기 (예: 극복하다)" value="${esc(v.meaning||'')}">
+    <div style="margin-top:8px;display:flex;gap:8px">
+      <button class="btn primary" style="padding:8px 14px;font-size:13px" onclick="saveMeaning('${id}')">저장</button>
+      <button class="btn ghost" style="padding:8px 14px;font-size:13px" onclick="redrawVocabCard('${id}')">취소</button>
+      <span class="mlink" style="align-self:center" onclick="lookupDef('${id}')">영영사전</span>
+    </div></div>`;
+  const inp=document.getElementById('vm_'+id);
+  inp.focus(); placeCaretEnd(inp);
+  inp.addEventListener('keydown',e=>{ if(e.isComposing) return; if(e.key==='Enter'){ e.preventDefault(); saveMeaning(id); } });
+}
+function redrawVocabCard(id){
+  const v=myVocab.find(x=>x.id===id); const el=document.getElementById('vc_'+id);
+  if(v&&el) el.outerHTML=vocabCardHTML(v);
+}
+async function saveMeaning(id){
+  const v=myVocab.find(x=>x.id===id); const inp=document.getElementById('vm_'+id);
+  if(!v||!inp) return;
+  const val=inp.value.trim();
+  const {error}=await db.from('vocab_words').update({meaning:val||null}).eq('id',id);
+  if(!error) v.meaning=val;
+  redrawVocabCard(id);
+}
+async function lookupDef(id){
+  const v=myVocab.find(x=>x.id===id); const el=document.getElementById('vd_'+id);
+  if(!v||!el) return;
+  el.innerHTML='영영사전 찾는 중…';
+  try{
+    const res=await fetch('https://api.dictionaryapi.dev/api/v2/entries/en/'+encodeURIComponent(v.word_key));
+    if(!res.ok) throw 0;
+    const j=await res.json();
+    const defs=[];
+    for(const entry of j) for(const m of (entry.meanings||[])){
+      for(const d of (m.definitions||[])){ defs.push(`<b>${esc(m.partOfSpeech||'')}</b> ${esc(d.definition)}`); if(defs.length>=2) break; }
+      if(defs.length>=2) break;
+    }
+    el.innerHTML=defs.length?('📖 '+defs.join('<br>📖 ')):'영영사전에서 못 찾았어요';
+  }catch(_){ el.innerHTML='영영사전에서 못 찾았어요 (변형된 형태면 원형으로 찾아보세요)'; }
+}
+
+// ---------- 복습 퀴즈 (예문 빈칸 + 간격 반복) ----------
+const SR_DAYS=[1,3,7,14,30,60];
+function shuffleArr(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+function startQuiz(practice){
+  let pool=practice?[...myVocab]:dueWords();
+  if(!pool.length) return;
+  qDeck=shuffleArr(pool); if(practice) qDeck=qDeck.slice(0,10);
+  qIdx=0; qRight=[]; qWrongList=[]; qActive=true; qAnswered=false; qPractice=!!practice;
+  removeBar(); renderQuiz();
+}
+function startWrongQuiz(){ // 방금 틀린 단어만 연습으로 다시
+  if(!qWrongList.length) return;
+  qDeck=shuffleArr(qWrongList); qIdx=0; qRight=[]; qWrongList=[];
+  qActive=true; qAnswered=false; qPractice=true;
+  renderQuiz();
+}
+function clozeHTML(v){
+  const ex=v.example||'';
+  if(!ex) return `<span class="qhint">뜻: ${esc(v.meaning||'(힌트 없음)')}</span><br>이 단어는? <span class="qblank">${'　'.repeat(Math.min(v.word.length,8))}</span>`;
+  const toks=ex.split(/\s+/);
+  let hit=false;
+  const parts=toks.map(t=>{
+    if(!hit && cleanWord(t).toLowerCase()===v.word_key){ hit=true;
+      return `<span class="qblank">${'　'.repeat(Math.min(v.word.length,8))}</span>`; }
+    return esc(t);
+  });
+  if(!hit) parts.push(`<span class="qblank">${'　'.repeat(Math.min(v.word.length,8))}</span>`);
+  return parts.join(' ');
+}
+function renderQuiz(){
+  qCur=qDeck[qIdx]; qAnswered=false;
+  const N=qDeck.length;
+  const hint=qCur.meaning?`힌트(내가 적은 뜻): ${esc(qCur.meaning)}`:`힌트: <b>${esc(qCur.word[0].toUpperCase())}</b>로 시작, ${qCur.word.length}글자`;
+  app.innerHTML=`
+    <button class="back" onclick="quizQuit()">‹ 단어장</button>
+    <div style="font-weight:600;margin:0 2px 12px">단어 복습 퀴즈${qPractice?' (연습)':''}</div>
+    <div class="rprog"><div class="bar2"><div class="fill2" style="width:${qIdx/N*100}%"></div></div><span class="cnt">${qIdx+1} / ${N}</span></div>
+    <div class="rsent" style="font-size:17px">${clozeHTML(qCur)}</div>
+    <div class="qhint">${hint}</div>
+    <input id="qin" placeholder="빈칸에 들어갈 단어" autocomplete="off" autocapitalize="off" style="margin-top:6px">
+    <div id="qres"></div>
+    <button id="qbtn" class="btn primary full" style="margin-top:12px" onclick="quizSubmit()">확인</button>
+    <div style="height:40px"></div>`;
+  const inp=$('qin'); inp.focus();
+  inp.addEventListener('keydown',e=>{ if(e.isComposing) return; if(e.key==='Enter'){ e.preventDefault(); quizSubmit(); } });
+}
+function quizQuit(){ tryLeave(()=>{ curTab='vocab'; loadData(); }); }
+function quizSubmit(){
+  if(qAnswered){ quizNext(); return; }
+  const val=cleanWord($('qin').value||'').toLowerCase();
+  if(!val){ $('qin').focus(); return; }
+  qAnswered=true;
+  const ok=val===qCur.word_key;
+  (ok?qRight:qWrongList).push(qCur);
+  updateWordSR(qCur,ok);
+  $('qres').innerHTML= ok
+    ? `<div class="qres ok">✓ 맞았어요! <b>${esc(qCur.word)}</b><span class="qa">${hlWord(qCur.example||'',qCur.word)}</span></div>`
+    : `<div class="qres no">✗ 정답은 <b>${esc(qCur.word)}</b>${qCur.meaning?` (${esc(qCur.meaning)})`:''}<span class="qa">${hlWord(qCur.example||'',qCur.word)}</span></div>`;
+  $('qbtn').textContent = qIdx+1>=qDeck.length ? '결과 보기' : '다음 →';
+  $('qbtn').focus();
+}
+async function updateWordSR(v,ok){
+  // 간격 반복: 맞히면 1→3→7→14→30→60일 뒤, 틀리면 처음부터
+  const t=todayStr(); let patch;
+  if(ok){
+    if(qPractice){ patch={correct_count:(v.correct_count||0)+1}; }
+    else{
+      const lvl=Math.min((v.level||0)+1,6);
+      const d=new Date(); d.setDate(d.getDate()+SR_DAYS[lvl-1]);
+      patch={level:lvl,next_due:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`,
+        correct_count:(v.correct_count||0)+1};
+    }
+  }else{
+    patch={level:0,next_due:t,wrong_count:(v.wrong_count||0)+1};
+  }
+  Object.assign(v,patch);
+  try{ await db.from('vocab_words').update(patch).eq('id',v.id); }catch(_){}
+}
+function quizNext(){
+  qIdx++;
+  if(qIdx<qDeck.length){ renderQuiz(); window.scrollTo({top:0}); }
+  else renderQuizEnd();
+}
+function renderQuizEnd(){
+  qActive=false;
+  const total=qRight.length+qWrongList.length;
+  const wrongHtml=qWrongList.length
+    ? `<div class="ptitle" style="margin-top:18px">틀린 단어 — 내일 또 나와요</div>`+
+      qWrongList.map(v=>`<div class="vocab"><div class="w">${esc(v.word)}${v.meaning?` <span style="font-weight:400;font-size:13px;color:var(--sub)">${esc(v.meaning)}</span>`:''}</div><div class="ex">${hlWord(v.example||'',v.word)}</div></div>`).join('')
+    : '';
+  app.innerHTML=`
+    <div class="done" style="margin-top:20px">${ic('check','ok')} 복습 완료! ${total}개 중 <b>${qRight.length}개</b> 맞았어요</div>
+    ${wrongHtml}
+    ${qWrongList.length?`<button class="btn primary full" style="margin-top:14px" onclick="startWrongQuiz()">틀린 것만 바로 다시 (연습)</button>`:''}
+    <button class="btn ghost full" style="margin-top:8px" onclick="showTab('vocab')">단어장으로</button>
+    <div style="height:40px"></div>`;
 }
 
 // ----- 독해 풀이 -----
 function pickRead(id){
   rP=allP.find(p=>p.id===id); if(!rP) return;
+  rSeq=rP.sentences.map((_,i)=>i); rRetryFb=null;
+  rIdx=0; rInterp=[]; rReact=[]; rMarks=[]; rTopic=''; rActive=true;
+  removeBar(); showTabBar(true);
+  renderReadStep();
+}
+function startRetryRead(fbId){
+  const fb=myFeedback.find(f=>f.id===fbId); if(!fb) return;
+  rP=allP.find(p=>p.id===fb.passage_id); if(!rP) return;
+  rSeq=[...(fb.flagged||[])].sort((a,b)=>a-b).filter(i=>i>=0&&i<rP.sentences.length);
+  if(!rSeq.length) return;
+  rRetryFb=fb;
   rIdx=0; rInterp=[]; rReact=[]; rMarks=[]; rTopic=''; rActive=true;
   removeBar(); showTabBar(true);
   renderReadStep();
 }
 function renderReadStep(){
-  const N=rP.sentences.length;
-  const toks=rP.sentences[rIdx].split(/\s+/);
+  const N=rSeq.length, si=rSeq[rIdx];
+  const toks=rP.sentences[si].split(/\s+/);
   const marked=new Set((rMarks[rIdx]||[]).map(m=>m.i));
   const words=toks.map((t,wi)=>`<span class="rword${marked.has(wi)?' mark':''}" onclick="toggleWord(${wi})">${esc(t)}</span>`).join(' ');
   const head=[rP.book,rP.unit,rP.title].filter(Boolean).join(' · ');
   const last=rIdx+1>=N;
+  let retryNote='';
+  if(rRetryFb){
+    const n=(rRetryFb.sentence_notes||[]).find(x=>x.index===si);
+    retryNote=`<div class="retryhint"><span class="lb">다시 독해 (${si+1}번째 문장)</span>${n&&n.note?esc(n.note):'지난번에 막혔던 문장이에요. 힌트를 떠올리며 다시 읽어봐요.'}</div>`;
+  }
   app.innerHTML=`
-    <button class="back" onclick="leaveRead()">‹ 지문 목록</button>
+    <button class="back" onclick="leaveRead()">‹ ${rRetryFb?'오답노트':'지문 목록'}</button>
     <div style="font-weight:600;margin:0 2px 12px">${esc(head)}</div>
     <div class="rprog"><div class="bar2"><div class="fill2" style="width:${rIdx/N*100}%"></div></div><span class="cnt">${rIdx+1} / ${N}</span></div>
+    ${retryNote}
     <div class="rsent" id="rsent">${words}</div>
     <div class="rhelp" id="rhelp"></div>
     <label style="margin-top:2px">① 이 문장, 내 말로 해석해보기</label>
@@ -835,7 +1157,7 @@ function renderReadStep(){
     <label style="margin-top:12px">② 그 해석에 대한 내 생각·반응 <span class="hint">(선택 — 엔터로 다음 문장)</span></label>
     <textarea class="rinput" id="rreact" placeholder="예: 이건 좀 의외인데? / 내 경험이랑 비슷해 / 왜 그럴까?">${esc(rReact[rIdx]||'')}</textarea>
     <div id="rmsg"></div>
-    <button class="btn primary full" style="margin-top:12px" onclick="readNext()">${last?'주제 쓰러 가기 →':'다음 문장 →'}</button>
+    <button class="btn primary full" style="margin-top:12px" onclick="readNext()">${last?(rRetryFb?'다시 독해 제출하기':'주제 쓰러 가기 →'):'다음 문장 →'}</button>
     ${rIdx>0?`<button class="btn ghost full" style="margin-top:8px" onclick="readPrev()">← 이전 문장</button>`:''}
     <div style="height:40px"></div>`;
   updateMarkHelp();
@@ -854,7 +1176,7 @@ function toggleWord(wi){
   const span=document.querySelectorAll('#rsent .rword')[wi];
   if(at>=0){ marks.splice(at,1); if(span) span.classList.remove('mark'); }
   else{
-    const w=cleanWord(rP.sentences[rIdx].split(/\s+/)[wi]);
+    const w=cleanWord(rP.sentences[rSeq[rIdx]].split(/\s+/)[wi]);
     if(!w) return;                       // 순수 기호는 표시 안 함
     marks.push({i:wi,w}); if(span) span.classList.add('mark');
   }
@@ -879,7 +1201,8 @@ function readNext(){
   const inp=$('rinput'); const val=(inp?inp.value:'').trim();
   if(!val){ $('rmsg').innerHTML=`<div class="msg err">이 문장을 내 말로 한 마디라도 적어야 넘어갈 수 있어요.</div>`; if(inp) inp.focus(); return; }
   saveReadInputs();
-  if(rIdx+1<rP.sentences.length){ rIdx++; renderReadStep(); window.scrollTo({top:0}); }
+  if(rIdx+1<rSeq.length){ rIdx++; renderReadStep(); window.scrollTo({top:0}); }
+  else if(rRetryFb) submitReading();     // 다시 독해는 주제 생략, 바로 제출
   else renderTopic();
 }
 function readPrev(){
@@ -888,7 +1211,7 @@ function readPrev(){
 }
 function renderTopic(){
   const head=[rP.book,rP.unit,rP.title].filter(Boolean).join(' · ');
-  const recap=rP.sentences.map((s,i)=>`<div class="rritem"><div class="en">${esc(s)}</div>
+  const recap=rSeq.map((si,i)=>`<div class="rritem"><div class="en">${esc(rP.sentences[si])}</div>
     <div class="ko"><span class="lb">해석</span>${esc(rInterp[i]||'')}</div>
     ${rReact[i]?`<div class="re"><span class="lb">반응</span>${esc(rReact[i])}</div>`:''}</div>`).join('');
   app.innerHTML=`
@@ -904,36 +1227,57 @@ function renderTopic(){
     <div style="height:40px"></div>`;
   const t=$('rtopic'); if(t){ t.focus(); placeCaretEnd(t); }
 }
-function backToLast(){ const t=$('rtopic'); if(t) rTopic=t.value.trim(); rIdx=rP.sentences.length-1; renderReadStep(); window.scrollTo({top:0}); }
+function backToLast(){ const t=$('rtopic'); if(t) rTopic=t.value.trim(); rIdx=rSeq.length-1; renderReadStep(); window.scrollTo({top:0}); }
 async function submitReading(){
-  const t=$('rtopic'); const topic=(t?t.value:'').trim();
-  if(!topic){ $('rmsg').innerHTML=`<div class="msg err">이 글의 주제를 한 문장으로 적어주세요.</div>`; if(t) t.focus(); return; }
-  rTopic=topic;
-  const interpretations=rP.sentences.map((s,i)=>({
-    index:i, sentence:s, my_reading:rInterp[i]||'', reaction:rReact[i]||'',
+  let topic='';
+  if(!rRetryFb){
+    const t=$('rtopic'); topic=(t?t.value:'').trim();
+    if(!topic){ $('rmsg').innerHTML=`<div class="msg err">이 글의 주제를 한 문장으로 적어주세요.</div>`; if(t) t.focus(); return; }
+    rTopic=topic;
+  }
+  const interpretations=rSeq.map((si,i)=>({
+    index:si, sentence:rP.sentences[si], my_reading:rInterp[i]||'', reaction:rReact[i]||'',
     unknown_words:(rMarks[i]||[]).map(m=>m.w)
   }));
   const studentName=(session.user.user_metadata&&session.user.user_metadata.name)||session.user.email;
   const btn=event&&event.target; setBusy(btn,true,'제출 중…');
-  const { error } = await db.from('readings').insert({
+  const row={
     passage_id:rP.id, user_id:session.user.id,
     student_email:session.user.email, student_name:studentName,
-    interpretations, topic
-  });
+    interpretations, topic:topic||null, is_retry:!!rRetryFb
+  };
+  let { error } = await db.from('readings').insert(row);
+  if(error&&/is_retry/.test(error.message||'')){  // is_retry 열이 아직 없으면 빼고 재시도
+    delete row.is_retry;
+    ({ error } = await db.from('readings').insert(row));
+  }
   if(error){ setBusy(btn,false); $('rmsg').innerHTML=`<div class="msg err">저장 실패: ${error.message}</div>`; return; }
+  // 형광펜 단어 → 단어장에 바로 담기
+  if(!vocabLegacy){
+    const rows=[], seen=new Set(myVocab.map(v=>v.word_key));
+    rSeq.forEach((si,i)=>{ (rMarks[i]||[]).forEach(m=>{
+      const k=m.w.toLowerCase(); if(seen.has(k)) return; seen.add(k);
+      rows.push({user_id:session.user.id,word:m.w,word_key:k,example:rP.sentences[si],passage_id:rP.id});
+    });});
+    if(rows.length) db.from('vocab_words').upsert(rows,{onConflict:'user_id,word_key',ignoreDuplicates:true}).then(()=>{});
+  }
   rActive=false;
   showReadDone();
 }
 function showReadDone(){
   const uniq=[], seen=new Set();
-  rP.sentences.forEach((s,i)=>{
-    (rMarks[i]||[]).forEach(m=>{ const k=m.w.toLowerCase(); if(!seen.has(k)){ seen.add(k); uniq.push({w:m.w,ex:s}); } });
+  rSeq.forEach((si,i)=>{
+    (rMarks[i]||[]).forEach(m=>{ const k=m.w.toLowerCase(); if(!seen.has(k)){ seen.add(k); uniq.push({w:m.w,ex:rP.sentences[si]}); } });
   });
   const vhtml=uniq.length
     ? uniq.map(x=>`<div class="vocab"><div class="w">${esc(x.w)}</div><div class="ex">${hlWord(x.ex,x.w)}</div></div>`).join('')
     : `<p class="hint" style="margin:8px 2px">이번엔 표시한 단어가 없었어요.</p>`;
+  const doneMsg=rRetryFb
+    ? `${ic('check','ok')} 다시 독해 제출 완료! 훨씬 나아졌을 거예요<br><span style="font-weight:400;font-size:13px">AI 선생님이 다시 봐줄 거예요</span>`
+    : `${ic('check','ok')} 독해 완료! 잘했어요<br><span style="font-weight:400;font-size:13px">선생님이 해석을 확인할 거예요</span>`;
+  rRetryFb=null;
   app.innerHTML=`
-    <div class="done" style="margin-top:20px">${ic('check','ok')} 독해 완료! 잘했어요<br><span style="font-weight:400;font-size:13px">선생님이 해석을 확인할 거예요</span></div>
+    <div class="done" style="margin-top:20px">${doneMsg}</div>
     <div class="ptitle" style="margin-top:22px">${ic('bookmark','warn')} 오늘 표시한 단어 (내 단어장에 담겼어요)</div>
     ${vhtml}
     <button class="btn primary full" style="margin-top:14px" onclick="loadData()">지문 목록으로</button>
