@@ -354,14 +354,18 @@ async function loadFeedbackAdmin(){
     const flagged=(fb.flagged||[]).length;
     html+=`<div class="card" style="margin-bottom:14px">
       <div style="font-weight:700">${esc(label)} <span class="sub" style="font-weight:400;font-size:12px;float:right">${fmt(fb.created_at)}${flagged?` · 재독해 ${flagged}문장`:' · 통과'}</span></div>
-      <div class="sub" style="margin:8px 0 4px;line-height:1.6">${esc(fb.summary||'')}</div>
-      ${fb.strengths?`<div class="sub" style="margin-bottom:6px">👍 ${esc(fb.strengths)}</div>`:''}
+      <div class="sub" style="margin:8px 0 4px;line-height:1.6">📊 ${esc(fb.summary||'')}</div>
+      ${fb.strengths?`<div class="sub" style="margin-bottom:4px">👍 ${esc(fb.strengths)}</div>`:''}
+      ${fb.improvements?`<div class="sub" style="margin-bottom:6px">🔧 ${esc(fb.improvements)}</div>`:''}
       ${(fb.sentence_notes||[]).map(n=>{
         const v=V[n.verdict]||V.partial;
         return `<div style="padding:8px 2px;border-top:1px solid #eee9df;font-size:13px">
           <span style="font-size:11px;font-weight:700;color:#fff;background:${v[1]};padding:1px 8px;border-radius:999px">${v[0]}</span>
           <div style="margin-top:5px">${esc(n.sentence||'')}</div>
+          ${n.reading_note?`<div class="sub" style="margin-top:4px">📖 ${esc(n.reading_note)}</div>`:''}
+          ${n.understanding_note?`<div class="sub" style="margin-top:3px">💡 ${esc(n.understanding_note)}</div>`:''}
           ${n.note?`<div class="sub" style="margin-top:4px">→ ${esc(n.note)}</div>`:''}
+          ${(n.missed_words||[]).length?`<div class="sub" style="margin-top:3px;font-size:12px">📒 단어장 추가: ${n.missed_words.map(m=>esc(m.word)).join(', ')}</div>`:''}
         </div>`;
       }).join('')}
     </div>`;

@@ -574,8 +574,9 @@ function showFeedback(fbId){
   const notCleared=readingRetryList().some(x=>x.fb.id===fb.id);
   let html=`<button class="back" onclick="showTab('wrong')">‹ 오답노트</button>
     <div style="font-weight:600;margin:0 2px 12px">${esc(label)}</div>
-    <div class="fbsum"><div class="t">🤖 AI 선생님 진단</div>${esc(fb.summary||'')}
-    ${fb.strengths?`<div style="margin-top:8px"><b>👍 잘한 점</b> — ${esc(fb.strengths)}</div>`:''}</div>`;
+    <div class="fbsum"><div class="t">🤖 AI 선생님 진단</div><b>📊 총평</b> — ${esc(fb.summary||'')}
+    ${fb.strengths?`<div style="margin-top:8px"><b>👍 잘한 점</b> — ${esc(fb.strengths)}</div>`:''}
+    ${fb.improvements?`<div style="margin-top:8px"><b>🔧 개선할 점</b> — ${esc(fb.improvements)}</div>`:''}</div>`;
   const notes=(fb.sentence_notes||[]).slice().sort((a,b)=>a.index-b.index);
   for(const n of notes){
     const v=VERDICT[n.verdict]||VERDICT.partial;
@@ -584,7 +585,19 @@ function showFeedback(fbId){
       <div class="en">${esc(n.sentence||p.sentences[n.index]||'')}</div>
       ${my&&my.my_reading?`<div class="my"><span class="lb">내 해석</span>${esc(my.my_reading)}</div>`:''}
       ${my&&my.my_understanding?`<div class="my"><span class="lb">내 설명</span>${esc(my.my_understanding)}</div>`:''}
+      ${n.reading_note?`<div class="note"><span class="lb">📖 독해</span>${esc(n.reading_note)}</div>`:''}
+      ${n.understanding_note?`<div class="note" style="border-top:none;padding-top:0"><span class="lb">💡 이해</span>${esc(n.understanding_note)}</div>`:''}
       ${n.note?`<div class="note"><span class="lb">코치</span>${esc(n.note)}</div>`:''}</div>`;
+  }
+  // AI가 발견해 단어장에 자동 등록한 단어들
+  const mwSeen=new Set(), mwList=[];
+  for(const n of notes) for(const mw of (n.missed_words||[])){
+    const k=String(mw.word||'').toLowerCase(); if(!k||mwSeen.has(k)) continue;
+    mwSeen.add(k); mwList.push(mw);
+  }
+  if(mwList.length){
+    html+=`<div class="ptitle" style="margin-top:16px">${ic('bookmark','warn')} 헷갈렸던 단어 — 단어장에 담아뒀어요</div>`;
+    html+=mwList.map(mw=>`<div class="vocab"><div class="w">${esc(mw.word)}${mw.meaning?` <span style="font-weight:400;font-size:13px;color:var(--sub)">${esc(mw.meaning)}</span>`:''}</div></div>`).join('');
   }
   if(flagged.length&&notCleared)
     html+=`<button class="btn primary full" style="margin-top:14px" onclick="startRetryRead('${fb.id}')">${ic('edit')} 표시된 문장 다시 독해하기 (${flagged.length}문장)</button>`;
