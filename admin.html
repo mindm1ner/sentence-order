@@ -190,6 +190,7 @@
 
         <section class="view" data-view="student">
           <h2 class="vtitle">학생</h2>
+          <div id="stuProfile"></div>
           <div class="subtabs">
             <button class="stab active" data-s="srec" onclick="showSub('srec')">풀이 기록</button>
             <button class="stab" data-s="sread" onclick="showSub('sread')">독해</button>
@@ -312,6 +313,7 @@ async function login(){
 async function logout(){ await db.auth.signOut(); showLogin(); }
 function showLogin(){ $('login').style.display='block'; $('admin').style.display='none'; }
 function showAdmin(session){
+  window._session=session;
   $('login').style.display='none'; $('admin').style.display='block';
   $('who').textContent=session.user.email;
   loadAll();
@@ -467,6 +469,55 @@ function renderToday(){
   el.innerHTML=html;
 }
 
+// ---------- 학생 프로필 헤더 ----------
+function renderStuProfile(){
+  const el=$('stuProfile'); if(!el) return;
+  const uidMe=window._session?window._session.user.id:null;
+  const stus=new Map();
+  for(const x of [...gStuReads,...gStuAtts])
+    if(x.user_id&&x.student_name&&x.user_id!==uidMe) stus.set(x.user_id,x.student_name);
+  if(!stus.size){ el.innerHTML=''; return; }
+  let html='';
+  for(const [uid,name] of stus){
+    const days=new Set();
+    for(const x of gStuAtts) if(x.user_id===uid&&x.created_at) days.add(x.created_at.slice(0,10));
+    for(const r of gStuReads) if(r.user_id===uid&&r.created_at) days.add(r.created_at.slice(0,10));
+    let sk=0; { const d=new Date(); if(!days.has(todayStrA())) d.setDate(d.getDate()-1);
+      while(days.has(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`)){ sk++; d.setDate(d.getDate()-1); } }
+    const myFb=gFb.filter(f=>f.user_id===uid);
+    const notes=myFb.flatMap(f=>f.sentence_notes||[]);
+    const goodPct=notes.length?Math.round(notes.filter(n=>n.verdict==='good').length/notes.length*100):null;
+    const myAsg2=gAsg.filter(a=>a.student_id===uid);
+    const doneCnt=myAsg2.filter(a=>hwStatus(a).done).length;
+    const tags={};
+    for(const n of notes) if(n.verdict!=='good'&&n.skill_tag) tags[n.skill_tag]=(tags[n.skill_tag]||0)+1;
+    const top=Object.entries(tags).sort((a,b)=>b[1]-a[1]).slice(0,3);
+    const maxT=top.length?top[0][1]:1;
+    html+=`<div class="card" style="margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+        <div style="width:40px;height:40px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px">${esc(name.charAt(0))}</div>
+        <div style="font-weight:700;font-size:16px">${esc(name)}</div>
+      </div>
+      <div class="kpis" style="margin-bottom:${top.length?'14px':'0'}">
+        <div class="kpi"><b>${sk}</b><span>연속 학습일</span></div>
+        <div class="kpi"><b>${goodPct===null?'·':goodPct+'%'}</b><span>독해 good 비율</span></div>
+        <div class="kpi"><b>${doneCnt}/${myAsg2.length}</b><span>완료 숙제</span></div>
+      </div>
+      ${top.length?`<div style="font-weight:700;font-size:13px;margin-bottom:8px">취약 태그, 다음 수업에서 다룰 것</div>`+
+        top.map(([tag,c])=>`<div style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:5px">
+          <span style="flex:0 0 90px;font-weight:600">${esc(tag)}</span>
+          <span style="flex:1;height:8px;background:var(--bg);border-radius:999px;overflow:hidden"><span style="display:block;height:100%;width:${Math.round(c/maxT*100)}%;background:#c98a2b;border-radius:999px"></span></span>
+          <span style="flex:0 0 34px;text-align:right;color:var(--sub);font-weight:700">${c}회</span>
+        </div>`).join(''):''}
+    </div>`;
+  }
+  el.innerHTML=html;
+}
+
+// renderToday가 끝날 때 프로필도 같이 갱신
+const _renderToday0=renderToday;
+renderToday=function(){ _renderToday0(); renderStuProfile(); };
+
 // ---------- 숙제 내주기 ----------
 let gAsg=[], gStuAtts=[], gStuReads=[];
 async function loadHomework(){
@@ -502,25 +553,57 @@ function hwStatus(a){
 }
 function renderHwList(){
   if(!gAsg.length){ $('hwList').innerHTML='<p class="sub">아직 내준 숙제가 없어요.</p>'; return; }
-  const stuName=id=>{ const x=[...gStuAtts,...gStuReads].find(y=>y.user_id===id&&y.student_name); return x?x.student_name:'(이름 없음)'; };
-  $('hwList').innerHTML=gAsg.map(a=>{
-    const p=allP.find(x=>x.id===a.passage_id);
-    const label=p?[p.book,p.unit,p.title].filter(Boolean).join(' · '):'(삭제된 지문)';
-    const st=hwStatus(a);
-    const stepTxt=(a.steps||[]).map(s=>{
-      const nm=s==='order'?'순서':'독해';
-      return st[s]?`<span style="color:#3a7d5d;font-weight:700">✓ ${nm}</span>`:`<span style="color:#8a877f">${nm}</span>`;
-    }).join(' · ');
-    return `<div class="rec ${st.done?'solved':''}" style="margin-bottom:8px">
-      <div class="rh">
-        <span class="badge ${st.done?'ok':''}" >${st.done?'완료':'미완료'}</span>
-        <b>${esc(stuName(a.student_id))}</b> · ${esc(label)}
-        <span class="when">${a.round_label?esc(a.round_label)+' · ':''}${a.due_date?'~'+esc(a.due_date):''} · ${fmt(a.created_at)}</span>
+  // 차시(round_label)별로 묶기, 최신 차시 먼저
+  const groups=new Map();
+  for(const a of gAsg){
+    const k=a.round_label||'차시 미지정';
+    if(!groups.has(k)) groups.set(k,[]);
+    groups.get(k).push(a);
+  }
+  let html='';
+  for(const [round,list] of groups){
+    const doneN=list.filter(a=>hwStatus(a).done).length;
+    const pct=Math.round(doneN/list.length*100);
+    const rows=list.map(a=>{
+      const st=hwStatus(a);
+      const stepNm=(a.steps||[]).map(s=>s==='order'?'순서':'독해').join('+');
+      const due=a.due_date
+        ? `<span class="dline" title="${dLabel(ddays(a.due_date))}">${esc(a.due_date.slice(5).replace('-','/'))}</span>`
+        : '<span style="color:var(--sub)">없음</span>';
+      return `<div style="display:flex;align-items:center;gap:10px;padding:9px 2px;border-top:1px solid #eee9df;font-size:13px">
+        <span class="badge ${st.done?'ok':''}" style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;color:#fff;background:${st.done?'var(--accent)':'var(--no)'}">${st.done?'완료':'미완료'}</span>
+        <b style="flex:0 0 auto">${esc(stuNameOf(a.student_id))}</b>
+        <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${pLabelOf(a.passage_id)}</span>
+        <span style="flex:0 0 auto;color:var(--sub);font-size:12px">${stepNm}</span>
+        <span style="flex:0 0 auto;font-size:12px">마감 ${due}</span>
+        <a style="flex:0 0 auto;color:#c0584b;cursor:pointer;font-size:12px" onclick="delAssignment('${a.id}')">삭제</a>
+      </div>`;
+    }).join('');
+    html+=`<div class="card" style="margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <b style="font-size:14px">${esc(round)}</b>
+        <span style="flex:1;height:7px;background:var(--bg);border-radius:999px;overflow:hidden"><span style="display:block;height:100%;width:${pct}%;background:var(--accent);border-radius:999px"></span></span>
+        <span style="font-size:12px;color:var(--sub);font-weight:700">${doneN}/${list.length} 완료</span>
+        <button class="btn ghost small" onclick="reuseRound('${jsStr(round)}')">이 차시 재사용</button>
       </div>
-      <div style="margin-top:6px;font-size:13px">${stepTxt}
-        <a style="float:right;color:#c0584b;cursor:pointer;font-size:12px" onclick="delAssignment('${a.id}')">삭제</a></div>
+      ${rows}
     </div>`;
-  }).join('');
+  }
+  $('hwList').innerHTML=html;
+}
+async function reuseRound(round){
+  const list=gAsg.filter(a=>(a.round_label||'차시 미지정')===round);
+  if(!list.length) return;
+  const label=prompt('새 차시 라벨을 입력하세요 (예: 8월 1주차)','');
+  if(label===null) return;
+  const due=prompt('마감일을 입력하세요 (YYYY-MM-DD, 비우면 마감 없음)','');
+  if(due===null) return;
+  const rows=list.map(a=>({ student_id:a.student_id, passage_id:a.passage_id, steps:a.steps,
+    round_label:label.trim()||null, due_date:(due||'').trim()||null }));
+  const { error } = await db.from('assignments').insert(rows);
+  if(error){ msg('hwMsg','재사용 실패: '+error.message,'err'); return; }
+  msg('hwMsg',`${esc(round)}의 숙제 ${rows.length}개를 새 차시로 복사했어요`,'ok');
+  loadHomework();
 }
 async function saveAssignment(){
   const student_id=$('hwStudent').value, passage_id=$('hwPassage').value;
