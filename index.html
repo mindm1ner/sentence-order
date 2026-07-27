@@ -364,6 +364,8 @@
   .fb .note .lb,.fb .my .lb{font-size:11px;font-weight:700;opacity:.7;margin-right:5px}
   .fbsum{border:1px solid var(--okb);background:var(--accent-soft);border-radius:14px;padding:14px 16px;margin-bottom:12px;font-size:14px;line-height:1.7}
   .fbsum .t{font-weight:700;color:var(--accent);margin-bottom:6px;display:flex;align-items:center;gap:6px}
+  .fblb{display:block;font-size:11px;font-weight:700;color:var(--accent);letter-spacing:.07em;margin:11px 0 2px}
+  .fblb.warn2{color:var(--warn)}
   .retryhint{border:1px solid var(--warnb);background:var(--warn-bg);border-radius:12px;
     padding:10px 13px;margin:0 0 12px;font-size:13px;color:var(--ink);line-height:1.6}
   .retryhint .lb{font-weight:700;color:var(--warn);margin-right:5px}
@@ -677,10 +679,10 @@ function renderHome(){
     if(due) html+=`<button class="psg" onclick="navTab('vocab')">단어 복습 퀴즈${vocabLegacy?'':''}<span class="cnt" style="color:var(--warn);font-weight:700">${due}단어</span></button>`;
     for(const {p,fb} of retries){
       const label=[p.book,p.unit,p.title].filter(Boolean).join(' · ');
-      html+=`<button class="psg wrong" onclick="showFeedback('${fb.id}')">다시 독해 — ${esc(label)}<span class="cnt">${(fb.flagged||[]).length}문장</span></button>`;
+      html+=`<button class="psg wrong" onclick="showFeedback('${fb.id}')">${esc(label)} 다시 읽기<span class="cnt">${(fb.flagged||[]).length}문장</span></button>`;
     }
   }
-  if(doneAsg.length) html+=`<div class="hint" style="margin:14px 2px 0">이번 차시 완료한 숙제 ${doneAsg.length}개 — 기록 탭에서 확인</div>`;
+  if(doneAsg.length) html+=`<div class="hint" style="margin:14px 2px 0">끝낸 숙제 ${doneAsg.length}개는 기록 탭에 있어요</div>`;
   app.innerHTML=html+`<div style="height:20px"></div>`;
 }
 
@@ -744,7 +746,7 @@ function renderCourse(){
     const active=!steps.includes('order')||orderDone;
     parts.push({state:readDone?'done':(active?'now':'wait'),inner:`<div class="card" style="padding:12px 14px${readDone?';opacity:.75':''}">
       <div style="font-weight:700;font-size:14px">한줄 독해</div>
-      <div class="hint" style="margin:2px 0 ${readDone?'0':'10px'}">${readDone?'제출 완료 — AI 진단을 확인해요':'해석하고, 하고 싶은 말을 내 말로'}</div>
+      <div class="hint" style="margin:2px 0 ${readDone?'0':'10px'}">${readDone?'제출 완료! AI 진단을 확인해요':'해석하고, 하고 싶은 말을 내 말로'}</div>
       ${readDone?`<button class="btn ghost" style="margin-top:8px;padding:8px 14px;font-size:13px" onclick="pickRead('${p.id}')">다시 독해하기</button>`
         :`<button class="btn primary full" style="margin-top:0" onclick="pickRead('${p.id}')">시작하기</button>`}</div>`});
   }
@@ -754,7 +756,7 @@ function renderCourse(){
     ${latestFb?`<button class="btn ghost" style="padding:8px 14px;font-size:13px" onclick="showFeedback('${latestFb.id}')">진단 보기</button>`:''}</div>`});
   parts.push({state:pVocab.length?'now':'wait',inner:`<div class="card" style="padding:12px 14px${pVocab.length?'':';opacity:.65'}">
     <div style="font-weight:700;font-size:14px">이 지문의 단어</div>
-    <div class="hint" style="margin:2px 0 0">${pVocab.length?`${pVocab.length}개 — 단어장에서 복습해요`:'독해 중 형광펜 치면 여기 쌓여요'}</div>
+    <div class="hint" style="margin:2px 0 0">${pVocab.length?`${pVocab.length}개를 단어장에서 복습할 수 있어요`:'독해 중 형광펜 치면 여기 쌓여요'}</div>
     ${pVocab.length?`<button class="btn ghost" style="margin-top:8px;padding:8px 14px;font-size:13px" onclick="navTab('vocab')">단어장 열기</button>`:''}</div>`});
   parts.forEach((pt,i)=>{ html+=rail(pt.state,pt.inner,i===parts.length-1); });
   app.innerHTML=html+`<div style="height:20px"></div>`;
@@ -762,7 +764,7 @@ function renderCourse(){
 function renderWrong(){
   const wrongList=allP.filter(p=>wrongIds.has(p.id))
     .sort((a,b)=>nat(a.book,b.book)||nat(a.unit,b.unit)||nat(a.title,b.title));
-  let html=topBar()+`<div class="ptitle">순서 맞추기 — 틀렸던 지문 다시 풀기</div>`;
+  let html=topBar()+`<div class="ptitle">순서 맞추기에서 틀렸던 지문</div>`;
   if(!wrongList.length){ html+=`<div class="empty">${ic('check','ok')} 지금은 틀린 지문이 없어요!</div>`; }
   else for(const p of wrongList){
     const label=[p.book,p.unit,p.title].filter(Boolean).join(' · ');
@@ -772,7 +774,7 @@ function renderWrong(){
   const retries=readingRetryList();
   const fbDone=diagnosedList();
   if(retries.length||fbDone.length){
-    html+=`<div class="ptitle" style="margin-top:22px">독해 — AI 진단</div>`;
+    html+=`<div class="ptitle" style="margin-top:22px">AI 진단 받은 독해</div>`;
     for(const {p,fb} of retries){
       const label=[p.book,p.unit,p.title].filter(Boolean).join(' · ');
       html+=`<button class="psg wrong" onclick="showFeedback('${fb.id}')">${esc(label)}<span class="cnt">다시 읽을 문장 ${(fb.flagged||[]).length}</span></button>`;
@@ -846,9 +848,9 @@ function feedbackBodyHTML(fb,opts){
       ${badge?`<span style="margin-left:auto;font-size:11px;font-weight:700;background:var(--ok);color:#fff;border-radius:999px;padding:2px 10px">${badge}</span>`:''}</div>
     ${seg}
     ${notes.length?`<div style="font-size:12px;color:var(--sub);margin-bottom:9px">잘 읽음 ${counts[0]} · 절반쯤 ${counts[1]} · 다시 보기 ${counts[2]}</div>`:''}
-    <b>총평</b> — ${esc(fb.summary||'')}
-    ${fb.strengths?`<div style="margin-top:8px"><b>잘한 점</b> — ${esc(fb.strengths)}</div>`:''}
-    ${fb.improvements?`<div style="margin-top:8px"><b>개선할 점</b> — ${esc(fb.improvements)}</div>`:''}</div>`;
+    <span class="fblb" style="margin-top:0">총평</span>${esc(fb.summary||'')}
+    ${fb.strengths?`<span class="fblb">잘한 점</span>${esc(fb.strengths)}`:''}
+    ${fb.improvements?`<span class="fblb warn2">개선할 점</span>${esc(fb.improvements)}`:''}</div>`;
   const hasSpans=notes.some(n=>(n.error_spans||[]).length);
   if(hasSpans) html+=`<div class="esplegend">
     <span><i style="background:var(--warn-bg);box-shadow:inset 0 -2px 0 var(--warn)"></i>어휘 오역</span>
@@ -872,7 +874,7 @@ function feedbackBodyHTML(fb,opts){
     mwSeen.add(k); mwList.push(mw);
   }
   if(mwList.length){
-    html+=`<div class="ptitle" style="margin-top:16px">${ic('bookmark','warn')} 헷갈렸던 단어 — 단어장에 담아뒀어요</div>`;
+    html+=`<div class="ptitle" style="margin-top:16px">${ic('bookmark','warn')} 헷갈렸던 단어는 단어장에 담아뒀어요</div>`;
     html+=mwList.map(mw=>`<div class="vocab"><div class="w">${esc(mw.word)}${mw.meaning?` <span style="font-weight:400;font-size:13px;color:var(--sub)">${esc(mw.meaning)}</span>`:''}</div></div>`).join('');
   }
   if(opts.retryBtn&&flagged.length)
@@ -1266,7 +1268,7 @@ function renderVocabTab(){
     app.innerHTML=html; return;
   }
   const due=dueWords();
-  let html=topBar()+`<div class="ptitle">형광펜 친 단어들 — 뜻을 채우고, 퀴즈로 복습해요</div>`;
+  let html=topBar()+`<div class="ptitle">독해에서 형광펜 친 단어들이에요. 뜻을 채우고 퀴즈로 복습해요</div>`;
   html+=`<div class="stats3">
     <div class="stat"><b>${myVocab.length}</b><span>전체 단어</span></div>
     <div class="stat"><b>${due.length}</b><span>오늘 복습</span></div>
@@ -1400,18 +1402,18 @@ function quizSubmit(){
     card.classList.add('glowOK');
     $('qbtn').style.display='none'; $('qtry').textContent='';
     showQBan(true, qTries===0?'정답이에요!':'맞았어요! 끝까지 해냈어요',
-      qCur.meaning?`${esc(qCur.word)} — ${esc(qCur.meaning)}`:'');
+      qCur.meaning?`${esc(qCur.word)} (${esc(qCur.meaning)})`:'');
   }else{
     qTries++;
     if(qTries>=4){
       qAnswered=true; qWrongList.push(qCur); updateWordSR(qCur,false);
       if(bl){ bl.textContent=qCur.word; bl.classList.add('nofill'); }
       $('qbtn').style.display='none'; $('qtry').textContent='';
-      showQBan(false, `정답은 ${esc(qCur.word)}${qCur.meaning?` (${esc(qCur.meaning)})`:''}`, '오늘 안에 다시 나와요 — 그때 잡으면 돼요');
+      showQBan(false, `정답은 ${esc(qCur.word)}${qCur.meaning?` (${esc(qCur.meaning)})`:''}`, '오늘 안에 다시 나와요. 그때 잡으면 돼요');
     }else{
       card.classList.remove('shakeX'); void card.offsetWidth; card.classList.add('shakeX');
       $('qhint').innerHTML=quizHintHTML();
-      $('qtry').textContent=`아직이에요 — 남은 기회 ${4-qTries}번`;
+      $('qtry').textContent=`아직이에요! 남은 기회 ${4-qTries}번`;
       inp.select();
     }
   }
@@ -1443,7 +1445,7 @@ function renderQuizEnd(){
   qActive=false; removeQBan();
   const total=qRight.length+qWrongList.length;
   const wrongHtml=qWrongList.length
-    ? `<div class="ptitle" style="margin-top:18px">틀린 단어 — 내일 또 나와요</div>`+
+    ? `<div class="ptitle" style="margin-top:18px">틀린 단어는 내일 또 나와요</div>`+
       qWrongList.map(v=>`<div class="vocab"><div class="w">${esc(v.word)}${v.meaning?` <span style="font-weight:400;font-size:13px;color:var(--sub)">${esc(v.meaning)}</span>`:''}</div><div class="ex">${hlWord(v.example||'',v.word)}</div></div>`).join('')
     : '';
   app.innerHTML=`
@@ -1505,7 +1507,7 @@ function renderReadStep(){
     <textarea class="rinput" id="rinput" placeholder="예: 이 문장은 ~라는 뜻인 것 같아 (엔터 → 다음 칸)">${esc(rInterp[rIdx]||'')}</textarea>
     <label style="margin-top:12px">② 그래서 이 문장이 하고 싶은 말은? <span class="hint">(번역 말고, 네 말로 설명)</span></label>
     <textarea class="rinput" id="runder" placeholder="예: 한마디로 ~가 중요하다는 말 / 앞 문장을 반박하려고 예를 드는 거야">${esc(rUnder[rIdx]||'')}</textarea>
-    <label style="margin-top:12px">③ 내 생각·반응 <span class="hint">(선택 — 엔터로 다음 문장)</span></label>
+    <label style="margin-top:12px">③ 내 생각·반응 <span class="hint">(안 써도 돼요, 엔터로 다음 문장)</span></label>
     <textarea class="rinput" id="rreact" placeholder="예: 이건 좀 의외인데? / 왜 그럴까? / 아까 내 질문의 답이 나왔네!">${esc(rReact[rIdx]||'')}</textarea>
     <div id="rmsg"></div>
     <button class="btn primary full" style="margin-top:12px" onclick="readNext()">${last?(rRetryFb?'다시 독해 제출하기':'주제 쓰러 가기 →'):'다음 문장 →'}</button>

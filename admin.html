@@ -366,7 +366,7 @@ async function loadHomework(){
     db.from('assignments').select('*').order('created_at',{ascending:false})
   ]);
   if(gRes.error){
-    $('hwList').innerHTML=`<p class="sub">숙제 표(assignments)가 아직 없어요 — redesign-plan.md의 SQL을 SQL Editor에서 실행해주세요.<br><span style="font-size:12px">${esc(gRes.error.message)}</span></p>`;
+    $('hwList').innerHTML=`<p class="sub">숙제 표(assignments)가 아직 없어요. redesign-plan.md의 SQL을 SQL Editor에서 실행해주세요.<br><span style="font-size:12px">${esc(gRes.error.message)}</span></p>`;
     return;
   }
   gStuAtts=aRes.data||[]; gStuReads=rRes.data||[]; gAsg=gRes.data||[];
@@ -413,7 +413,7 @@ function renderHwList(){
 async function saveAssignment(){
   const student_id=$('hwStudent').value, passage_id=$('hwPassage').value;
   const steps=[]; if($('hwOrder').checked) steps.push('order'); if($('hwReading').checked) steps.push('reading');
-  if(!student_id){ msg('hwMsg','학생 기록이 아직 없어요 — 학생이 한 번 로그인해 활동하면 목록에 떠요','err'); return; }
+  if(!student_id){ msg('hwMsg','학생 기록이 아직 없어요. 학생이 한 번 로그인해 활동하면 목록에 떠요','err'); return; }
   if(!passage_id){ msg('hwMsg','지문을 선택하세요','err'); return; }
   if(!steps.length){ msg('hwMsg','순서/독해 중 최소 하나는 체크해야 해요','err'); return; }
   const row={ student_id, passage_id, steps,
@@ -445,7 +445,7 @@ async function loadVocabAdmin(){
       <div style="font-weight:700;margin-bottom:4px">${ic('user')} 학생 단어 ${list.length}개 <span class="sub" style="font-weight:400">· 뜻 미입력 ${noMean}개</span></div>
       ${list.map(v=>`<div style="padding:9px 2px;border-top:1px solid #eee9df;font-size:14px">
         <b>${esc(v.word)}</b>
-        ${v.meaning?` — ${esc(v.meaning)}`:' — <span style="color:#c98a2b">뜻 미입력</span>'}
+        ${v.meaning?`: ${esc(v.meaning)}`:': <span style="color:#c98a2b">뜻 미입력</span>'}
         <span class="sub" style="font-size:12px;float:right">복습 ${v.level||0}단계 · ✓${v.correct_count||0} ✗${v.wrong_count||0} · 다음 ${v.next_due||'-'}</span>
         <div class="sub" style="font-size:12px;margin-top:3px">${esc(v.example||'')}</div>
       </div>`).join('')}
@@ -522,7 +522,7 @@ function renderChips(){
   const books=[...new Set(allP.map(p=>p.book).filter(Boolean))].sort(nat);
   $('bookChips').innerHTML = books.length
     ? books.map(b=>`<span class="chip" onclick="setField('book','${jsStr(b)}')">${esc(b)}</span>`).join('')
-    : `<span class="chip empty">아직 없음 — 새로 입력하면 다음부터 여기 떠요</span>`;
+    : `<span class="chip empty">새로 입력하면 다음부터 여기 떠요</span>`;
   renderUnitChips();
 }
 function renderUnitChips(){
