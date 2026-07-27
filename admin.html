@@ -192,13 +192,15 @@
           <h2 class="vtitle">학생</h2>
           <div id="stuProfile"></div>
           <div class="subtabs">
-            <button class="stab active" data-s="srec" onclick="showSub('srec')">풀이 기록</button>
+            <button class="stab active" data-s="sins" onclick="showSub('sins')">인사이트</button>
+            <button class="stab" data-s="srec" onclick="showSub('srec')">풀이 기록</button>
             <button class="stab" data-s="sread" onclick="showSub('sread')">독해</button>
             <button class="stab" data-s="sfb" onclick="showSub('sfb')">AI 진단</button>
             <button class="stab" data-s="srefl" onclick="showSub('srefl')">이유 쓰기</button>
             <button class="stab" data-s="svoc" onclick="showSub('svoc')">단어장</button>
           </div>
-          <div class="spane active" data-s="srec"><div id="records"></div></div>
+          <div class="spane active" data-s="sins"><div id="insightView"></div></div>
+          <div class="spane" data-s="srec"><div id="records"></div></div>
           <div class="spane" data-s="sread"><div id="readings"></div></div>
           <div class="spane" data-s="sfb"><div id="feedbackAdmin"></div></div>
           <div class="spane" data-s="srefl"><div id="reflections"></div></div>
@@ -228,11 +230,12 @@
             <button class="btn ghost small" style="margin-top:10px" onclick="splitText()"><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg> 문장으로 쪼개기</button>
 
             <div id="splitwrap" style="display:none">
-              <label style="margin-top:18px">문장 확인 · 수정 <span class="hint">(한 줄 = 한 문장. 잘못 끊겼으면 줄을 합치거나 나누세요)</span></label>
-              <textarea id="split" rows="8"></textarea>
+              <label style="margin-top:18px">문장 확인 · 수정 <span class="hint">(카드 안에서 바로 고칠 수 있어요. 줄바꿈하면 그 자리에서 나뉘고, 합치기를 누르면 위 문장과 붙어요)</span></label>
+              <div id="sentCards"></div>
               <div id="formmsg"></div>
               <div class="row" style="margin-top:12px">
                 <button class="btn primary" onclick="save()">저장하기</button>
+                <button class="btn ghost" onclick="save(true)">저장하고 바로 숙제 내주기</button>
                 <button class="btn ghost" onclick="resetForm()">취소</button>
               </div>
             </div>
@@ -324,35 +327,67 @@ function splitText(){
   const raw=$('raw').value.trim(); if(!raw) return;
   const cleaned=raw.replace(/\s+/g,' ').trim();
   const parts=cleaned.match(/[^.!?]+[.!?]+["'”’)\]]*|\S.+$/g) || [cleaned];
-  $('split').value=parts.map(s=>s.trim()).filter(Boolean).join('\n');
+  renderSentCards(parts.map(s=>s.trim()).filter(Boolean));
   $('splitwrap').style.display='block';
+}
+// ---------- 문장 카드 검수 ----------
+const ABBR=/\b(?:Mr|Mrs|Ms|Dr|Prof|St|Jr|Sr|vs|etc|e\.g|i\.e|No|Fig|approx|Inc|Ltd)\.$|\b[A-Z]\.$|\d\.$/;
+function renderSentCards(arr){
+  const el=$('sentCards'); if(!el) return;
+  el.innerHTML=arr.map((s,i)=>{
+    const suspect=i>0&&ABBR.test(arr[i-1].trim());
+    return `<div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:7px">
+      <span style="flex:0 0 24px;height:24px;border-radius:8px;display:flex;align-items:center;justify-content:center;
+        font-size:11px;font-weight:800;margin-top:8px;background:${suspect?'#c98a2b':'var(--accent-soft)'};color:${suspect?'#fff':'var(--accent)'}">${suspect?'!':i+1}</span>
+      <div style="flex:1;min-width:0">
+        <textarea class="scin" rows="2" style="margin:0;font-size:14px;line-height:1.6;padding:9px 11px${suspect?';border-color:#e8c58a;background:#fdf9f0':''}">${esc(s)}</textarea>
+        ${suspect?`<div class="hint" style="color:#c98a2b;margin-top:2px">위 문장이 약어에서 끊긴 것 같아요. 합치기를 눌러 확인해보세요</div>`:''}
+      </div>
+      ${i>0?`<button class="btn ghost small" style="margin-top:5px;flex:0 0 auto${suspect?';border-color:#e8c58a;color:#c98a2b;font-weight:700':''}" onclick="mergeCard(${i})">합치기</button>`
+        :'<span style="flex:0 0 62px"></span>'}
+    </div>`;
+  }).join('');
+}
+function readCards(){
+  return [...document.querySelectorAll('#sentCards .scin')]
+    .flatMap(t=>t.value.split('\n')).map(s=>s.trim()).filter(Boolean);
+}
+function mergeCard(i){
+  const arr=[...document.querySelectorAll('#sentCards .scin')].map(t=>t.value.trim());
+  if(i<1||i>=arr.length) return;
+  arr[i-1]=(arr[i-1]+' '+arr[i]).replace(/\s+/g,' ');
+  arr.splice(i,1);
+  renderSentCards(arr.filter(Boolean));
 }
 
 // ---------- 저장 ----------
-async function save(){
+let _pendingHwPid=null;
+async function save(goHw){
   const book=$('book').value.trim();
   const unit=$('unit').value.trim();
   const title=$('title').value.trim();
-  const sentences=$('split').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  const sentences=readCards();
   if(!book){ msg('formmsg','교재명을 입력하세요','err'); return; }
   if(!title){ msg('formmsg','지문 번호·제목을 입력하세요','err'); return; }
   if(sentences.length<2){ msg('formmsg','문장이 2개 이상이어야 해요','err'); return; }
 
-  let res;
+  let res, newId=editingId;
   if(editingId){
     res=await db.from('passages').update({book,unit,title,sentences}).eq('id',editingId);
   }else{
-    res=await db.from('passages').insert({book,unit,title,sentences});
+    res=await db.from('passages').insert({book,unit,title,sentences}).select();
+    if(!res.error&&res.data&&res.data[0]) newId=res.data[0].id;
   }
   if(res.error){ msg('formmsg',res.error.message,'err'); return; }
   msg('formmsg','저장됐어요 ✓','ok');
-  $('title').value=''; $('raw').value=''; $('split').value='';
+  $('title').value=''; $('raw').value=''; $('sentCards').innerHTML='';
   $('splitwrap').style.display='none'; editingId=null;
+  if(goHw===true&&newId) _pendingHwPid=newId;
   loadAll();
 }
 function resetForm(){
   editingId=null;
-  $('title').value=''; $('raw').value=''; $('split').value='';
+  $('title').value=''; $('raw').value=''; $('sentCards').innerHTML='';
   $('splitwrap').style.display='none'; $('formmsg').innerHTML='';
 }
 
@@ -390,8 +425,8 @@ function isDis(key){ try{return JSON.parse(localStorage.getItem('oj_dis')||'{}')
 function dismissToday(key){ try{const d=JSON.parse(localStorage.getItem('oj_dis')||'{}'); d[key]=todayStrA(); localStorage.setItem('oj_dis',JSON.stringify(d));}catch(_){} }
 function stuNameOf(id){ const x=[...gStuReads,...gStuAtts].find(y=>y.user_id===id&&y.student_name); return x?x.student_name:'학생'; }
 function pLabelOf(pid){ const p=allP.find(x=>x.id===pid); return esc(p?[p.book,p.unit,p.title].filter(Boolean).join(' · '):'(삭제된 지문)'); }
-function tqView(i){ if(_tq[i]){ _tq[i].view(); } }
-function tqOk(i){
+function tqGo(i){ const it=_tq[i]; if(!it) return; it.ok(); it.view(); renderToday(); }
+function tqSkip(i){
   const it=_tq[i]; if(!it) return;
   it.ok();
   const row=document.getElementById('tq'+i);
@@ -460,8 +495,8 @@ function renderToday(){
         html+=`<div class="tq" id="tq${i}">
           <div class="tic" style="background:${it.ic[1]};color:${it.ic[2]}">${it.ic[0]}</div>
           <div class="tg"><div class="tt">${it.t}</div><div class="ts">${it.s}</div></div>
-          <button class="btn ghost small" onclick="tqView(${i})">보기</button>
-          <button class="btn primary small" onclick="tqOk(${i})">확인</button>
+          <button class="btn primary small" onclick="tqGo(${i})">확인하기</button>
+          <a style="font-size:12px;color:var(--sub);cursor:pointer;flex:0 0 auto" onclick="tqSkip(${i})">넘기기</a>
         </div>`;
       }
     }
@@ -514,9 +549,95 @@ function renderStuProfile(){
   el.innerHTML=html;
 }
 
-// renderToday가 끝날 때 프로필도 같이 갱신
+// ---------- AI 인사이트 (주간 요약·태그 증감·다음 숙제 추천, 전부 데이터 기반) ----------
+function renderInsight(){
+  const el=$('insightView'); if(!el) return;
+  const uidMe=window._session?window._session.user.id:null;
+  const stus=new Map();
+  for(const x of [...gStuReads,...gStuAtts]) if(x.user_id&&x.student_name&&x.user_id!==uidMe) stus.set(x.user_id,x.student_name);
+  if(!stus.size){ el.innerHTML='<p class="sub">학생 기록이 쌓이면 인사이트가 여기 떠요.</p>'; return; }
+  const now=Date.now(), WK=7*86400000;
+  let html='';
+  for(const [uid,name] of stus){
+    const fbs=gFb.filter(f=>f.user_id===uid);
+    const cur=fbs.filter(f=>now-new Date(f.created_at)<WK);
+    const prev=fbs.filter(f=>{const d=now-new Date(f.created_at);return d>=WK&&d<2*WK;});
+    const notesOf=a=>a.flatMap(f=>f.sentence_notes||[]);
+    const gp=a=>{const n=notesOf(a);return n.length?Math.round(n.filter(x=>x.verdict==='good').length/n.length*100):null;};
+    const curPct=gp(cur), prevPct=gp(prev);
+    const tagCnt=a=>{const t={};for(const n of notesOf(a)) if(n.verdict!=='good'&&n.skill_tag) t[n.skill_tag]=(t[n.skill_tag]||0)+1;return t;};
+    const ct=tagCnt(cur), pt=tagCnt(prev);
+    const tags=Object.entries(ct).sort((a,b)=>b[1]-a[1]);
+    let sum='';
+    if(!cur.length){ sum=`최근 7일 동안 새 진단이 없어요.${fbs.length?' 지난 기록은 AI 진단 탭에 있어요.':''}`; }
+    else{
+      sum=`최근 7일 동안 진단 ${cur.length}건을 받았어요. `;
+      if(curPct!==null){
+        sum+=`잘 읽은 문장 비율은 ${curPct}%`;
+        if(prevPct!==null){ const d=curPct-prevPct;
+          sum+= d>0?`로, 지난주보다 ${d}%p 올랐어요. `: d<0?`로, 지난주보다 ${-d}%p 내렸어요. `:`로 지난주와 같아요. `;
+        } else sum+='예요. ';
+      }
+      sum+= tags.length?`이번 주 가장 자주 걸린 유형은 ${tags[0][0]}(${tags[0][1]}회)예요.`:'걸린 문장이 없었어요. 아주 잘하고 있어요.';
+    }
+    const tagRows=tags.slice(0,4).map(([tag,c])=>{
+      const p2=pt[tag]||0;
+      const arrow=c>p2?`<span style="color:var(--no);font-weight:700">▲${c-p2}</span>`
+        :c<p2?`<span style="color:var(--accent);font-weight:700">▼${p2-c}</span>`
+        :'<span style="color:var(--sub)">그대로</span>';
+      const maxC=tags[0][1]||1;
+      return `<div style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:5px">
+        <span style="flex:0 0 90px;font-weight:600">${esc(tag)}</span>
+        <span style="flex:1;height:8px;background:var(--bg);border-radius:999px;overflow:hidden"><span style="display:block;height:100%;width:${Math.round(c/maxC*100)}%;background:#c98a2b;border-radius:999px"></span></span>
+        <span style="flex:0 0 30px;text-align:right;color:var(--sub);font-weight:700">${c}회</span>
+        <span style="flex:0 0 52px;text-align:right;font-size:11px">${arrow}</span>
+      </div>`;
+    }).join('');
+    // 다음 숙제 추천: 안 읽었고 숙제로 안 낸 지문 중, 최다 취약 유형에 맞는 것
+    const readPids=new Set(gStuReads.filter(r=>r.user_id===uid).map(r=>r.passage_id));
+    const asgPids=new Set(gAsg.filter(a=>a.student_id===uid).map(a=>a.passage_id));
+    const candidates=allP.filter(p=>!readPids.has(p.id)&&!asgPids.has(p.id));
+    let recHtml='';
+    if(tags.length&&candidates.length){
+      const top=tags[0][0];
+      const score=p=>{
+        const text=(p.sentences||[]).join(' ');
+        if(top==='지칭') return (text.match(/\b(it|they|this|that|these|those|them|its|their|such)\b/gi)||[]).length;
+        if(top==='어휘') return (text.match(/\b[a-z]{9,}\b/gi)||[]).length;
+        if(top==='연결어'||top==='흐름') return (text.match(/\b(however|although|therefore|thus|moreover|nevertheless|whereas|while|consequently|instead)\b/gi)||[]).length;
+        return (p.sentences||[]).reduce((m,s)=>Math.max(m,String(s).split(' ').length),0);
+      };
+      const rec=candidates.slice().sort((a,b)=>score(b)-score(a))[0];
+      const why={'지칭':'대명사가 많이 나와 지칭 추론 연습에 좋아요','어휘':'긴 어휘가 많아 어휘 추론 연습에 좋아요',
+        '연결어':'연결어가 자주 나와 흐름 잡기 연습에 좋아요','흐름':'연결어가 자주 나와 흐름 잡기 연습에 좋아요'};
+      recHtml=`<div style="display:flex;align-items:center;gap:10px;border-top:1px solid #eee9df;margin-top:12px;padding-top:12px">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:13px;color:var(--accent)">다음 숙제 추천</div>
+          <div style="font-size:12.5px;margin-top:2px">${pLabelOf(rec.id)}</div>
+          <div style="font-size:11.5px;color:var(--sub)">${why[top]||'긴 문장이 있어 구조 연습에 좋아요'}</div>
+        </div>
+        <button class="btn primary small" onclick="recAssign('${rec.id}','${uid}')">이 지문으로 숙제 내기</button>
+      </div>`;
+    }
+    html+=`<div class="card" style="margin-bottom:14px">
+      <div style="font-weight:700;font-size:15px;margin-bottom:8px">${esc(name)}, 이번 주</div>
+      <div style="font-size:13.5px;line-height:1.7;margin-bottom:${tags.length?'12px':'0'}">${sum}</div>
+      ${tagRows?`<div style="font-weight:700;font-size:13px;margin-bottom:8px">취약 유형, 지난주와 비교</div>${tagRows}`:''}
+      ${recHtml}
+    </div>`;
+  }
+  el.innerHTML=html;
+}
+function recAssign(pid,uid){
+  showView('homework');
+  if($('hwPassage')) $('hwPassage').value=pid;
+  if($('hwStudent')) $('hwStudent').value=uid;
+  msg('hwMsg','인사이트 추천 지문이 선택됐어요. 구성과 마감만 정하고 내주세요','ok');
+}
+
+// renderToday가 끝날 때 프로필·인사이트도 같이 갱신
 const _renderToday0=renderToday;
-renderToday=function(){ _renderToday0(); renderStuProfile(); };
+renderToday=function(){ _renderToday0(); renderStuProfile(); renderInsight(); };
 
 // ---------- 숙제 내주기 ----------
 let gAsg=[], gStuAtts=[], gStuReads=[];
@@ -540,6 +661,12 @@ async function loadHomework(){
     .map(p=>`<option value="${p.id}">${esc([p.book,p.unit,p.title].filter(Boolean).join(' · '))}</option>`).join('');
   renderHwList();
   renderToday();
+  if(_pendingHwPid){   // "저장하고 바로 숙제 내주기" 체인
+    if($('hwPassage')) $('hwPassage').value=_pendingHwPid;
+    _pendingHwPid=null;
+    showView('homework');
+    msg('hwMsg','방금 저장한 지문이 선택됐어요. 학생과 구성, 마감만 정하고 내주세요','ok');
+  }
 }
 function hwStatus(a){
   const after=t=>t&&new Date(t)>=new Date(a.created_at);
@@ -883,8 +1010,9 @@ function edit(id){
   const p=allP.find(x=>x.id===id); if(!p) return;
   editingId=p.id;
   $('book').value=p.book||''; $('unit').value=p.unit||''; $('title').value=p.title||'';
-  $('raw').value=''; $('split').value=p.sentences.join('\n');
+  $('raw').value=''; renderSentCards(p.sentences||[]);
   $('splitwrap').style.display='block'; renderUnitChips();
+  showView('passages');
   window.scrollTo({top:0,behavior:'smooth'});
 }
 async function del(id){
