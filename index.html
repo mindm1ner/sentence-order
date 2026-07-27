@@ -564,19 +564,15 @@ function diagnosedList(){
   return out;
 }
 const VERDICT={good:{lb:'잘 읽었어요',cls:'good'},partial:{lb:'절반쯤',cls:'partial'},missed:{lb:'다시 보기',cls:'missed'}};
-function showFeedback(fbId){
-  const fb=myFeedback.find(f=>f.id===fbId); if(!fb) return;
-  const p=allP.find(x=>x.id===fb.passage_id); if(!p) return;
-  removeBar(); showTabBar(true);
+// 진단 본문 — 오답노트 상세와 독해 제출 직후 화면에서 공용
+function feedbackBodyHTML(fb,opts){
+  opts=opts||{};
+  const p=allP.find(x=>x.id===fb.passage_id)||{sentences:[]};
   const reading=myReadings.find(r=>r.id===fb.reading_id);
-  const label=[p.book,p.unit,p.title].filter(Boolean).join(' · ');
   const flagged=(fb.flagged||[]);
-  const notCleared=readingRetryList().some(x=>x.fb.id===fb.id);
-  let html=`<button class="back" onclick="showTab('wrong')">‹ 오답노트</button>
-    <div style="font-weight:600;margin:0 2px 12px">${esc(label)}</div>
-    <div class="fbsum"><div class="t">🤖 AI 선생님 진단</div><b>📊 총평</b> — ${esc(fb.summary||'')}
-    ${fb.strengths?`<div style="margin-top:8px"><b>👍 잘한 점</b> — ${esc(fb.strengths)}</div>`:''}
-    ${fb.improvements?`<div style="margin-top:8px"><b>🔧 개선할 점</b> — ${esc(fb.improvements)}</div>`:''}</div>`;
+  let html=`<div class="fbsum"><div class="t">AI 선생님 진단</div><b>총평</b> — ${esc(fb.summary||'')}
+    ${fb.strengths?`<div style="margin-top:8px"><b>잘한 점</b> — ${esc(fb.strengths)}</div>`:''}
+    ${fb.improvements?`<div style="margin-top:8px"><b>개선할 점</b> — ${esc(fb.improvements)}</div>`:''}</div>`;
   const notes=(fb.sentence_notes||[]).slice().sort((a,b)=>a.index-b.index);
   for(const n of notes){
     const v=VERDICT[n.verdict]||VERDICT.partial;
@@ -585,8 +581,8 @@ function showFeedback(fbId){
       <div class="en">${esc(n.sentence||p.sentences[n.index]||'')}</div>
       ${my&&my.my_reading?`<div class="my"><span class="lb">내 해석</span>${esc(my.my_reading)}</div>`:''}
       ${my&&my.my_understanding?`<div class="my"><span class="lb">내 설명</span>${esc(my.my_understanding)}</div>`:''}
-      ${n.reading_note?`<div class="note"><span class="lb">📖 독해</span>${esc(n.reading_note)}</div>`:''}
-      ${n.understanding_note?`<div class="note" style="border-top:none;padding-top:0"><span class="lb">💡 이해</span>${esc(n.understanding_note)}</div>`:''}
+      ${n.reading_note?`<div class="note"><span class="lb">독해</span>${esc(n.reading_note)}</div>`:''}
+      ${n.understanding_note?`<div class="note" style="border-top:none;padding-top:0"><span class="lb">이해</span>${esc(n.understanding_note)}</div>`:''}
       ${n.note?`<div class="note"><span class="lb">코치</span>${esc(n.note)}</div>`:''}</div>`;
   }
   // AI가 발견해 단어장에 자동 등록한 단어들
@@ -599,10 +595,38 @@ function showFeedback(fbId){
     html+=`<div class="ptitle" style="margin-top:16px">${ic('bookmark','warn')} 헷갈렸던 단어 — 단어장에 담아뒀어요</div>`;
     html+=mwList.map(mw=>`<div class="vocab"><div class="w">${esc(mw.word)}${mw.meaning?` <span style="font-weight:400;font-size:13px;color:var(--sub)">${esc(mw.meaning)}</span>`:''}</div></div>`).join('');
   }
-  if(flagged.length&&notCleared)
+  if(opts.retryBtn&&flagged.length)
     html+=`<button class="btn primary full" style="margin-top:14px" onclick="startRetryRead('${fb.id}')">${ic('edit')} 표시된 문장 다시 독해하기 (${flagged.length}문장)</button>`;
-  html+=`<div style="height:80px"></div>`;
-  app.innerHTML=html;
+  return html;
+}
+function showFeedback(fbId){
+  const fb=myFeedback.find(f=>f.id===fbId); if(!fb) return;
+  const p=allP.find(x=>x.id===fb.passage_id); if(!p) return;
+  removeBar(); showTabBar(true);
+  const label=[p.book,p.unit,p.title].filter(Boolean).join(' · ');
+  const notCleared=readingRetryList().some(x=>x.fb.id===fb.id);
+  app.innerHTML=`<button class="back" onclick="showTab('wrong')">‹ 오답노트</button>
+    <div style="font-weight:600;margin:0 2px 12px">${esc(label)}</div>`
+    +feedbackBodyHTML(fb,{retryBtn:notCleared})
+    +`<div style="height:80px"></div>`;
+}
+// 제출 직후 진단 기다리기 — 도착하면 완료 화면에 바로 표시
+async function pollFeedback(readingId){
+  for(let i=0;i<24;i++){
+    await new Promise(r=>setTimeout(r,5000));
+    if(!document.getElementById('fbwait')) return;      // 화면을 떠났으면 중단
+    try{
+      const {data}=await db.from('reading_feedback').select('*').eq('reading_id',readingId).limit(1);
+      if(data&&data.length){
+        const fb=data[0]; myFeedback.unshift(fb);
+        const el=document.getElementById('fbwait');
+        if(el) el.outerHTML=feedbackBodyHTML(fb,{retryBtn:(fb.flagged||[]).length>0});
+        return;
+      }
+    }catch(_){}
+  }
+  const el=document.getElementById('fbwait');
+  if(el) el.innerHTML=`<div class="empty" style="padding:16px 0">진단이 조금 늦어지고 있어요.<br>잠시 후 오답노트 탭에서 확인해봐요.</div>`;
 }
 function renderMe(){
   const latest={}, attempted=new Set();
@@ -1293,12 +1317,14 @@ async function submitReading(){
     student_email:session.user.email, student_name:studentName,
     interpretations, topic:topic||null, is_retry:!!rRetryFb
   };
-  let { error } = await db.from('readings').insert(row);
+  let { data:insData, error } = await db.from('readings').insert(row).select();
   if(error&&/is_retry/.test(error.message||'')){  // is_retry 열이 아직 없으면 빼고 재시도
     delete row.is_retry;
-    ({ error } = await db.from('readings').insert(row));
+    ({ data:insData, error } = await db.from('readings').insert(row).select());
   }
   if(error){ setBusy(btn,false); $('rmsg').innerHTML=`<div class="msg err">저장 실패: ${error.message}</div>`; return; }
+  const newReading=insData&&insData[0];
+  if(newReading){ myReadings.unshift(newReading); readIds.add(newReading.passage_id); }
   // 형광펜 단어 → 단어장에 바로 담기
   if(!vocabLegacy){
     const rows=[], seen=new Set(myVocab.map(v=>v.word_key));
@@ -1309,26 +1335,31 @@ async function submitReading(){
     if(rows.length) db.from('vocab_words').upsert(rows,{onConflict:'user_id,word_key',ignoreDuplicates:true}).then(()=>{});
   }
   rActive=false;
-  showReadDone();
+  showReadDone(newReading?newReading.id:null);
 }
-function showReadDone(){
+function showReadDone(readingId){
   const uniq=[], seen=new Set();
   rSeq.forEach((si,i)=>{
     (rMarks[i]||[]).forEach(m=>{ const k=m.w.toLowerCase(); if(!seen.has(k)){ seen.add(k); uniq.push({w:m.w,ex:rP.sentences[si]}); } });
   });
   const vhtml=uniq.length
-    ? uniq.map(x=>`<div class="vocab"><div class="w">${esc(x.w)}</div><div class="ex">${hlWord(x.ex,x.w)}</div></div>`).join('')
-    : `<p class="hint" style="margin:8px 2px">이번엔 표시한 단어가 없었어요.</p>`;
+    ? `<div class="ptitle" style="margin-top:22px">${ic('bookmark','warn')} 오늘 표시한 단어 (내 단어장에 담겼어요)</div>`
+      +uniq.map(x=>`<div class="vocab"><div class="w">${esc(x.w)}</div><div class="ex">${hlWord(x.ex,x.w)}</div></div>`).join('')
+    : '';
   const doneMsg=rRetryFb
-    ? `${ic('check','ok')} 다시 독해 제출 완료! 훨씬 나아졌을 거예요<br><span style="font-weight:400;font-size:13px">AI 선생님이 곧 다시 봐줄 거예요 — 잠시 후 오답노트에서 확인!</span>`
-    : `${ic('check','ok')} 독해 완료! 잘했어요<br><span style="font-weight:400;font-size:13px">AI 선생님이 몇 분 안에 진단해줄 거예요 — 오답노트 탭에서 확인!</span>`;
+    ? `${ic('check','ok')} 다시 독해 제출 완료! 훨씬 나아졌을 거예요`
+    : `${ic('check','ok')} 독해 완료! 잘했어요`;
   rRetryFb=null;
+  const waitHtml=readingId
+    ? `<div id="fbwait" class="loading" style="padding:28px 0"><span class="spinner"></span>AI 선생님이 지금 진단하고 있어요…</div>`
+    : '';
   app.innerHTML=`
     <div class="done" style="margin-top:20px">${doneMsg}</div>
-    <div class="ptitle" style="margin-top:22px">${ic('bookmark','warn')} 오늘 표시한 단어 (내 단어장에 담겼어요)</div>
+    ${waitHtml}
     ${vhtml}
     <button class="btn primary full" style="margin-top:14px" onclick="loadData()">지문 목록으로</button>
     <div style="height:40px"></div>`;
+  if(readingId) pollFeedback(readingId);
 }
 
 init();
