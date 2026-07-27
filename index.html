@@ -79,8 +79,31 @@
   .hint{font-size:12px;color:var(--sub)}
 
   .ptitle{font-size:13px;color:var(--sub);margin:4px 2px 12px}
-  .who{font-size:12px;color:var(--sub);text-align:right;margin-bottom:10px}
-  .who a{color:var(--accent);cursor:pointer;text-decoration:underline}
+  /* 상단 프로필 버튼 + 바텀 시트 메뉴 */
+  .topmenu{display:flex;justify-content:flex-end;margin-bottom:8px}
+  .avatarbtn{width:36px;height:36px;border-radius:50%;background:var(--accent-soft);color:var(--accent);
+    font-weight:700;font-size:15px;border:1px solid var(--okb);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;font-family:inherit;padding:0}
+  .sheeto{position:fixed;inset:0;background:rgba(20,19,17,.45);z-index:70;display:none;
+    align-items:flex-end;justify-content:center}
+  .sheeto.show{display:flex}
+  .sheet{background:var(--card);width:100%;max-width:640px;border-radius:20px 20px 0 0;
+    padding:8px 18px calc(22px + env(safe-area-inset-bottom));box-shadow:0 -10px 40px rgba(0,0,0,.22);
+    animation:sheetUp .26s cubic-bezier(.22,1,.36,1)}
+  @keyframes sheetUp{from{transform:translateY(45%);opacity:.5}to{transform:translateY(0);opacity:1}}
+  .sheet .grab{width:38px;height:4px;border-radius:999px;background:var(--line);margin:6px auto 14px}
+  .sprofile{display:flex;align-items:center;gap:12px;padding:2px 4px 14px;border-bottom:1px solid var(--line);margin-bottom:6px}
+  .sitem{display:flex;align-items:center;gap:11px;width:100%;background:none;border:none;
+    padding:13px 6px;font-size:15px;color:var(--ink);font-family:inherit;cursor:pointer;
+    text-align:left;border-radius:10px}
+  .sitem:active{background:var(--bg)}
+  .sitem.out{color:var(--no)}
+  .sw{margin-left:auto;width:42px;height:25px;border-radius:999px;background:var(--line);
+    position:relative;transition:background .2s;flex:0 0 auto}
+  .sw.on{background:var(--accent)}
+  .sw i{position:absolute;top:3px;left:3px;width:19px;height:19px;border-radius:50%;
+    background:#fff;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+  .sw.on i{left:20px}
 
   /* 오답 패널 */
   .wrongpanel{border:1px solid var(--warnb);background:var(--warn-bg);border-radius:16px;
@@ -436,7 +459,9 @@ const PATHS={
   check:'<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
   edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/>',
   cursor:'<path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/>',
-  bookmark:'<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>'
+  bookmark:'<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>',
+  moon:'<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>',
+  exit:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>'
 };
 function ic(name,extra){return `<svg class="ic ${extra||''}" viewBox="0 0 24 24">${PATHS[name]||''}</svg>`;}
 
@@ -584,11 +609,35 @@ function showTab(t){
   else if(t==='learn'){ curCourse?renderCourse():renderLearn(); }
   else renderHome();
 }
-function topBar(){
-  const myName=session?((session.user.user_metadata&&session.user.user_metadata.name)||session.user.email):'';
-  const dark=isDarkNow();
-  return `<div class="who">${myName?esc(myName)+'님 · ':''}<a onclick="toggleTheme()">${dark?'라이트':'다크'} 모드</a> · <a onclick="showOnboarding()">사용법</a> · <a onclick="logout()">로그아웃</a></div>`;
+function myDisplayName(){
+  return session?((session.user.user_metadata&&session.user.user_metadata.name)||session.user.email):'';
 }
+function topBar(){
+  const initial=(myDisplayName()||'?').trim().charAt(0).toUpperCase();
+  return `<div class="topmenu"><button class="avatarbtn" onclick="openMenu()" aria-label="내 메뉴">${esc(initial)}</button></div>`;
+}
+// ---------- 프로필 바텀 시트 메뉴 ----------
+function openMenu(){
+  const name=myDisplayName(), email=session?session.user.email:'';
+  const initial=(name||'?').trim().charAt(0).toUpperCase();
+  let el=document.getElementById('sheet');
+  if(!el){ el=document.createElement('div'); el.id='sheet'; el.className='sheeto'; document.body.appendChild(el); }
+  el.innerHTML=`<div class="sheet" onclick="event.stopPropagation()">
+    <div class="grab"></div>
+    <div class="sprofile">
+      <span class="avatarbtn" style="width:42px;height:42px;cursor:default">${esc(initial)}</span>
+      <span><span style="display:block;font-weight:700;font-size:15px">${esc(name)}님</span>
+        <span class="hint" style="margin:0">${esc(email)}</span></span>
+    </div>
+    <button class="sitem" onclick="toggleTheme()">${ic('moon','muted')} 다크 모드
+      <span class="sw ${isDarkNow()?'on':''}" id="swTheme"><i></i></span></button>
+    <button class="sitem" onclick="closeMenu();showOnboarding()">${ic('book','muted')} 사용법 다시 보기</button>
+    <button class="sitem out" onclick="logout()">${ic('exit','')} 로그아웃</button>
+  </div>`;
+  el.classList.add('show');
+  el.onclick=closeMenu;
+}
+function closeMenu(){ const el=document.getElementById('sheet'); if(el) el.classList.remove('show'); }
 // ---------- 테마 (자동 감지 + 수동 전환, 기기별 기억) ----------
 function isDarkNow(){
   const t=document.documentElement.dataset.theme;
@@ -599,7 +648,8 @@ function toggleTheme(){
   const next=isDarkNow()?'light':'dark';
   document.documentElement.dataset.theme=next;
   try{ localStorage.setItem('so_theme',next); }catch(_){}
-  if(!(solving||rActive||qActive)) showTab(curTab);   // 풀이 중엔 색만 바뀌고 화면 유지
+  const sw=document.getElementById('swTheme');
+  if(sw) sw.classList.toggle('on',isDarkNow());
 }
 (function initTheme(){
   try{ const t=localStorage.getItem('so_theme'); if(t) document.documentElement.dataset.theme=t; }catch(_){}
