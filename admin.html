@@ -143,6 +143,7 @@
         <button class="navbtn" data-v="records" onclick="showView('records')"><svg class="ic" viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>학생 기록</button>
         <button class="navbtn" data-v="reflections" onclick="showView('reflections')"><svg class="ic" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>이유</button>
         <button class="navbtn" data-v="readings" onclick="showView('readings')"><svg class="ic" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>독해</button>
+        <button class="navbtn" data-v="homework" onclick="showView('homework')"><svg class="ic" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>숙제</button>
         <button class="navbtn" data-v="vocab" onclick="showView('vocab')"><svg class="ic" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>단어장</button>
         <button class="navbtn" data-v="feedback" onclick="showView('feedback')"><svg class="ic" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 1 7 7c0 2.4-1.2 4.5-3 5.7V17a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-2.3C6.2 13.5 5 11.4 5 9a7 7 0 0 1 7-7z"/><line x1="9" y1="22" x2="15" y2="22"/></svg>AI 진단</button>
       </nav>
@@ -203,6 +204,32 @@
         <section class="view" data-view="readings">
           <h2 class="vtitle">학생 독해 · 해석 · 단어장</h2>
           <div id="readings"></div>
+        </section>
+
+        <section class="view" data-view="homework">
+          <h2 class="vtitle">숙제 내주기</h2>
+          <div class="card">
+            <div class="row">
+              <div><label>학생</label><select id="hwStudent" style="width:100%;border:1px solid #e7e4dc;border-radius:11px;padding:12px;font-size:15px;font-family:inherit;background:#fff"></select></div>
+              <div><label>차시 라벨 (선택)</label><input id="hwRound" placeholder="예: 7월 4주차"></div>
+            </div>
+            <label>지문</label>
+            <select id="hwPassage" style="width:100%;border:1px solid #e7e4dc;border-radius:11px;padding:12px;font-size:15px;font-family:inherit;background:#fff"></select>
+            <div class="row" style="margin-top:14px;align-items:end">
+              <div>
+                <label>시킬 것</label>
+                <div style="display:flex;gap:16px;padding:10px 2px">
+                  <label style="display:flex;align-items:center;gap:6px;margin:0;font-size:14px;color:#2b2a27;cursor:pointer"><input type="checkbox" id="hwOrder" checked style="width:auto"> 순서 맞추기</label>
+                  <label style="display:flex;align-items:center;gap:6px;margin:0;font-size:14px;color:#2b2a27;cursor:pointer"><input type="checkbox" id="hwReading" checked style="width:auto"> 한줄 독해</label>
+                </div>
+              </div>
+              <div><label>마감일 (선택)</label><input id="hwDue" type="date"></div>
+            </div>
+            <div id="hwMsg"></div>
+            <button class="btn primary" style="margin-top:12px" onclick="saveAssignment()">숙제 내주기</button>
+          </div>
+          <h3 class="subt">내준 숙제</h3>
+          <div id="hwList"></div>
         </section>
 
         <section class="view" data-view="vocab">
@@ -313,6 +340,79 @@ async function loadAll(){
   loadReadings();
   loadVocabAdmin();
   loadFeedbackAdmin();
+  loadHomework();
+}
+
+// ---------- 숙제 내주기 ----------
+let gAsg=[], gStuAtts=[], gStuReads=[];
+async function loadHomework(){
+  const [aRes,rRes,gRes]=await Promise.all([
+    db.from('attempts').select('user_id,student_name,passage_id,is_correct,created_at'),
+    db.from('readings').select('user_id,student_name,passage_id,is_retry,created_at'),
+    db.from('assignments').select('*').order('created_at',{ascending:false})
+  ]);
+  if(gRes.error){
+    $('hwList').innerHTML=`<p class="sub">숙제 표(assignments)가 아직 없어요 — redesign-plan.md의 SQL을 SQL Editor에서 실행해주세요.<br><span style="font-size:12px">${esc(gRes.error.message)}</span></p>`;
+    return;
+  }
+  gStuAtts=aRes.data||[]; gStuReads=rRes.data||[]; gAsg=gRes.data||[];
+  const stu=new Map();
+  for(const x of [...gStuAtts,...gStuReads]) if(x.user_id&&x.student_name) stu.set(x.user_id,x.student_name);
+  $('hwStudent').innerHTML=[...stu].map(([id,name])=>`<option value="${id}">${esc(name)}</option>`).join('')
+    ||'<option value="">학생 기록이 아직 없어요</option>';
+  $('hwPassage').innerHTML=[...allP].sort((a,b)=>nat(a.book,b.book)||nat(a.unit,b.unit)||nat(a.title,b.title))
+    .map(p=>`<option value="${p.id}">${esc([p.book,p.unit,p.title].filter(Boolean).join(' · '))}</option>`).join('');
+  renderHwList();
+}
+function hwStatus(a){
+  const after=t=>t&&new Date(t)>=new Date(a.created_at);
+  const st={}; const steps=a.steps||[];
+  if(steps.includes('order'))
+    st.order=gStuAtts.some(x=>x.user_id===a.student_id&&x.passage_id===a.passage_id&&x.is_correct&&after(x.created_at));
+  if(steps.includes('reading'))
+    st.reading=gStuReads.some(r=>r.user_id===a.student_id&&r.passage_id===a.passage_id&&!r.is_retry&&after(r.created_at));
+  st.done=steps.length>0&&steps.every(s=>st[s]);
+  return st;
+}
+function renderHwList(){
+  if(!gAsg.length){ $('hwList').innerHTML='<p class="sub">아직 내준 숙제가 없어요.</p>'; return; }
+  const stuName=id=>{ const x=[...gStuAtts,...gStuReads].find(y=>y.user_id===id&&y.student_name); return x?x.student_name:'(이름 없음)'; };
+  $('hwList').innerHTML=gAsg.map(a=>{
+    const p=allP.find(x=>x.id===a.passage_id);
+    const label=p?[p.book,p.unit,p.title].filter(Boolean).join(' · '):'(삭제된 지문)';
+    const st=hwStatus(a);
+    const stepTxt=(a.steps||[]).map(s=>{
+      const nm=s==='order'?'순서':'독해';
+      return st[s]?`<span style="color:#3a7d5d;font-weight:700">✓ ${nm}</span>`:`<span style="color:#8a877f">${nm}</span>`;
+    }).join(' · ');
+    return `<div class="rec ${st.done?'solved':''}" style="margin-bottom:8px">
+      <div class="rh">
+        <span class="badge ${st.done?'ok':''}" >${st.done?'완료':'진행 중'}</span>
+        <b>${esc(stuName(a.student_id))}</b> · ${esc(label)}
+        <span class="when">${a.round_label?esc(a.round_label)+' · ':''}${a.due_date?'~'+esc(a.due_date):''} · ${fmt(a.created_at)}</span>
+      </div>
+      <div style="margin-top:6px;font-size:13px">${stepTxt}
+        <a style="float:right;color:#c0584b;cursor:pointer;font-size:12px" onclick="delAssignment('${a.id}')">삭제</a></div>
+    </div>`;
+  }).join('');
+}
+async function saveAssignment(){
+  const student_id=$('hwStudent').value, passage_id=$('hwPassage').value;
+  const steps=[]; if($('hwOrder').checked) steps.push('order'); if($('hwReading').checked) steps.push('reading');
+  if(!student_id){ msg('hwMsg','학생 기록이 아직 없어요 — 학생이 한 번 로그인해 활동하면 목록에 떠요','err'); return; }
+  if(!passage_id){ msg('hwMsg','지문을 선택하세요','err'); return; }
+  if(!steps.length){ msg('hwMsg','순서/독해 중 최소 하나는 체크해야 해요','err'); return; }
+  const row={ student_id, passage_id, steps,
+    round_label:$('hwRound').value.trim()||null, due_date:$('hwDue').value||null };
+  const { error } = await db.from('assignments').insert(row);
+  if(error){ msg('hwMsg','저장 실패: '+error.message,'err'); return; }
+  msg('hwMsg','숙제를 내줬어요 ✓ 학생 홈에 바로 떠요','ok');
+  loadHomework();
+}
+async function delAssignment(id){
+  if(!confirm('이 숙제를 삭제할까요?')) return;
+  const { error } = await db.from('assignments').delete().eq('id',id);
+  if(!error) loadHomework();
 }
 
 // ---------- 학생 단어장 ----------

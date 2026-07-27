@@ -290,6 +290,26 @@
   .esp.k-ref{text-decoration:underline dotted 2px var(--no);text-underline-offset:3px}
   .esplegend{display:flex;gap:12px;font-size:11px;color:var(--sub);margin:2px 2px 10px;flex-wrap:wrap}
   .esplegend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+  /* 홈: 주간 잔디 + 숙제 칩 */
+  .wdots{display:flex;gap:6px;margin-top:8px}
+  .wdots .wd{width:18px;height:18px;border-radius:6px;background:var(--line)}
+  .wdots .wd.on{background:var(--accent)}
+  .wdots .wd.today{background:var(--accent-soft);outline:2px solid var(--accent);outline-offset:1px}
+  .chip2{display:inline-block;font-size:10.5px;font-weight:700;border-radius:999px;padding:2px 9px;
+    background:var(--bg);border:1px solid var(--line);color:var(--sub)}
+  .chip2.ok{background:var(--ok-bg);border-color:#bfe0cf;color:var(--ok)}
+  .chip2.hwmark{background:var(--warn-bg);border-color:#f0d9b8;color:var(--warn);margin-left:6px}
+  .psg.hw{border-color:#cfe3d8;background:var(--card)}
+  /* 학습 코스 레일 */
+  .cstep{display:flex;gap:12px}
+  .crail{flex:0 0 28px;display:flex;flex-direction:column;align-items:center}
+  .cnd{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:12px;font-weight:800;background:var(--line);color:var(--sub);flex:0 0 auto}
+  .cnd.done{background:var(--accent);color:#fff}
+  .cnd.now{background:var(--card);border:2px solid var(--accent);color:var(--accent)}
+  .cbar{width:2px;flex:1;background:var(--line);min-height:14px}
+  .cbar.done{background:var(--accent)}
+  .cbody{flex:1;min-width:0;padding-bottom:12px}
   /* AI 진단 */
   .fb{border:1px solid var(--line);border-left:4px solid var(--line);background:var(--card);
     border-radius:12px;padding:11px 14px;margin-bottom:8px}
@@ -339,11 +359,11 @@
 
 <!-- 하단 탭바 -->
 <div id="tabbar" class="tabbar" style="display:none">
-  <button class="tab active" data-t="play" onclick="navTab('play')"><svg class="ic" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg><span>순서</span></button>
-  <button class="tab" data-t="read" onclick="navTab('read')"><svg class="ic" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg><span>독해</span></button>
+  <button class="tab active" data-t="home" onclick="navTab('home')"><svg class="ic" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>홈</span></button>
+  <button class="tab" data-t="learn" onclick="navTab('learn')"><svg class="ic" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg><span>학습</span></button>
   <button class="tab" data-t="vocab" onclick="navTab('vocab')"><svg class="ic" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><span>단어장</span></button>
   <button class="tab" data-t="wrong" onclick="navTab('wrong')"><svg class="ic" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg><span>오답노트</span></button>
-  <button class="tab" data-t="me" onclick="navTab('me')"><svg class="ic" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span>내 기록</span></button>
+  <button class="tab" data-t="me" onclick="navTab('me')"><svg class="ic" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span>기록</span></button>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -361,6 +381,8 @@ let myVocab=[], vocabLegacy=false;
 let qDeck=[], qIdx=0, qCur=null, qRight=[], qWrongList=[], qActive=false, qAnswered=false, qPractice=false;
 // AI 독해 진단
 let myFeedback=[];
+// 숙제·코스
+let myAsg=[], curCourse=null;
 
 function nat(a,b){return String(a||'').localeCompare(String(b||''),'ko',{numeric:true,sensitivity:'base'});}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -479,16 +501,18 @@ function enter(s){
 function $(id){return document.getElementById(id);}
 
 // ---------- 데이터 로드 + 탭 ----------
-let curTab='play';
+let curTab='home';
 async function loadData(){
   app.innerHTML=`<div class="loading"><span class="spinner"></span>불러오는 중…</div>`;
-  const [pRes,aRes,rRes,vRes,fRes]=await Promise.all([
+  const [pRes,aRes,rRes,vRes,fRes,gRes]=await Promise.all([
     db.from('passages').select('*'),
     db.from('attempts').select('*').order('created_at',{ascending:false}),
     db.from('readings').select('*').order('created_at',{ascending:false}),
     db.from('vocab_words').select('*').eq('user_id',session.user.id),
-    db.from('reading_feedback').select('*').order('created_at',{ascending:false})
+    db.from('reading_feedback').select('*').order('created_at',{ascending:false}),
+    db.from('assignments').select('*').order('created_at',{ascending:false})
   ]);
+  myAsg=(!gRes.error&&gRes.data)?gRes.data.filter(a=>a.student_id===session.user.id):[];
   if(pRes.error){ app.innerHTML=`<div class="empty">불러오기 실패 😢<br>${pRes.error.message}</div>`; return; }
   allP=pRes.data||[];
   myAtts=(!aRes.error&&aRes.data)?aRes.data:[];
@@ -512,17 +536,102 @@ function showTab(t){
   removeBar(); showTabBar(true);
   if(t==='wrong') renderWrong();
   else if(t==='me') renderMe();
-  else if(t==='read') renderRead();
   else if(t==='vocab') renderVocabTab();
-  else renderLibrary();
+  else if(t==='learn'){ curCourse?renderCourse():renderLearn(); }
+  else renderHome();
 }
 function topBar(){
   const myName=session?((session.user.user_metadata&&session.user.user_metadata.name)||session.user.email):'';
   return `<div class="who">${myName?esc(myName)+'님 · ':''}<a onclick="showOnboarding()">사용법</a> · <a onclick="logout()">로그아웃</a></div>`;
 }
-function renderLibrary(){
+// ---------- 홈: 이번 차시 숙제 + 오늘의 처방 + 스트릭 ----------
+function activityDays(){
+  const days=new Set();
+  for(const a of myAtts) if(a.user_id===session.user.id&&a.created_at) days.add(a.created_at.slice(0,10));
+  for(const r of myReadings) if(r.user_id===session.user.id&&r.created_at) days.add(r.created_at.slice(0,10));
+  return days;
+}
+function dstr(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function streakCount(days){
+  let n=0; const d=new Date();
+  if(!days.has(dstr(d))) d.setDate(d.getDate()-1);   // 오늘 아직 안 했으면 어제부터 셈
+  while(days.has(dstr(d))){ n++; d.setDate(d.getDate()-1); }
+  return n;
+}
+function asgStatus(a){
+  const after=t=>t&&new Date(t)>=new Date(a.created_at);
+  const steps=a.steps||[];
+  const st={};
+  if(steps.includes('order'))
+    st.order=myAtts.some(x=>x.user_id===session.user.id&&x.passage_id===a.passage_id&&x.is_correct&&after(x.created_at));
+  if(steps.includes('reading'))
+    st.reading=myReadings.some(r=>r.user_id===session.user.id&&r.passage_id===a.passage_id&&!r.is_retry&&after(r.created_at));
+  st.done=steps.length>0&&steps.every(s=>st[s]);
+  return st;
+}
+function stepName(s){ return s==='order'?'순서':'독해'; }
+function renderHome(){
+  const days=activityDays(), sk=streakCount(days);
+  // 주간 잔디 (월~일)
+  const now=new Date(); const dow=(now.getDay()+6)%7; // 월=0
+  let dots='';
+  for(let i=0;i<7;i++){
+    const d=new Date(now); d.setDate(now.getDate()-dow+i);
+    const key=dstr(d);
+    const cls= key===dstr(now) ? (days.has(key)?'on':'today') : (days.has(key)?'on':'');
+    dots+=`<i class="wd ${cls}"></i>`;
+  }
+  let html=topBar();
+  html+=`<div class="card" style="display:flex;gap:14px;align-items:center;margin-bottom:14px">
+    <div style="flex:0 0 auto;text-align:center;min-width:64px">
+      <div style="font-size:26px;font-weight:800;color:var(--accent);line-height:1.1">${sk}</div>
+      <div class="hint">일 연속</div>
+    </div>
+    <div style="flex:1">
+      <div style="font-weight:700;font-size:15px">${sk>0?'오늘도 이어가요':'오늘부터 다시 시작해요'}</div>
+      <div class="wdots">${dots}</div>
+    </div></div>`;
+  // 이번 차시 숙제
+  const open=myAsg.filter(a=>!asgStatus(a).done);
+  const doneAsg=myAsg.filter(a=>asgStatus(a).done);
+  html+=`<div class="ptitle">이번 차시 숙제</div>`;
+  if(!myAsg.length) html+=`<div class="empty" style="padding:20px 0">아직 받은 숙제가 없어요.<br>학습 탭에서 자유롭게 골라 풀 수 있어요.</div>`;
+  else if(!open.length) html+=`<div class="done">${ic('check','ok')} 이번 차시 숙제를 전부 끝냈어요!</div>`;
+  for(const a of open){
+    const p=allP.find(x=>x.id===a.passage_id); if(!p) continue;
+    const st=asgStatus(a);
+    const label=[p.book,p.unit,p.title].filter(Boolean).join(' · ');
+    const stepsHtml=(a.steps||[]).map(s=>
+      `<span class="chip2 ${st[s]?'ok':''}">${st[s]?'✓ ':''}${stepName(s)}</span>`).join('');
+    html+=`<button class="psg hw" onclick="openCourse('${p.id}')">
+      <span style="flex:1;min-width:0">
+        <span style="display:block;font-weight:600">${esc(label)}</span>
+        <span style="display:flex;gap:6px;margin-top:5px">${stepsHtml}</span>
+      </span>
+      <span class="cnt">${a.round_label?esc(a.round_label):''}${a.due_date?`<br>~${esc(a.due_date.slice(5))}`:''}</span>
+    </button>`;
+  }
+  // 오늘의 처방
+  const due=vocabLegacy?0:dueWords().length;
+  const retries=readingRetryList();
+  if(due||retries.length){
+    html+=`<div class="ptitle" style="margin-top:18px">오늘의 처방</div>`;
+    if(due) html+=`<button class="psg" onclick="navTab('vocab')">단어 복습 퀴즈${vocabLegacy?'':''}<span class="cnt" style="color:var(--warn);font-weight:700">${due}단어</span></button>`;
+    for(const {p,fb} of retries){
+      const label=[p.book,p.unit,p.title].filter(Boolean).join(' · ');
+      html+=`<button class="psg wrong" onclick="showFeedback('${fb.id}')">다시 독해 — ${esc(label)}<span class="cnt">${(fb.flagged||[]).length}문장</span></button>`;
+    }
+  }
+  if(doneAsg.length) html+=`<div class="hint" style="margin:14px 2px 0">이번 차시 완료한 숙제 ${doneAsg.length}개 — 기록 탭에서 확인</div>`;
+  app.innerHTML=html+`<div style="height:20px"></div>`;
+}
+
+// ---------- 학습: 교재 → 지문 → 코스 ----------
+function renderLearn(){
+  curCourse=null;
   if(!allP.length){ app.innerHTML=topBar()+`<div class="empty">아직 등록된 지문이 없어요.</div>`; return; }
   const groups=buildGroups(allP);
+  const asgIds=new Set(myAsg.filter(a=>!asgStatus(a).done).map(a=>a.passage_id));
   let html=topBar()+`<div class="ptitle">교재를 펼쳐 지문을 선택하세요</div>`;
   let first=true;
   for(const [book,units] of groups){
@@ -532,14 +641,65 @@ function renderLibrary(){
     for(const unit of Object.keys(units)){
       if(unit) html+=`<div class="unith">${esc(unit)}</div>`;
       for(const p of units[unit]){
-        const w=wrongIds.has(p.id)?' '+ic('rotate','sm warn'):'';
-        html+=`<button class="psg" onclick="pick('${p.id}')">${esc(p.title)}${w}<span class="cnt">문장 ${p.sentences.length}</span></button>`;
+        const marks=(asgIds.has(p.id)?` <span class="chip2 hwmark">숙제</span>`:'')+(wrongIds.has(p.id)?' '+ic('rotate','sm warn'):'');
+        html+=`<button class="psg" onclick="openCourse('${p.id}')">${esc(p.title)}${marks}<span class="cnt">문장 ${p.sentences.length}</span></button>`;
       }
     }
     html+=`</div></div>`;
     first=false;
   }
   app.innerHTML=html;
+}
+function openCourse(pid){ curCourse=pid; curTab='learn'; renderCourse(); }
+function asgForPassage(pid){
+  return myAsg.find(a=>a.passage_id===pid&&!asgStatus(a).done)||myAsg.find(a=>a.passage_id===pid)||null;
+}
+function renderCourse(){
+  const p=allP.find(x=>x.id===curCourse);
+  if(!p){ renderLearn(); return; }
+  removeBar(); showTabBar(true);
+  const uid=session.user.id;
+  const asg=asgForPassage(p.id);
+  const steps=asg?(asg.steps||[]):['order','reading'];
+  const label=[p.book,p.unit,p.title].filter(Boolean).join(' · ');
+  const orderDone=myAtts.some(x=>x.user_id===uid&&x.passage_id===p.id&&x.is_correct&&(!asg||new Date(x.created_at)>=new Date(asg.created_at)));
+  const readDone=myReadings.some(r=>r.user_id===uid&&r.passage_id===p.id&&!r.is_retry&&(!asg||new Date(r.created_at)>=new Date(asg.created_at)));
+  const latestFb=myFeedback.find(f=>f.passage_id===p.id);
+  const pVocab=vocabLegacy?[]:myVocab.filter(v=>v.passage_id===p.id);
+  let html=`<button class="back" onclick="curCourse=null;renderLearn()">‹ 지문 목록</button>
+    <div style="font-weight:600;margin:0 2px 4px">${esc(label)}</div>
+    <div class="hint" style="margin:0 2px 14px">${asg?`숙제${asg.round_label?` · ${esc(asg.round_label)}`:''}${asg.due_date?` · ~${esc(asg.due_date.slice(5))}`:''}`:'자유 학습'} · 문장 ${p.sentences.length}개</div>`;
+  let n=0; const N=steps.length+(latestFb?1:0)+(pVocab.length?1:0);
+  const rail=(state,inner,last)=>`<div class="cstep">
+    <div class="crail"><div class="cnd ${state}">${state==='done'?'✓':++n}</div>${last?'':`<div class="cbar ${state==='done'?'done':''}"></div>`}</div>
+    <div class="cbody">${inner}</div></div>`;
+  let idx=0; const total=steps.length+2;
+  const parts=[];
+  if(steps.includes('order')){
+    parts.push({state:orderDone?'done':'now',inner:`<div class="card" style="padding:12px 14px${orderDone?';opacity:.75':''}">
+      <div style="font-weight:700;font-size:14px">순서 맞추기</div>
+      <div class="hint" style="margin:2px 0 ${orderDone?'0':'10px'}">${orderDone?'완료했어요':'흩어진 문장을 배열해요'}</div>
+      ${orderDone?'':`<button class="btn primary full" style="margin-top:0" onclick="pick('${p.id}')">풀기</button>`}
+      ${orderDone?`<button class="btn ghost" style="margin-top:8px;padding:8px 14px;font-size:13px" onclick="pick('${p.id}')">다시 풀기</button>`:''}</div>`});
+  }
+  if(steps.includes('reading')){
+    const active=!steps.includes('order')||orderDone;
+    parts.push({state:readDone?'done':(active?'now':'wait'),inner:`<div class="card" style="padding:12px 14px${readDone?';opacity:.75':''}">
+      <div style="font-weight:700;font-size:14px">한줄 독해</div>
+      <div class="hint" style="margin:2px 0 ${readDone?'0':'10px'}">${readDone?'제출 완료 — AI 진단을 확인해요':'해석하고, 하고 싶은 말을 내 말로'}</div>
+      ${readDone?`<button class="btn ghost" style="margin-top:8px;padding:8px 14px;font-size:13px" onclick="pickRead('${p.id}')">다시 독해하기</button>`
+        :`<button class="btn primary full" style="margin-top:0" onclick="pickRead('${p.id}')">시작하기</button>`}</div>`});
+  }
+  parts.push({state:latestFb?'done':'wait',inner:`<div class="card" style="padding:12px 14px${latestFb?'':';opacity:.65'}">
+    <div style="font-weight:700;font-size:14px">AI 진단</div>
+    <div class="hint" style="margin:2px 0 ${latestFb?'8px':'0'}">${latestFb?`${(latestFb.flagged||[]).length?`다시 읽을 문장 ${(latestFb.flagged||[]).length}개`:'통과했어요'}`:'독해를 제출하면 30초 안에 도착해요'}</div>
+    ${latestFb?`<button class="btn ghost" style="padding:8px 14px;font-size:13px" onclick="showFeedback('${latestFb.id}')">진단 보기</button>`:''}</div>`});
+  parts.push({state:pVocab.length?'now':'wait',inner:`<div class="card" style="padding:12px 14px${pVocab.length?'':';opacity:.65'}">
+    <div style="font-weight:700;font-size:14px">이 지문의 단어</div>
+    <div class="hint" style="margin:2px 0 0">${pVocab.length?`${pVocab.length}개 — 단어장에서 복습해요`:'독해 중 형광펜 치면 여기 쌓여요'}</div>
+    ${pVocab.length?`<button class="btn ghost" style="margin-top:8px;padding:8px 14px;font-size:13px" onclick="navTab('vocab')">단어장 열기</button>`:''}</div>`});
+  parts.forEach((pt,i)=>{ html+=rail(pt.state,pt.inner,i===parts.length-1); });
+  app.innerHTML=html+`<div style="height:20px"></div>`;
 }
 function renderWrong(){
   const wrongList=allP.filter(p=>wrongIds.has(p.id))
@@ -780,7 +940,7 @@ function tryLeave(go){
   solving=false; go();
 }
 function leaveSolve(){ tryLeave(()=>loadData()); }
-function leaveRead(){ const t=rRetryFb?'wrong':'read'; tryLeave(()=>{ curTab=t; loadData(); }); }
+function leaveRead(){ const t=rRetryFb?'wrong':'learn'; tryLeave(()=>{ curTab=t; loadData(); }); }
 function navTab(t){ if(solving||rActive||qActive) tryLeave(()=>{ curTab=t; loadData(); }); else showTab(t); }
 
 function buildGroups(list){
@@ -879,6 +1039,8 @@ async function check(){
   render(true);
   // 결과 저장(정답·오답 모두)
   const studentName=(session.user.user_metadata&&session.user.user_metadata.name)||session.user.email;
+  myAtts.unshift({ passage_id:current.id, score:correct, total:state.length, is_correct:isC,
+    submitted, user_id:session.user.id, created_at:new Date().toISOString() });   // 코스·스트릭 즉시 반영
   try{
     await db.from('attempts').insert({
       passage_id:current.id, score:correct, total:state.length, is_correct:isC,
@@ -986,31 +1148,7 @@ function hlWord(sentence,w){
   }catch(e){ return safe; }
 }
 
-// ----- 독해 도서관 + 단어장 버튼 -----
-function renderRead(){
-  buildVocab();
-  const vCnt=vocabLegacy?vocab.length:myVocab.length;
-  let html=topBar()+`<div class="ptitle">한 문장씩 읽고, 내 말로 해석해봐요</div>`;
-  html+=`<button class="vocabbtn" onclick="showTab('vocab')">${ic('bookmark','warn')} 내 단어장 <span class="cnt">${vCnt}개 ›</span></button>`;
-  if(!allP.length){ html+=`<div class="empty">아직 등록된 지문이 없어요.</div>`; app.innerHTML=html; return; }
-  const groups=buildGroups(allP);
-  let first=true;
-  for(const [book,units] of groups){
-    const total=Object.values(units).reduce((n,a)=>n+a.length,0);
-    html+=`<div class="book${first?' open':''}"><button class="bookh" onclick="this.closest('.book').classList.toggle('open')">
-      <span class="chev">›</span> ${ic('book','muted')} ${esc(book)} <span class="cnt">${total}개</span></button><div class="bookbody">`;
-    for(const unit of Object.keys(units)){
-      if(unit) html+=`<div class="unith">${esc(unit)}</div>`;
-      for(const p of units[unit]){
-        const done=readIds.has(p.id)?' '+ic('check','sm ok'):'';
-        html+=`<button class="psg" onclick="pickRead('${p.id}')">${esc(p.title)}${done}<span class="cnt">문장 ${p.sentences.length}</span></button>`;
-      }
-    }
-    html+=`</div></div>`;
-    first=false;
-  }
-  app.innerHTML=html;
-}
+// (구 독해 탭은 '학습' 코스로 통합됨 — 2026-07-27 리디자인)
 
 // ----- 단어장(전체 모아보기) -----
 function buildVocab(){
