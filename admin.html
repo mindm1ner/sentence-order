@@ -117,6 +117,30 @@
   .navbtn .ic{stroke:currentColor}
   .main{flex:1;min-width:0}
   .view{display:none} .view.active{display:block}
+  /* 학생 메뉴 서브탭 */
+  .subtabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:16px;flex-wrap:wrap}
+  .stab{border:none;background:none;font-family:inherit;font-size:13.5px;font-weight:700;color:var(--sub);
+    padding:9px 13px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .stab.active{color:var(--accent);border-bottom-color:var(--accent)}
+  .spane{display:none} .spane.active{display:block}
+  /* 오늘: 처리 대기열 */
+  .kpis{display:flex;gap:10px;margin-bottom:18px}
+  .kpi{flex:1;background:var(--card);border:1px solid var(--line);border-radius:13px;padding:13px 8px;
+    text-align:center;box-shadow:var(--shadow)}
+  .kpi b{display:block;font-size:21px}
+  .kpi span{font-size:11.5px;color:var(--sub)}
+  .tq{display:flex;align-items:center;gap:11px;background:var(--card);border:1px solid var(--line);
+    border-radius:12px;padding:11px 13px;margin-bottom:8px;box-shadow:var(--shadow);
+    transition:opacity .3s,transform .3s}
+  .tq.gone{opacity:0;transform:translateX(24px)}
+  .tq .tic{flex:0 0 32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:13px}
+  .tq .tg{flex:1;min-width:0}
+  .tq .tt{font-weight:600;font-size:14px}
+  .tq .ts{font-size:12px;color:var(--sub);margin-top:1px}
+  .dline{border-bottom:1px dotted var(--sub);cursor:help}
+  .alldone{text-align:center;color:var(--accent);background:var(--accent-soft);border:1px solid #bfe0cf;
+    border-radius:13px;padding:22px;font-weight:600;font-size:14px}
   .vtitle{font-size:16px;margin:0 0 14px}
   .subt{font-size:14px;font-weight:700;margin:26px 2px 12px;display:flex;align-items:center;gap:6px}
   @media(max-width:680px){
@@ -152,18 +176,35 @@
 
     <div class="layout">
       <nav class="side">
-        <button class="navbtn active" data-v="passages" onclick="showView('passages')"><svg class="ic" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>지문</button>
-        <button class="navbtn" data-v="stats" onclick="showView('stats')"><svg class="ic" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>통계</button>
-        <button class="navbtn" data-v="records" onclick="showView('records')"><svg class="ic" viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>학생 기록</button>
-        <button class="navbtn" data-v="reflections" onclick="showView('reflections')"><svg class="ic" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>이유</button>
-        <button class="navbtn" data-v="readings" onclick="showView('readings')"><svg class="ic" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>독해</button>
+        <button class="navbtn active" data-v="today" onclick="showView('today')"><svg class="ic" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>오늘</button>
+        <button class="navbtn" data-v="student" onclick="showView('student')"><svg class="ic" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>학생</button>
+        <button class="navbtn" data-v="passages" onclick="showView('passages')"><svg class="ic" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>지문</button>
         <button class="navbtn" data-v="homework" onclick="showView('homework')"><svg class="ic" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>숙제</button>
-        <button class="navbtn" data-v="vocab" onclick="showView('vocab')"><svg class="ic" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>단어장</button>
-        <button class="navbtn" data-v="feedback" onclick="showView('feedback')"><svg class="ic" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 1 7 7c0 2.4-1.2 4.5-3 5.7V17a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-2.3C6.2 13.5 5 11.4 5 9a7 7 0 0 1 7-7z"/><line x1="9" y1="22" x2="15" y2="22"/></svg>AI 진단</button>
       </nav>
 
       <main class="main">
-        <section class="view active" data-view="passages">
+        <section class="view active" data-view="today">
+          <h2 class="vtitle">오늘 확인할 것</h2>
+          <div id="todayView"><p class="sub">불러오는 중이에요…</p></div>
+        </section>
+
+        <section class="view" data-view="student">
+          <h2 class="vtitle">학생</h2>
+          <div class="subtabs">
+            <button class="stab active" data-s="srec" onclick="showSub('srec')">풀이 기록</button>
+            <button class="stab" data-s="sread" onclick="showSub('sread')">독해</button>
+            <button class="stab" data-s="sfb" onclick="showSub('sfb')">AI 진단</button>
+            <button class="stab" data-s="srefl" onclick="showSub('srefl')">이유 쓰기</button>
+            <button class="stab" data-s="svoc" onclick="showSub('svoc')">단어장</button>
+          </div>
+          <div class="spane active" data-s="srec"><div id="records"></div></div>
+          <div class="spane" data-s="sread"><div id="readings"></div></div>
+          <div class="spane" data-s="sfb"><div id="feedbackAdmin"></div></div>
+          <div class="spane" data-s="srefl"><div id="reflections"></div></div>
+          <div class="spane" data-s="svoc"><div id="vocabAdmin"></div></div>
+        </section>
+
+        <section class="view" data-view="passages">
           <h2 class="vtitle">지문 출제·관리</h2>
           <div class="card">
             <div class="row">
@@ -198,26 +239,8 @@
 
           <h3 class="subt"><svg class="ic muted" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg> 등록된 지문</h3>
           <div id="list"></div>
-        </section>
-
-        <section class="view" data-view="stats">
-          <h2 class="vtitle">지문별 난이도 (어려운 순)</h2>
+          <h3 class="subt">지문별 난이도 (어려운 순)</h3>
           <div id="stats"></div>
-        </section>
-
-        <section class="view" data-view="records">
-          <h2 class="vtitle">학생 풀이 기록 · 오답</h2>
-          <div id="records"></div>
-        </section>
-
-        <section class="view" data-view="reflections">
-          <h2 class="vtitle">학생이 쓴 이유 (메타인지)</h2>
-          <div id="reflections"></div>
-        </section>
-
-        <section class="view" data-view="readings">
-          <h2 class="vtitle">학생 독해 · 해석 · 단어장</h2>
-          <div id="readings"></div>
         </section>
 
         <section class="view" data-view="homework">
@@ -246,16 +269,6 @@
           <div id="hwList"></div>
         </section>
 
-        <section class="view" data-view="vocab">
-          <h2 class="vtitle">학생 단어장 (뜻 · 복습 현황)</h2>
-          <div id="vocabAdmin"></div>
-        </section>
-
-        <section class="view" data-view="feedback">
-          <h2 class="vtitle">AI 독해 진단 기록</h2>
-          <p class="sub" style="margin-bottom:14px">채영님 Claude Code에서 「민주 독해 진단」을 실행하면 여기와 민주 앱 오답노트에 결과가 쌓여요.</p>
-          <div id="feedbackAdmin"></div>
-        </section>
       </main>
     </div>
   </div>
@@ -357,19 +370,117 @@ async function loadAll(){
   loadHomework();
 }
 
+// ---------- 학생 메뉴 서브탭 ----------
+function showSub(s){
+  document.querySelectorAll('.stab').forEach(b=>b.classList.toggle('active',b.dataset.s===s));
+  document.querySelectorAll('.spane').forEach(p=>p.classList.toggle('active',p.dataset.s===s));
+}
+
+// ---------- 오늘: 처리 대기열 ----------
+// 기준: ①안 열어본 새 제출 ②마감이 지났거나 오늘·내일인 미완료 숙제 ③3일 넘게 그대로인 다시 독해
+let gFb=[], _tq=[];
+function todayStrA(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+function ddays(ds){ return Math.round((new Date(ds)-new Date(todayStrA()))/86400000); }
+function dLabel(n){ return n===0?'D-DAY':n>0?`D-${n}`:`${-n}일 지남`; }
+function getSeen(){ try{return JSON.parse(localStorage.getItem('oj_seen')||'[]');}catch(_){return [];} }
+function markSeen(id){ const s=getSeen(); if(!s.includes(id)){ s.push(id); try{localStorage.setItem('oj_seen',JSON.stringify(s));}catch(_){} } }
+function isDis(key){ try{return JSON.parse(localStorage.getItem('oj_dis')||'{}')[key]===todayStrA();}catch(_){return false;} }
+function dismissToday(key){ try{const d=JSON.parse(localStorage.getItem('oj_dis')||'{}'); d[key]=todayStrA(); localStorage.setItem('oj_dis',JSON.stringify(d));}catch(_){} }
+function stuNameOf(id){ const x=[...gStuReads,...gStuAtts].find(y=>y.user_id===id&&y.student_name); return x?x.student_name:'학생'; }
+function pLabelOf(pid){ const p=allP.find(x=>x.id===pid); return esc(p?[p.book,p.unit,p.title].filter(Boolean).join(' · '):'(삭제된 지문)'); }
+function tqView(i){ if(_tq[i]){ _tq[i].view(); } }
+function tqOk(i){
+  const it=_tq[i]; if(!it) return;
+  it.ok();
+  const row=document.getElementById('tq'+i);
+  if(row){ row.classList.add('gone'); setTimeout(renderToday,320); } else renderToday();
+}
+function renderToday(){
+  const el=$('todayView'); if(!el) return;
+  const seen=getSeen();
+  const items=[];
+  for(const r of gStuReads){
+    if(!r.id||seen.includes(r.id)) continue;
+    const asg=gAsg.find(a=>a.student_id===r.user_id&&a.passage_id===r.passage_id);
+    items.push({ stu:r.student_name||'학생', kind:'sub',
+      ic:['제출','var(--accent-soft)','var(--accent)'],
+      t:`${pLabelOf(r.passage_id)} ${r.is_retry?'다시 독해':'독해'}를 제출했어요`,
+      s:`${fmt(r.created_at)}${asg&&asg.round_label?` · ${esc(asg.round_label)} 숙제`:''}`,
+      view:()=>{ markSeen(r.id); showView('student'); showSub('sread'); },
+      ok:()=>markSeen(r.id) });
+  }
+  for(const a of gAsg){
+    const st=hwStatus(a); if(st.done) continue;
+    if(!a.due_date||ddays(a.due_date)>1) continue;
+    const key='hw'+a.id; if(isDis(key)) continue;
+    const remain=(a.steps||[]).filter(s2=>!st[s2]).map(s2=>s2==='order'?'순서 맞추기':'한줄 독해').join('와 ');
+    items.push({ stu:stuNameOf(a.student_id), kind:'hw',
+      ic:['숙제','#f8efdd','#c98a2b'],
+      t:`${pLabelOf(a.passage_id)}의 ${remain}가 아직이에요`,
+      s:`${a.round_label?esc(a.round_label)+' 숙제 · ':''}마감 <span class="dline" title="${dLabel(ddays(a.due_date))}">${esc(a.due_date.slice(5).replace('-','/'))}</span>`,
+      view:()=>showView('homework'),
+      ok:()=>dismissToday(key) });
+  }
+  const seenPair=new Set();
+  for(const fb of gFb){
+    const pairKey=fb.user_id+'|'+fb.passage_id;
+    if(seenPair.has(pairKey)) continue; seenPair.add(pairKey);
+    if(!(fb.flagged||[]).length) continue;
+    const cleared=gStuReads.some(r=>r.user_id===fb.user_id&&r.passage_id===fb.passage_id
+      &&new Date(r.created_at)>new Date(fb.created_at));
+    if(cleared) continue;
+    const age=-ddays(fb.created_at.slice(0,10));
+    if(age<3) continue;
+    const key='fb'+fb.id; if(isDis(key)) continue;
+    items.push({ stu:stuNameOf(fb.user_id), kind:'flag',
+      ic:['재독','#f7e6e3','#c0584b'],
+      t:`${pLabelOf(fb.passage_id)} 다시 독해가 ${age}일째 그대로예요`,
+      s:`표시된 문장 ${(fb.flagged||[]).length}개`,
+      view:()=>{ showView('student'); showSub('sfb'); },
+      ok:()=>dismissToday(key) });
+  }
+  _tq=items;
+  const cnt=k=>items.filter(x=>x.kind===k).length;
+  let html=`<div class="kpis">
+    <div class="kpi"><b style="color:var(--accent)">${cnt('sub')}</b><span>새 제출</span></div>
+    <div class="kpi"><b style="color:#c98a2b">${cnt('hw')}</b><span>챙길 숙제</span></div>
+    <div class="kpi"><b style="color:#c0584b">${cnt('flag')}</b><span>재독해 방치</span></div>
+  </div>`;
+  if(!items.length){
+    html+=`<div class="alldone">오늘 확인할 것을 다 비웠어요</div>`;
+  }else{
+    const byStu=new Map();
+    items.forEach((it,i)=>{ if(!byStu.has(it.stu)) byStu.set(it.stu,[]); byStu.get(it.stu).push(i); });
+    for(const [stu,idxs] of byStu){
+      html+=`<h3 class="subt">${ic('user','muted')} ${esc(stu)}</h3>`;
+      for(const i of idxs){
+        const it=items[i];
+        html+=`<div class="tq" id="tq${i}">
+          <div class="tic" style="background:${it.ic[1]};color:${it.ic[2]}">${it.ic[0]}</div>
+          <div class="tg"><div class="tt">${it.t}</div><div class="ts">${it.s}</div></div>
+          <button class="btn ghost small" onclick="tqView(${i})">보기</button>
+          <button class="btn primary small" onclick="tqOk(${i})">확인</button>
+        </div>`;
+      }
+    }
+  }
+  el.innerHTML=html;
+}
+
 // ---------- 숙제 내주기 ----------
 let gAsg=[], gStuAtts=[], gStuReads=[];
 async function loadHomework(){
   const [aRes,rRes,gRes]=await Promise.all([
     db.from('attempts').select('user_id,student_name,passage_id,is_correct,created_at'),
-    db.from('readings').select('user_id,student_name,passage_id,is_retry,created_at'),
+    db.from('readings').select('id,user_id,student_name,passage_id,is_retry,created_at'),
     db.from('assignments').select('*').order('created_at',{ascending:false})
   ]);
+  gStuAtts=aRes.data||[]; gStuReads=rRes.data||[]; gAsg=(!gRes.error&&gRes.data)?gRes.data:[];
   if(gRes.error){
     $('hwList').innerHTML=`<p class="sub">숙제 표(assignments)가 아직 없어요. redesign-plan.md의 SQL을 SQL Editor에서 실행해주세요.<br><span style="font-size:12px">${esc(gRes.error.message)}</span></p>`;
+    renderToday();
     return;
   }
-  gStuAtts=aRes.data||[]; gStuReads=rRes.data||[]; gAsg=gRes.data||[];
   const stu=new Map();
   for(const x of [...gStuAtts,...gStuReads]) if(x.user_id&&x.student_name) stu.set(x.user_id,x.student_name);
   $('hwStudent').innerHTML=[...stu].map(([id,name])=>`<option value="${id}">${esc(name)}</option>`).join('')
@@ -377,6 +488,7 @@ async function loadHomework(){
   $('hwPassage').innerHTML=[...allP].sort((a,b)=>nat(a.book,b.book)||nat(a.unit,b.unit)||nat(a.title,b.title))
     .map(p=>`<option value="${p.id}">${esc([p.book,p.unit,p.title].filter(Boolean).join(' · '))}</option>`).join('');
   renderHwList();
+  renderToday();
 }
 function hwStatus(a){
   const after=t=>t&&new Date(t)>=new Date(a.created_at);
@@ -401,7 +513,7 @@ function renderHwList(){
     }).join(' · ');
     return `<div class="rec ${st.done?'solved':''}" style="margin-bottom:8px">
       <div class="rh">
-        <span class="badge ${st.done?'ok':''}" >${st.done?'완료':'진행 중'}</span>
+        <span class="badge ${st.done?'ok':''}" >${st.done?'완료':'미완료'}</span>
         <b>${esc(stuName(a.student_id))}</b> · ${esc(label)}
         <span class="when">${a.round_label?esc(a.round_label)+' · ':''}${a.due_date?'~'+esc(a.due_date):''} · ${fmt(a.created_at)}</span>
       </div>
@@ -458,6 +570,8 @@ async function loadVocabAdmin(){
 async function loadFeedbackAdmin(){
   const { data, error } = await db.from('reading_feedback').select('*').order('created_at',{ascending:false});
   const el=$('feedbackAdmin');
+  gFb=(!error&&data)?data:[];
+  renderToday();
   if(error){ el.innerHTML=`<p class="sub">진단 표가 아직 없어요. UPDATE 가이드의 SQL을 먼저 실행해주세요.<br><span style="font-size:12px">${esc(error.message)}</span></p>`; return; }
   if(!data||!data.length){ el.innerHTML='<p class="sub">아직 진단 기록이 없어요. Claude Code에서 「민주 독해 진단」을 실행해보세요.</p>'; return; }
   const V={good:['잘 읽음','#3a7d5d'],partial:['절반','#c98a2b'],missed:['놓침','#c0584b']};
