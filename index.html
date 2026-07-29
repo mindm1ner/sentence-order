@@ -324,14 +324,9 @@
   .pos{display:inline-block;font-size:10px;font-weight:700;color:var(--accent);background:var(--accent-soft);
     border-radius:5px;padding:1px 5px;margin-right:3px;vertical-align:1px}
   .senses{font-size:13px;color:var(--ink);margin-top:6px;line-height:1.7}
-  /* 퀴즈 뜻 고르기 선택지 */
-  .qopt{display:block;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);
-    border-radius:12px;padding:12px 15px;font-size:14.5px;color:var(--ink);cursor:pointer;margin-bottom:8px;
-    font-family:inherit;transition:border-color .12s}
-  .qopt:hover{border-color:var(--accent)}
-  .qopt.ok{background:var(--ok-bg);border-color:var(--ok);color:var(--ok);font-weight:700}
-  .qopt.no{background:var(--no-bg);border-color:var(--no);color:var(--no)}
-  .qopt[disabled]{cursor:default}
+  /* 퀴즈 주관식 입력칸 상태 */
+  .qin-ok{border-color:var(--ok)!important;background:var(--ok-bg);color:var(--ok);font-weight:600}
+  .qin-no{border-color:var(--no)!important;background:var(--no-bg)}
   .qstep{font-size:11px;font-weight:700;color:var(--accent);letter-spacing:.06em;margin:0 2px 6px}
   /* 복습 퀴즈 */
   .qblank{display:inline-block;min-width:64px;border-bottom:2px solid var(--warn);
@@ -1433,15 +1428,27 @@ function quizHintHTML(){
   if(qTries>=2) return `${base} · 첫 글자는 <b>${esc(w[0].toUpperCase())}</b>`;
   return base;
 }
-// 퀴즈는 단어마다 2단계: ① 뜻 알기(선택형) → ② 문맥에 쓰기(예문 빈칸). 둘 다 맞아야 그 단어를 아는 것으로 침
-let qOpts=null, qMeanOK=true, qMeanDone=false;
-function meaningOf(v){ return v.meaning||((Array.isArray(v.senses)&&v.senses[0])?v.senses[0].meaning:null); }
-function meaningOptions(v){
-  const correct=meaningOf(v); if(!correct) return null;
-  const pool=[...new Set(myVocab.filter(x=>x.word_key!==v.word_key).map(meaningOf).filter(m=>m&&m!==correct))];
-  const ds=shuffleArr(pool).slice(0,3);
-  if(!ds.length) return null;               // 비교할 다른 뜻이 없으면 ① 생략
-  return shuffleArr([{m:correct,ok:true},...ds.map(m=>({m,ok:false}))]);
+// 퀴즈는 단어마다 최대 3단계: ① 뜻 쓰기(주관식, 순서 무관 전부) → ② 문맥 해석(예문마다 어떤 뜻인지) → ③ 빈칸에 단어 쓰기
+// 모든 단계를 통과해야 그 단어를 아는 것으로 침. 없는 단계(뜻 정보 없음, 뜻 1개뿐)는 건너뜀
+let qMeanOK=true, qCtxOK=true, qTargets=null, qCtxItems=[], qTDone=[], qPhaseTries=0;
+// 우리말 뜻 채점: 괄호 주석·띄어쓰기·문장부호 무시, 쉼표로 나뉜 동의어 중 하나면 정답, 작은 어미 차이 흡수
+function normKo(s){ return String(s||'').toLowerCase().replace(/\(.*?\)/g,'').replace(/[\s,;·/~\-–—.!?'"’‘…]/g,''); }
+function lev1(a,b){                       // 편집거리 1 이하인지 (바라다/바랐다 류)
+  if(a===b) return true;
+  const la=a.length, lb=b.length;
+  if(Math.abs(la-lb)>1) return false;
+  let i=0,j=0,diff=0;
+  while(i<la&&j<lb){
+    if(a[i]===b[j]){i++;j++;continue;}
+    if(++diff>1) return false;
+    if(la>lb) i++; else if(lb>la) j++; else {i++;j++;}
+  }
+  return diff+(la-i)+(lb-j)<=1;
+}
+function matchMean(ans,meaning){
+  const a=normKo(ans); if(!a) return false;
+  return String(meaning||'').split(/[,;·/]/).map(normKo).filter(Boolean).some(v=>
+    a===v||(v.length>=3&&lev1(a,v))||(v.length>=4&&v.includes(a)&&a.length>=v.length-2));
 }
 function quizShell(inner){
   const N=qDeck.length;
@@ -1453,35 +1460,152 @@ function quizShell(inner){
     <div style="height:120px"></div>`;
   window.scrollTo({top:0});
 }
+function quizSteps(){
+  const st=[]; if(qTargets) st.push('뜻'); if(qCtxItems.length) st.push('문맥'); st.push('빈칸'); return st;
+}
+function stepLb(name){
+  const st=quizSteps();
+  return `${st.indexOf(name)+1} / ${st.length} 단계 · ${({'뜻':'뜻 쓰기','문맥':'문맥 해석','빈칸':'빈칸에 쓰기'})[name]}`;
+}
 function renderQuiz(){
-  qCur=qDeck[qIdx]; qAnswered=false; qTries=0; qMeanDone=false;
+  qCur=qDeck[qIdx]; qAnswered=false; qTries=0;
   removeQBan();
-  qOpts=meaningOptions(qCur);
-  if(qOpts){ qMeanOK=false; renderQuizMeaning(); }
-  else { qMeanOK=true; renderQuizCloze(); }   // 뜻 정보가 없는 단어는 빈칸만
+  const ss=Array.isArray(qCur.senses)?qCur.senses.filter(s=>s&&s.meaning):[];
+  qTargets=ss.length?ss.map(s=>({pos:POS_ABBR[s.pos]||s.pos||'',mean:s.meaning}))
+    :(qCur.meaning?[{pos:'',mean:qCur.meaning}]:null);
+  qCtxItems=ss.filter(s=>s.example);
+  if(qCtxItems.length<2) qCtxItems=[];          // 뜻이 하나뿐이면 문맥 구분은 의미 없어 생략
+  qMeanOK=!qTargets; qCtxOK=!qCtxItems.length;  // 없는 단계는 통과 처리
+  if(qTargets) renderQuizMeaning(); else renderQuizCloze();
+}
+function quizWireInputs(prefix,submit){
+  document.querySelectorAll(`input[id^="${prefix}"]`).forEach(inp=>{
+    inp.addEventListener('input',()=>inp.classList.remove('qin-no'));
+    inp.addEventListener('keydown',e=>{
+      if(e.isComposing) return;
+      if(e.key==='Enter'){ e.preventDefault();
+        const empty=[...document.querySelectorAll(`input[id^="${prefix}"]`)].find(x=>!x.readOnly&&!x.value.trim());
+        if(empty&&empty!==inp) empty.focus(); else submit();
+      }
+    });
+  });
 }
 function renderQuizMeaning(){
+  qPhaseTries=0; qTDone=qTargets.map(()=>false);
+  const posSet=[...new Set(qTargets.map(t=>t.pos).filter(Boolean))];
   quizShell(`
-    <div class="qstep">① 뜻 알기</div>
+    <div class="qstep">${stepLb('뜻')}</div>
     <div class="rsent" id="qword" style="text-align:center;font-size:25px;font-weight:700">${esc(qCur.word)}</div>
-    <div class="qhint" style="margin:12px 2px 8px">이 단어의 뜻은 무엇일까요?</div>
-    ${qOpts.map((o,i)=>`<button class="qopt" id="qo_${i}" onclick="quizMeanPick(${i})">${esc(o.m)}</button>`).join('')}
-    <div id="qmeanNext"></div>`);
+    <div class="qhint" style="margin:12px 2px 2px">이 단어의 뜻${qTargets.length>1?` <b>${qTargets.length}개를 전부</b> 적어보세요 (순서는 상관없어요)`:'을 적어보세요'}${posSet.length>1?` · 품사 힌트: ${posSet.map(esc).join('·')}`:''}</div>
+    ${qTargets.map((_,i)=>`<input id="qm_${i}" placeholder="뜻 ${i+1}" autocomplete="off" style="margin-top:8px">`).join('')}
+    <div class="qtry" id="qtry"></div>
+    <div id="qnext"></div>
+    <button id="qbtn" class="btn primary full" style="margin-top:10px" onclick="quizMeanSubmit()">확인</button>`);
+  quizWireInputs('qm_',quizMeanSubmit);
+  const f=$('qm_0'); if(f) f.focus();
 }
-function quizMeanPick(i){
-  if(qMeanDone) return; qMeanDone=true;
-  qMeanOK=!!qOpts[i].ok;
-  qOpts.forEach((o,k)=>{ const b=$('qo_'+k); if(!b) return; b.disabled=true;
-    if(o.ok) b.classList.add('ok'); else if(k===i) b.classList.add('no'); });
-  if(!qMeanOK){ const w=$('qword'); if(w){ w.classList.remove('shakeX'); void w.offsetWidth; w.classList.add('shakeX'); } }
-  $('qmeanNext').innerHTML=`
-    <div class="qhint" style="margin:10px 2px 4px">${qMeanOK?'맞아요! 이제 문장 속에서 직접 써봐요':'뜻을 다시 봤어요. 문장 속에서 써보며 익혀요'}</div>
-    <button class="btn primary full" style="margin-top:8px" onclick="renderQuizCloze()">② 빈칸에 써보기 →</button>`;
+function quizMeanSubmit(){
+  // 잠기지 않은 칸을 아직 안 맞힌 뜻과 순서 무관으로 짝지음
+  qTargets.forEach((_,i)=>{
+    const inp=$('qm_'+i); if(!inp||inp.readOnly) return;
+    const val=inp.value.trim(); if(!val) return;
+    const hit=qTargets.findIndex((t,ti)=>!qTDone[ti]&&matchMean(val,t.mean));
+    if(hit>=0){ qTDone[hit]=true; inp.readOnly=true; inp.classList.remove('qin-no'); inp.classList.add('qin-ok'); }
+    else inp.classList.add('qin-no');
+  });
+  const remaining=qTDone.filter(x=>!x).length;
+  if(!remaining){ quizPhaseDone('mean',true); return; }
+  qPhaseTries++;
+  if(qPhaseTries>=3){ quizPhaseDone('mean',false); return; }
+  const w=$('qword'); if(w){ w.classList.remove('shakeX'); void w.offsetWidth; w.classList.add('shakeX'); }
+  $('qtry').textContent=`아직 ${remaining}개 남았어요 · 남은 기회 ${3-qPhaseTries}번`;
+  const open=qTargets.map((_,i)=>$('qm_'+i)).find(x=>x&&!x.readOnly);
+  if(open){ open.focus(); if(open.value) open.select(); }
+}
+// ② 문맥 해석: 독해 진단과 같은 기준으로 AI가 채점(good/partial/missed). good에 도달할 때까지 계속 재시도
+let qCtxRound=0, qCtxGrading=false;
+async function gradeCtxAI(items){
+  const res=await fetch(`${SUPABASE_URL}/functions/v1/clever-api`,{
+    method:'POST',
+    headers:{'Content-Type':'application/json',apikey:SUPABASE_ANON_KEY,
+      Authorization:'Bearer '+(session&&session.access_token?session.access_token:SUPABASE_ANON_KEY)},
+    body:JSON.stringify({type:'grade_ctx',items})
+  });
+  if(!res.ok) throw new Error('grade '+res.status);
+  return res.json();
+}
+function renderQuizContext(){
+  qCtxRound=0; qTDone=qCtxItems.map(()=>false);
+  quizShell(`
+    <div class="qstep">${stepLb('문맥')}</div>
+    <div class="qhint" style="margin:2px 2px 8px"><b>${esc(qCur.word)}</b> — 각 문장에서 <b>어떤 뜻</b>으로 쓰였는지 적으면 AI 선생님이 채점해요. 통과할 때까지 다시 써봐요</div>
+    ${qCtxItems.map((s,i)=>`
+      <div class="rsent" style="font-size:15px;line-height:1.8;padding:13px 15px;margin-top:${i?'12px':'0'};margin-bottom:0">${hlWord(s.example,qCur.word)}</div>
+      <input id="qc_${i}" placeholder="이 문장에서의 뜻" autocomplete="off" style="margin-top:8px">
+      <div class="qtry" id="qcn_${i}" style="min-height:0;margin:4px 2px 0;font-weight:500"></div>`).join('')}
+    <div class="qtry" id="qtry"></div>
+    <div id="qnext"></div>
+    <button id="qbtn" class="btn primary full" style="margin-top:10px" onclick="quizCtxSubmit()">확인</button>`);
+  quizWireInputs('qc_',quizCtxSubmit);
+  const f=$('qc_0'); if(f) f.focus();
+}
+async function quizCtxSubmit(){
+  if(qCtxGrading) return;
+  const open=qCtxItems.map((s,i)=>({s,i,inp:$('qc_'+i)})).filter(x=>x.inp&&!x.inp.readOnly);
+  if(!open.length) return;
+  if(open.some(x=>!x.inp.value.trim())){
+    $('qtry').textContent='모든 칸을 채운 뒤 확인을 눌러요';
+    const e=open.find(x=>!x.inp.value.trim()); if(e) e.inp.focus(); return;
+  }
+  qCtxGrading=true; qCtxRound++;
+  const btn=$('qbtn'); setBusy(btn,true,'AI 선생님이 채점 중…');
+  let results=null;
+  try{
+    const out=await gradeCtxAI(open.map(x=>({word:qCur.word,example:x.s.example,target:x.s.meaning,answer:x.inp.value.trim()})));
+    results=out&&out.results;
+  }catch(_){ results=null; }   // AI를 못 부르면 아래에서 로컬 채점으로 폴백
+  qCtxGrading=false; setBusy(btn,false);
+  open.forEach((x,k)=>{
+    const r=results&&results[k];
+    const pass=r?(r.verdict==='good'):matchMean(x.inp.value.trim(),x.s.meaning);
+    const noteEl=$('qcn_'+x.i);
+    if(pass){
+      qTDone[x.i]=true; x.inp.readOnly=true; x.inp.classList.remove('qin-no'); x.inp.classList.add('qin-ok');
+      if(noteEl) noteEl.textContent='';
+    }else{
+      x.inp.classList.remove('qin-no'); void x.inp.offsetWidth; x.inp.classList.add('qin-no');
+      if(noteEl) noteEl.innerHTML=`<span style="color:var(--warn)">${esc((r&&r.note)||'이 문장 상황에 맞는 의미인지 다시 생각해봐요')}</span>`;
+    }
+  });
+  const remaining=qTDone.filter(x=>!x).length;
+  if(!remaining){ quizPhaseDone('ctx',qCtxRound===1); return; }   // 첫 시도에 전부 통과해야 이 단어를 아는 것으로
+  $('qtry').textContent=`아직 ${remaining}개 남았어요. AI 힌트를 보고 통과할 때까지 다시 써봐요`;
+  const o=qCtxItems.map((_,i)=>$('qc_'+i)).find(x=>x&&!x.readOnly);
+  if(o){ o.focus(); if(o.value) o.select(); }
+}
+function quizRecapHTML(phase){
+  if(phase==='mean')
+    return `<div class="vocab" style="margin-top:8px">${sensesHTML(qCur)||`<div class="senses">${esc(qCur.meaning||'')}</div>`}</div>`;
+  return `<div class="vocab" style="margin-top:8px">${qCtxItems.map(s=>
+    `<div class="senses"><span class="pos">${esc(POS_ABBR[s.pos]||s.pos||'')}</span>${esc(s.meaning)}<div class="ex" style="margin-top:3px">${hlWord(s.example,qCur.word)}</div></div>`).join('')}</div>`;
+}
+function quizPhaseDone(phase,ok){
+  if(phase==='mean') qMeanOK=ok; else qCtxOK=ok;
+  const btn=$('qbtn'); if(btn) btn.style.display='none';
+  const t=$('qtry'); if(t) t.textContent='';
+  const next=(phase==='mean'&&qCtxItems.length)?'renderQuizContext()':'renderQuizCloze()';
+  const failMsg=phase==='ctx'
+    ? '통과했어요! 다만 한 번에 못 잡았으니 이 단어는 오늘 다시 나와요'
+    : '정답을 확인하고 넘어가요. 이 단어는 오늘 다시 나와요';
+  $('qnext').innerHTML=`
+    ${ok?`<div class="qhint" style="margin:10px 2px 4px;color:var(--ok);font-weight:700">전부 맞았어요!</div>`
+       :`<div class="qhint" style="margin:10px 2px 4px">${failMsg}</div>${quizRecapHTML(phase)}`}
+    <button class="btn primary full" style="margin-top:10px" onclick="${next}">다음 →</button>`;
 }
 function renderQuizCloze(){
   removeQBan();
   quizShell(`
-    <div class="qstep">② 문맥에 쓰기</div>
+    <div class="qstep">${stepLb('빈칸')}</div>
     <div class="rsent" id="qcardEl" style="font-size:17px">${clozeHTML(qCur)}</div>
     <div class="qhint" id="qhint">${quizHintHTML()}</div>
     <input id="qin" placeholder="빈칸에 들어갈 단어" autocomplete="off" autocapitalize="off" style="margin-top:6px">
@@ -1508,7 +1632,7 @@ function quizSubmit(){
   const card=$('qcardEl'), bl=card.querySelector('.qblank');
   if(val===qCur.word_key){
     qAnswered=true;
-    const overall=qMeanOK;   // ① 뜻 + ② 빈칸 둘 다 맞아야 정답
+    const overall=qMeanOK&&qCtxOK;   // 뜻·문맥·빈칸 모든 단계를 첫 시도에 통과해야 정답
     (overall?qRight:qWrongList).push(qCur); updateWordSR(qCur,overall);
     if(bl){ bl.textContent=qCur.word; bl.classList.add('okfill'); }
     if(overall) card.classList.add('glowOK');
