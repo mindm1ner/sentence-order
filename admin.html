@@ -764,12 +764,18 @@ async function loadVocabAdmin(){
     const list=byS[uid].slice().sort((a,b)=>a.word_key.localeCompare(b.word_key));
     html+=`<div class="card" style="margin-bottom:14px">
       <div style="font-weight:700;margin-bottom:4px">${ic('user')} 학생 단어 ${list.length}개</div>
-      ${list.map(v=>`<div style="padding:9px 2px;border-top:1px solid #eee9df;font-size:14px">
+      ${list.map(v=>{
+        const POSA={'명사':'명','동사':'동','형용사':'형','부사':'부','전치사':'전','접속사':'접','대명사':'대','감탄사':'감','숙어':'숙'};
+        const senses=Array.isArray(v.senses)?v.senses.filter(s=>s&&s.meaning):[];
+        const sHtml=senses.length?`<div style="font-size:13px;margin-top:4px">${senses.map(s=>
+          `<span style="display:inline-block;font-size:10px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:5px;padding:0 5px;margin-right:3px;vertical-align:1px">${esc(POSA[s.pos]||s.pos||'')}</span>${esc(s.meaning)}`).join(' &nbsp; ')}</div>`:'';
+        const ctx=v.meaning?`<div style="font-size:12.5px;margin-top:3px"><b style="font-size:11px;color:#c98a2b">문맥 뜻</b> ${esc(v.meaning)}</div>`:'';
+        return `<div style="padding:9px 2px;border-top:1px solid #eee9df;font-size:14px">
         <b>${esc(v.word)}</b>
-        ${v.meaning?`: ${esc(v.meaning)}`:': <span style="color:#c98a2b">뜻 미입력</span>'}
         <span class="sub" style="font-size:12px;float:right">복습 ${v.level||0}단계 · ✓${v.correct_count||0} ✗${v.wrong_count||0} · 다음 ${v.next_due||'-'}</span>
+        ${sHtml}${ctx}
         <div class="sub" style="font-size:12px;margin-top:3px">${esc(v.example||'')}</div>
-      </div>`).join('')}
+      </div>`;}).join('')}
     </div>`;
   }
   el.innerHTML=html;
