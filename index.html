@@ -1036,7 +1036,7 @@ function closeModal(yes){
 // 풀이 화면 떠나기 가드
 function tryLeave(go){
   if(rActive){
-    confirmModal('독해를 아직 제출하지 않았어요.<br>나가면 지금 쓴 해석은 저장되지 않아요.', ()=>{ rActive=false; rRetryFb=null; go(); });
+    confirmModal('독해를 아직 제출하지 않았어요.<br>쓴 내용은 자동 저장돼서, 다시 들어오면 이어서 쓸 수 있어요.', ()=>{ saveDraft(); rActive=false; rRetryFb=null; go(); });
     return;
   }
   if(qActive){
@@ -1506,13 +1506,51 @@ function renderQuizEnd(){
     <div style="height:40px"></div>`;
 }
 
+// ----- 독해 자동저장 (쓰다 만 내용을 기기에 임시저장 → 다시 들어오면 이어서) -----
+let rDraftLoaded=false, draftTimer=null;
+function draftKey(){ return `so_rdraft_${session.user.id}_${rP.id}_${rRetryFb?rRetryFb.id:'full'}`; }
+function saveDraft(){
+  if(!rActive||!rP||!session) return;
+  saveReadInputs();
+  const t=$('rtopic'); if(t) rTopic=t.value.trim();
+  try{ localStorage.setItem(draftKey(),JSON.stringify({
+    seq:rSeq, step:t?'topic':'read', idx:rIdx,
+    interp:rInterp, under:rUnder, react:rReact, marks:rMarks, topic:rTopic, at:Date.now()
+  })); }catch(_){}
+}
+function saveDraftSoon(){ clearTimeout(draftTimer); draftTimer=setTimeout(saveDraft,400); }
+function clearDraft(){ clearTimeout(draftTimer); try{ localStorage.removeItem(draftKey()); }catch(_){} }
+function loadDraft(){
+  rDraftLoaded=false;
+  try{
+    const d=JSON.parse(localStorage.getItem(draftKey())||'null');
+    if(!d) return null;
+    if(JSON.stringify(d.seq)!==JSON.stringify(rSeq)){ localStorage.removeItem(draftKey()); return null; } // 지문이 바뀌었으면 버림
+    const has=(d.interp||[]).some(x=>x)||(d.under||[]).some(x=>x)||(d.react||[]).some(x=>x)
+      ||(d.marks||[]).some(m=>m&&m.length)||d.topic;
+    if(!has) return null;
+    rIdx=Math.min(d.idx||0,rSeq.length-1);
+    rInterp=d.interp||[]; rUnder=d.under||[]; rReact=d.react||[]; rMarks=d.marks||[]; rTopic=d.topic||'';
+    rDraftLoaded=true;
+    return d;
+  }catch(_){ return null; }
+}
+function draftRestart(){
+  clearDraft();
+  if(rRetryFb) startRetryRead(rRetryFb.id); else pickRead(rP.id);
+}
+// 탭을 닫거나 다른 앱으로 나가는 순간에도 마지막 입력을 붙잡아 저장
+window.addEventListener('beforeunload',()=>{ if(rActive) saveDraft(); });
+document.addEventListener('visibilitychange',()=>{ if(document.hidden&&rActive) saveDraft(); });
+
 // ----- 독해 풀이 -----
 function pickRead(id){
   rP=allP.find(p=>p.id===id); if(!rP) return;
   rSeq=rP.sentences.map((_,i)=>i); rRetryFb=null;
   rIdx=0; rInterp=[]; rUnder=[]; rReact=[]; rMarks=[]; rTopic=''; rActive=true;
+  const d=loadDraft();
   removeBar(); showTabBar(true);
-  renderReadStep();
+  if(d&&d.step==='topic') renderTopic(); else renderReadStep();
 }
 function startRetryRead(fbId){
   const fb=myFeedback.find(f=>f.id===fbId); if(!fb) return;
@@ -1521,6 +1559,7 @@ function startRetryRead(fbId){
   if(!rSeq.length) return;
   rRetryFb=fb;
   rIdx=0; rInterp=[]; rUnder=[]; rReact=[]; rMarks=[]; rTopic=''; rActive=true;
+  loadDraft();
   removeBar(); showTabBar(true);
   renderReadStep();
 }
@@ -1546,11 +1585,15 @@ function renderReadStep(){
     const n=(rRetryFb.sentence_notes||[]).find(x=>x.index===si);
     retryNote=`<div class="retryhint"><span class="lb">다시 독해 (${si+1}번째 문장)</span>${n&&n.note?esc(n.note):'지난번에 막혔던 문장이에요. 힌트를 떠올리며 다시 읽어봐요.'}</div>`;
   }
+  const draftNote=rDraftLoaded
+    ? `<div class="msg okmsg" style="display:flex;align-items:center;gap:10px">쓰다 만 내용을 불러왔어요. 이어서 쓰면 돼요
+        <span class="mlink" style="margin-left:auto;flex:0 0 auto;color:inherit" onclick="draftRestart()">처음부터 새로</span></div>`
+    : '';
   app.innerHTML=`
     <button class="back" onclick="leaveRead()">‹ ${rRetryFb?'오답노트':'지문 목록'}</button>
     <div style="font-weight:600;margin:0 2px 12px">${esc(head)}</div>
     <div class="rprog"><div class="bar2"><div class="fill2" style="width:${rIdx/N*100}%"></div></div><span class="cnt">${rIdx+1} / ${N}</span></div>
-    ${retryNote}
+    ${draftNote}${retryNote}
     <div class="rsent" id="rsent">${words}</div>
     <div class="rhelp" id="rhelp"></div>
     <label style="margin-top:2px">① 이 문장, 내 말로 해석해보기</label>
@@ -1565,9 +1608,10 @@ function renderReadStep(){
     <div style="height:40px"></div>`;
   updateMarkHelp();
   const inp=$('rinput'), und=$('runder'), rea=$('rreact');
-  if(inp){ inp.addEventListener('keydown',readKey); inp.focus(); placeCaretEnd(inp); }
-  if(und){ und.addEventListener('keydown',readKey); }
-  if(rea){ rea.addEventListener('keydown',readKey); }
+  if(inp){ inp.addEventListener('keydown',readKey); inp.addEventListener('input',saveDraftSoon); inp.focus(); placeCaretEnd(inp); }
+  if(und){ und.addEventListener('keydown',readKey); und.addEventListener('input',saveDraftSoon); }
+  if(rea){ rea.addEventListener('keydown',readKey); rea.addEventListener('input',saveDraftSoon); }
+  saveDraft(); rDraftLoaded=false;
 }
 let rTip='';   // 탭한 단어의 단어장 뜻 (폰에서는 hover가 없어서 여기로 보여줌)
 function updateMarkHelp(){
@@ -1590,6 +1634,7 @@ function toggleWord(wi){
     rTip=mean?`${w}: ${mean}`:'';
   }
   updateMarkHelp();
+  saveDraftSoon();
 }
 function readKey(e){
   if(e.isComposing) return;              // 한글 입력 중이면 무시
@@ -1623,6 +1668,10 @@ function readPrev(){
 }
 function renderTopic(){
   const head=[rP.book,rP.unit,rP.title].filter(Boolean).join(' · ');
+  const draftNote=rDraftLoaded
+    ? `<div class="msg okmsg" style="display:flex;align-items:center;gap:10px">쓰다 만 내용을 불러왔어요. 이어서 쓰면 돼요
+        <span class="mlink" style="margin-left:auto;flex:0 0 auto;color:inherit" onclick="draftRestart()">처음부터 새로</span></div>`
+    : '';
   const recap=rSeq.map((si,i)=>`<div class="rritem"><div class="en">${esc(rP.sentences[si])}</div>
     <div class="ko"><span class="lb">해석</span>${esc(rInterp[i]||'')}</div>
     ${rUnder[i]?`<div class="un"><span class="lb">하고싶은말</span>${esc(rUnder[i])}</div>`:''}
@@ -1631,6 +1680,7 @@ function renderTopic(){
     <button class="back" onclick="backToLast()">‹ 마지막 문장</button>
     <div style="font-weight:600;margin:0 2px 12px">${esc(head)}</div>
     <div class="rprog"><div class="bar2"><div class="fill2" style="width:100%"></div></div><span class="cnt">주제 쓰기</span></div>
+    ${draftNote}
     <p class="hint" style="margin:0 2px 12px">문장을 다 읽었어요! 전체 흐름을 보고 <b>이 글의 주제</b>를 한 문장으로 정리해봐요.</p>
     <div class="rrecap">${recap}</div>
     <label style="margin-top:14px">이 글의 주제 (한 문장)</label>
@@ -1638,7 +1688,8 @@ function renderTopic(){
     <div id="rmsg"></div>
     <button class="btn primary full" onclick="submitReading()">제출하기</button>
     <div style="height:40px"></div>`;
-  const t=$('rtopic'); if(t){ t.focus(); placeCaretEnd(t); }
+  const t=$('rtopic'); if(t){ t.addEventListener('input',saveDraftSoon); t.focus(); placeCaretEnd(t); }
+  saveDraft(); rDraftLoaded=false;
 }
 function backToLast(){ const t=$('rtopic'); if(t) rTopic=t.value.trim(); rIdx=rSeq.length-1; renderReadStep(); window.scrollTo({top:0}); }
 async function submitReading(){
@@ -1677,6 +1728,7 @@ async function submitReading(){
     });});
     if(rows.length) db.from('vocab_words').upsert(rows,{onConflict:'user_id,word_key',ignoreDuplicates:true}).then(()=>{});
   }
+  clearDraft();
   rActive=false;
   showReadDone(newReading?newReading.id:null);
 }
