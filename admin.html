@@ -443,7 +443,7 @@ function renderToday(){
       ic:['제출','var(--accent-soft)','var(--accent)'],
       t:`${pLabelOf(r.passage_id)} ${r.is_retry?'다시 독해':'독해'}를 제출했어요`,
       s:`${fmt(r.created_at)}${asg&&asg.round_label?` · ${esc(asg.round_label)} 숙제`:''}`,
-      view:()=>{ markSeen(r.id); showView('student'); showSub('sread'); },
+      view:()=>{ markSeen(r.id); openReading(rgOwner(r),r.passage_id,r.id); },
       ok:()=>markSeen(r.id) });
   }
   for(const a of gAsg){
@@ -973,36 +973,84 @@ async function loadReflections(){
 }
 
 // ---------- 학생 독해 · 해석 · 단어장 ----------
+// 같은 학생·같은 지문 제출(1차 독해 + 다시 독해)은 한 그룹 카드로 묶고, 헤더 클릭으로 접었다 폈다
+function rgOwner(r){ return r.user_id||r.student_email||'unknown'; }
+function rgId(owner,pid){ return 'rg_'+owner+'_'+pid; }
+function readingBlockHTML(r,n){
+  const lines=(r.interpretations||[]).map(it=>{
+    const marks=(it.unknown_words||[]);
+    return `<div class="ord">
+      <span class="p">${(it.index!=null?it.index:0)+1}</span>
+      <span class="s"><b>${esc(it.sentence||'')}</b><br>
+        <span style="color:var(--sub)">해석 → ${esc(it.my_reading||'(미작성)')}</span>
+        ${it.my_understanding?`<br><span style="color:#3a7d5d">하고싶은말 → ${esc(it.my_understanding)}</span>`:''}
+        ${it.reaction?`<br><span style="color:#c98a2b">반응 → ${esc(it.reaction)}</span>`:''}
+        ${marks.length?`<br><span style="font-size:11px;color:var(--no)">모르는 단어: ${marks.map(esc).join(', ')}</span>`:''}
+      </span></div>`;
+  }).join('');
+  const allWords=[...new Set((r.interpretations||[]).flatMap(it=>it.unknown_words||[]))];
+  const kind=r.is_retry
+    ? `<span style="color:#c98a2b">다시 독해</span>`
+    : `<span style="color:var(--accent)">${n===0?'1차 독해':`${n+1}차 독해`}</span>`;
+  return `<div id="rr_${r.id}" style="margin-top:12px;border-top:1px dashed #e3ddd1;padding-top:10px">
+    <div style="font-size:12.5px;font-weight:700">${kind} <span style="font-weight:500;color:var(--sub)">· ${fmt(r.created_at)}${r.is_retry?` · ${(r.interpretations||[]).length}문장만`:''}</span></div>
+    ${r.topic?`<div style="margin-top:6px;font-size:13px;background:#fff;border-radius:8px;padding:8px 10px"><b>주제:</b> ${esc(r.topic)}</div>`:''}
+    <div style="margin-top:6px">${lines}</div>
+    ${allWords.length?`<div style="margin-top:8px;font-size:12px;color:var(--sub)">📒 표시한 단어 ${allWords.length}개: ${allWords.map(esc).join(', ')}</div>`:''}
+  </div>`;
+}
+function toggleRG(gid){
+  const el=document.getElementById(gid); if(!el) return;
+  const b=el.querySelector('.rgbody'); if(!b) return;
+  const open=b.style.display!=='none';
+  b.style.display=open?'none':'block';
+  const ch=el.querySelector('.chev2'); if(ch) ch.style.transform=open?'':'rotate(180deg)';
+}
 async function loadReadings(){
   const { data:rs, error } = await db.from('readings').select('*').order('created_at',{ascending:false});
   if(error){ $('readings').innerHTML=`<div class="msg err">독해 표(readings)가 아직 없어요. SQL을 실행했는지 확인하세요.<br>${error.message}</div>`; return; }
   if(!rs || !rs.length){ $('readings').innerHTML='<p class="sub">아직 학생이 독해한 기록이 없어요.</p>'; return; }
-  let html='';
+  const groups=new Map();               // rs가 최신순이라 그룹 순서도 최근 제출 순
   for(const r of rs){
-    const p=allP.find(x=>x.id===r.passage_id);
+    const k=rgOwner(r)+'|'+r.passage_id;
+    if(!groups.has(k)) groups.set(k,[]);
+    groups.get(k).push(r);
+  }
+  let html='';
+  for(const list of groups.values()){
+    const latest=list[0], asc=list.slice().reverse();
+    const p=allP.find(x=>x.id===latest.passage_id);
     const label=p?[p.book,p.unit,p.title].filter(Boolean).join(' · '):'(삭제된 지문)';
-    const who=r.student_name||r.student_email||'학생';
-    const lines=(r.interpretations||[]).map(it=>{
-      const marks=(it.unknown_words||[]);
-      return `<div class="ord">
-        <span class="p">${(it.index!=null?it.index:0)+1}</span>
-        <span class="s"><b>${esc(it.sentence||'')}</b><br>
-          <span style="color:var(--sub)">해석 → ${esc(it.my_reading||'(미작성)')}</span>
-          ${it.my_understanding?`<br><span style="color:#3a7d5d">하고싶은말 → ${esc(it.my_understanding)}</span>`:''}
-          ${it.reaction?`<br><span style="color:#c98a2b">반응 → ${esc(it.reaction)}</span>`:''}
-          ${marks.length?`<br><span style="font-size:11px;color:var(--no)">모르는 단어: ${marks.map(esc).join(', ')}</span>`:''}
-        </span></div>`;
-    }).join('');
-    const allWords=[...new Set((r.interpretations||[]).flatMap(it=>it.unknown_words||[]))];
-    html+=`<div class="rec solved">
-      <div class="rh"><span class="badge">독해</span> ${esc(who)} · ${esc(label)}<span class="when">${fmt(r.created_at)}</span></div>
-      <div style="margin-top:8px;font-size:13px;background:#fff;border-radius:8px;padding:8px 10px"><b>주제:</b> ${esc(r.topic||'(미작성)')}</div>
-      <span class="toggle" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display==='none'?'block':'none'">문장별 해석 보기 ▾</span>
-      <div style="display:none;margin-top:6px">${lines}</div>
-      ${allWords.length?`<div style="margin-top:10px;font-size:12px;color:var(--sub)">📒 표시한 단어 ${allWords.length}개: ${allWords.map(esc).join(', ')}</div>`:''}
+    const who=latest.student_name||latest.student_email||'학생';
+    const gid=rgId(rgOwner(latest),latest.passage_id);
+    const retryN=list.filter(r=>r.is_retry).length;
+    let n=0;
+    const subs=asc.map(r=>readingBlockHTML(r,r.is_retry?-1:n++)).join('');
+    html+=`<div class="rec solved" id="${gid}">
+      <div class="rh" style="cursor:pointer" onclick="toggleRG('${gid}')">
+        <span class="badge">독해</span> ${esc(who)} · ${esc(label)}
+        ${retryN?`<span style="font-size:11px;font-weight:700;color:#c98a2b;background:#f8efdd;border-radius:999px;padding:1px 8px;flex:0 0 auto">다시 독해 ${retryN}회</span>`:''}
+        <span class="when">제출 ${list.length}회 · 최근 ${fmt(latest.created_at)} <span class="chev2" style="display:inline-block;transition:transform .2s">▾</span></span>
+      </div>
+      <div class="rgbody" style="display:none">${subs}</div>
     </div>`;
   }
   $('readings').innerHTML=html;
+}
+// 오늘 대기열 "확인하기" → 독해 탭으로 가서 해당 그룹을 펼치고 그 제출 위치로 스크롤
+function openReading(owner,pid,rid){
+  showView('student'); showSub('sread');
+  const gid=rgId(owner||'unknown',pid);
+  const el=document.getElementById(gid); if(!el) return;
+  const b=el.querySelector('.rgbody');
+  if(b&&b.style.display==='none') toggleRG(gid);
+  const target=rid?document.getElementById('rr_'+rid):null;
+  setTimeout(()=>{
+    (target||el).scrollIntoView({behavior:'smooth',block:'start'});
+    el.style.transition='box-shadow .35s';
+    el.style.boxShadow='0 0 0 3px var(--accent)';
+    setTimeout(()=>{ el.style.boxShadow=''; },1800);
+  },80);
 }
 
 // ---------- 수정 / 삭제 ----------
