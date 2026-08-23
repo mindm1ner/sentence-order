@@ -283,6 +283,22 @@
   .rword.mark:hover{background:var(--hl)}
   /* 단어장에 뜻이 있는 단어: 점선 밑줄 + 커서 올리면 뜻 말풍선 */
   .rword.known{border-bottom:2px dotted #cdbf9a}
+  /* 형광펜 칠 때 그 단어 위에 잠깐 뜨는 뜻 말풍선 */
+  .wtip{position:absolute;z-index:60;background:var(--ink);color:var(--bg);
+    border-radius:10px;padding:7px 11px;font-size:12px;line-height:1.55;
+    max-width:min(280px,82vw);pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.2);
+    opacity:0;transform:translate(-50%,-100%) translateY(2px);transition:opacity .15s,transform .15s}
+  .wtip.on{opacity:1;transform:translate(-50%,-100%) translateY(-5px)}
+  .wtip::after{content:"";position:absolute;top:100%;left:50%;margin-left:-5px;
+    border:5px solid transparent;border-top-color:var(--ink)}
+  .wtip b{display:block;font-weight:700;margin-bottom:3px;color:var(--hl)}
+  .wtip i{display:block;font-style:normal}
+  .wtip i+i{margin-top:3px}
+  /* color:inherit — 아래 .pos의 초록(--accent)이 새어 들어오는 걸 막으면서,
+     말풍선이 테마에 따라 뒤집혀도 글자색이 같이 따라오게 한다 (흰색을 박으면 다크에서 안 보임) */
+  .wtip .pos{display:inline-block;background:rgba(127,127,127,.28);border-radius:4px;
+    padding:0 5px;margin-right:5px;font-size:10px;font-weight:700;color:inherit}
+  .wtip .soft{opacity:.75}
   .rword.known:hover::after{content:attr(data-mean);position:absolute;bottom:calc(100% + 5px);
     left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;font-size:12px;
     font-weight:500;line-height:1.4;padding:5px 10px;border-radius:8px;white-space:nowrap;
@@ -400,6 +416,70 @@
   .retryhint{border:1px solid var(--warnb);background:var(--warn-bg);border-radius:12px;
     padding:10px 13px;margin:0 0 12px;font-size:13px;color:var(--ink);line-height:1.6}
   .retryhint .lb{font-weight:700;color:var(--warn);margin-right:5px}
+  /* 다시 읽을 문장 창고 */
+  .storehead{display:flex;align-items:baseline;gap:8px;margin:4px 2px 10px}
+  .storehead .t{font-size:13px;font-weight:700;color:var(--ink)}
+  .storehead .more{margin-left:auto;font-size:12px;color:var(--sub);cursor:pointer}
+  .storehead .more:hover{color:var(--accent)}
+  .stitem{display:flex;gap:11px;width:100%;text-align:left;background:var(--card);
+    border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:8px;
+    cursor:pointer;color:var(--ink);font-family:inherit}
+  .stitem:hover{border-color:var(--accent)}.stitem:active{transform:scale(.99)}
+  .stitem.done{opacity:.7}
+  .stitem .miss{flex:0 0 auto;align-self:flex-start;margin-top:1px;font-size:11px;font-weight:700;
+    color:#fff;background:var(--no);border-radius:999px;padding:2px 8px;white-space:nowrap}
+  .stitem.done .miss{background:var(--ok)}
+  .stitem .body{display:block;flex:1;min-width:0}
+  .stitem .meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11px;color:var(--sub)}
+  .stitem .tag{font-weight:700;color:var(--warn)}
+  .stitem .en{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+    font-size:14px;margin-top:5px;line-height:1.55}
+  /* 오늘의 루틴 */
+  .rt{border:1px solid var(--line);background:var(--card);border-radius:16px;
+    padding:2px 15px 4px;margin-bottom:14px;box-shadow:var(--shadow)}
+  .rthead{display:flex;align-items:center;gap:8px;padding:13px 0 3px;font-weight:700;font-size:14px}
+  .rthead .n{margin-left:auto;font-size:12px;color:var(--sub)}
+  .rtrow{display:flex;align-items:center;gap:11px;padding:12px 0;font-size:14px}
+  .rtrow+.rtrow{border-top:1px solid var(--line)}
+  .rtrow .bx{flex:0 0 20px;height:20px;border-radius:6px;border:2px solid var(--line);
+    display:flex;align-items:center;justify-content:center}
+  .rtrow.ok .bx{background:var(--accent);border-color:var(--accent)}
+  .rtrow.ok .bx .ic{width:12px;height:12px;stroke:#fff;stroke-width:3.5}
+  .rtrow .k{flex:0 0 46px;font-weight:700}
+  .rtrow .v{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    color:var(--sub);font-size:13px}
+  .rtrow.ok .k{color:var(--sub)}
+  .rtrow.auto{opacity:.55}
+  .rtrow .go{flex:0 0 auto;font-size:12px;font-weight:700;color:#fff;background:var(--accent);
+    border:none;border-radius:999px;padding:5px 13px;cursor:pointer;font-family:inherit}
+  .rtrow .go.soft{background:var(--warn)}
+  .rtempty{font-size:13px;color:var(--no);font-weight:700;padding:12px 0}
+  /* 루틴 월간 달력 */
+  .calh{display:flex;align-items:center;gap:8px;margin:0 2px 9px}
+  .calh b{font-size:14px}
+  .calh .nav{margin-left:auto;display:flex;gap:5px}
+  .calh .nav button{width:28px;height:28px;border:1px solid var(--line);background:var(--card);
+    border-radius:8px;color:var(--ink);cursor:pointer;font-size:13px;line-height:1;font-family:inherit}
+  .calh .nav button:disabled{opacity:.35;cursor:default}
+  .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:12px}
+  .cal .dow{font-size:11px;color:var(--sub);text-align:center}
+  .cal .cd{display:flex;align-items:center;justify-content:center;aspect-ratio:1;border-radius:8px;
+    font-size:11px;font-style:normal;color:var(--sub);background:var(--bg);border:1.5px solid transparent}
+  .cal .cd.pad{background:none}
+  .cal .cd.lnone{opacity:.4}
+  .cal .cd.l1{background:var(--accent-soft);color:var(--accent)}
+  .cal .cd.l2{background:var(--accent);color:#fff;opacity:.62}
+  .cal .cd.l3{background:var(--accent);color:#fff;font-weight:700}
+  .cal .cd.now{border-color:var(--accent)}
+  .stats4{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:16px}
+  .caught{background:var(--accent-soft);border:1px solid var(--okb);border-radius:16px;
+    padding:15px 17px;margin-bottom:16px}
+  .caught .big{font-size:30px;font-weight:800;color:var(--accent);line-height:1.15}
+  .tagbar{display:flex;align-items:center;gap:9px;font-size:13px;margin-top:8px}
+  .tagbar .nm{flex:0 0 50px;color:var(--sub);font-size:12px}
+  .tagbar .br{flex:1;height:9px;background:var(--card);border-radius:999px;overflow:hidden}
+  .tagbar .br i{display:block;height:100%;background:var(--accent);border-radius:999px}
+  .tagbar .n{flex:0 0 auto;font-weight:700;font-size:12px;color:var(--accent)}
 </style>
 </head>
 <body>
@@ -581,13 +661,15 @@ function $(id){return document.getElementById(id);}
 let curTab='home';
 async function loadData(){
   app.innerHTML=`<div class="loading"><span class="spinner"></span>불러오는 중…</div>`;
-  const [pRes,aRes,rRes,vRes,fRes,gRes]=await Promise.all([
+  const [pRes,aRes,rRes,vRes,fRes,gRes,dRes,poRes]=await Promise.all([
     db.from('passages').select('*'),
     db.from('attempts').select('*').order('created_at',{ascending:false}),
     db.from('readings').select('*').order('created_at',{ascending:false}),
     db.from('vocab_words').select('*').eq('user_id',session.user.id),
     db.from('reading_feedback').select('*').order('created_at',{ascending:false}),
-    db.from('assignments').select('*').order('created_at',{ascending:false})
+    db.from('assignments').select('*').order('created_at',{ascending:false}),
+    db.from('routine_days').select('*').eq('user_id',session.user.id),
+    db.from('routine_pool').select('*').eq('student_id',session.user.id)
   ]);
   myAsg=(!gRes.error&&gRes.data)?gRes.data.filter(a=>a.student_id===session.user.id):[];
   if(pRes.error){ app.innerHTML=`<div class="empty">불러오기 실패 😢<br>${pRes.error.message}</div>`; return; }
@@ -604,6 +686,11 @@ async function loadData(){
   const latest={};
   for(const a of myAtts){ if(!(a.passage_id in latest)) latest[a.passage_id]=a; }
   for(const pid in latest){ if(!latest[pid].is_correct) wrongIds.add(pid); }
+  // 루틴 표가 없으면(SQL 미실행) 조용히 꺼진다 — 홈은 예전 모습 그대로
+  routineMissing=!!dRes.error||!!poRes.error;
+  myDays=(!dRes.error&&dRes.data)?dRes.data:[];
+  myPool=(!poRes.error&&poRes.data)?poRes.data:[];
+  await ensureRoutine();
   showTab(curTab);
 }
 function showTabBar(on){ const t=$('tabbar'); if(t) t.style.display=on?'flex':'none'; }
@@ -662,7 +749,265 @@ function toggleTheme(){
 (function initTheme(){
   try{ const t=localStorage.getItem('so_theme'); if(t) document.documentElement.dataset.theme=t; }catch(_){}
 })();
-// ---------- 홈: 이번 차시 숙제 + 오늘의 처방 + 스트릭 ----------
+// ---------- 오늘의 루틴 ----------
+// 하루 경계는 자정이 아니라 새벽 2시. 밤 12시 넘겨 공부해도 그날로 쳐준다.
+// 바꿀 일이 있으면 DAY_START 한 곳만 고칠 것 (스트릭·주간 잔디도 같이 따라온다).
+const DAY_START=2;
+let myDays=[], myPool=[], routineMissing=true;
+function routineDate(at){
+  const d=at?new Date(at):new Date();
+  d.setHours(d.getHours()-DAY_START);
+  return dstr(d);
+}
+const RT={reading:{k:'독해'},retry:{k:'재독해'},vocab:{k:'단어'}};
+function todayRow(kind){ const t=routineDate(); return myDays.find(d=>d.log_date===t&&d.kind===kind); }
+// 완료 판정. 지난 날은 done_at만 인정한다 — 몰아하기로 지난 칸을 채울 수 없다.
+function routineDone(d){
+  if(d.done_at) return true;
+  if(!d.payload) return true;                       // 재료가 없던 날은 자동 완료
+  if(d.log_date!==routineDate()) return false;
+  const on=r=>r.user_id===session.user.id&&routineDate(r.created_at)===d.log_date;
+  if(d.kind==='reading')
+    return myReadings.some(r=>on(r)&&r.passage_id===d.payload.passage_id&&!r.is_retry);
+  if(d.kind==='retry')
+    return myReadings.some(r=>on(r)&&r.passage_id===d.payload.passage_id&&r.is_retry);
+  if(d.kind==='vocab'){
+    const t=todayStr();
+    return (d.payload.word_ids||[]).every(id=>{
+      const v=myVocab.find(x=>x.id===id);
+      return !v||(v.next_due&&v.next_due>t);        // 지워진 단어는 통과로 본다
+    });
+  }
+  return false;
+}
+// 재독해 재료 — 창고 1등이 속한 지문에서 1~2문장.
+// readings가 passage_id를 하나만 가져서, 하루치는 반드시 같은 지문에서 뽑아야 한다.
+function pickRetryPayload(){
+  const {open}=sentenceStore();
+  if(!open.length) return null;
+  const t=routineDate(), recent=new Set();
+  for(const d of myDays){
+    if(d.kind!=='retry'||!d.payload||!d.payload.passage_id) continue;
+    if(Math.round((new Date(t)-new Date(d.log_date))/86400000)>3) continue;
+    for(const i of (d.payload.indexes||[])) recent.add(d.payload.passage_id+'#'+i);
+  }
+  let cand=open.filter(e=>!recent.has(e.passage_id+'#'+e.index));
+  if(!cand.length) cand=open;                       // 후보가 모자라면 제한을 푼다
+  const head=cand[0];
+  const same=cand.filter(e=>e.passage_id===head.passage_id).slice(0,2);
+  return { passage_id:head.passage_id, indexes:same.map(e=>e.index).sort((a,b)=>a-b) };
+}
+// 접속할 때 세 칸을 검사해 없으면 그 자리에서 뽑는다. 재료가 없으면 바로 완료로 켜준다.
+async function ensureRoutine(){
+  if(routineMissing||!session) return;
+  const t=routineDate(), rows=[];
+  let servedPool=null;
+  if(!todayRow('reading')){
+    const next=myPool.filter(r=>!r.served_on&&allP.some(p=>p.id===r.passage_id))
+      .sort((a,b)=>(a.sort||0)-(b.sort||0))[0];
+    if(next){                                       // 지문이 떨어지면 행을 안 만든다 (홈에 경고)
+      servedPool=next;
+      rows.push({kind:'reading',payload:{passage_id:next.passage_id,pool_id:next.id}});
+    }
+  }
+  if(!todayRow('retry')){
+    const pick=pickRetryPayload();
+    rows.push({kind:'retry',payload:pick,done_at:pick?null:new Date().toISOString()});
+  }
+  if(!todayRow('vocab')){
+    const due=vocabLegacy?[]:dueWords().slice(0,10);
+    rows.push({kind:'vocab',payload:due.length?{word_ids:due.map(v=>v.id)}:null,
+      done_at:due.length?null:new Date().toISOString()});
+  }
+  if(rows.length){
+    const { error } = await db.from('routine_days')
+      .upsert(rows.map(r=>({user_id:session.user.id,log_date:t,...r})),
+        {onConflict:'user_id,log_date,kind',ignoreDuplicates:true});
+    if(error){ routineMissing=true; return; }
+    const { data } = await db.from('routine_days').select('*').eq('user_id',session.user.id);
+    if(data) myDays=data;
+    // 배급이 실제로 기록된 뒤에만 풀에서 뺀다 (행 없이 지문만 소모되는 일이 없게)
+    if(servedPool&&todayRow('reading')){
+      await db.from('routine_pool').update({served_on:t}).eq('id',servedPool.id);
+      servedPool.served_on=t;
+    }
+  }
+  await syncRoutineDone();
+}
+// 증거(제출·복습 상태)로 완료가 확인되면 done_at을 박아둔다. 지난 날은 이 기록만 남는다.
+async function syncRoutineDone(){
+  if(routineMissing||!session) return;
+  const t=routineDate();
+  for(const d of myDays){
+    if(d.done_at||d.log_date!==t||!d.payload) continue;
+    if(!routineDone(d)) continue;
+    const at=new Date().toISOString();
+    let ref=null;
+    if(d.kind==='reading'||d.kind==='retry'){
+      const r=myReadings.find(x=>x.user_id===session.user.id&&x.passage_id===d.payload.passage_id
+        &&routineDate(x.created_at)===t&&(d.kind==='retry'?x.is_retry:!x.is_retry));
+      ref=r?r.id:null;
+    }
+    const { error } = await db.from('routine_days').update({done_at:at,ref_id:ref}).eq('id',d.id);
+    if(!error){ d.done_at=at; d.ref_id=ref; }
+  }
+}
+// 스트릭·잔디의 원천. 세 칸을 다 채운 날만 센다.
+function routineDoneDays(){
+  const per=new Map();
+  for(const d of myDays){
+    const e=per.get(d.log_date)||{done:0,total:0};
+    e.total++; if(routineDone(d)) e.done++;
+    per.set(d.log_date,e);
+  }
+  const days=new Set();
+  for(const [k,e] of per) if(e.total&&e.done===e.total) days.add(k);
+  return days;
+}
+function routineCardHTML(){
+  if(routineMissing) return '';
+  const kinds=['reading','retry','vocab'];
+  const rows=kinds.map(k=>({k,d:todayRow(k)}));
+  const noPassage=!rows.find(x=>x.k==='reading').d;
+  const live=rows.filter(x=>x.d);
+  if(!live.length&&!noPassage) return '';
+  const doneN=live.filter(x=>routineDone(x.d)).length;
+  const allDone=!noPassage&&live.length===kinds.length&&doneN===live.length;
+  if(allDone) return `<div class="rt"><div class="rthead" style="padding:15px 0">${ic('check','ok')} 오늘의 루틴 완료<span class="n">${doneN}/${live.length}</span></div></div>`;
+  let h=`<div class="rt"><div class="rthead">오늘의 루틴<span class="n">${doneN}/${noPassage?kinds.length:live.length}</span></div>`;
+  for(const {k,d} of rows){
+    if(k==='reading'&&noPassage){
+      h+=`<div class="rtempty">읽을 지문이 떨어졌어요. 선생님이 곧 채워줄 거예요</div>`;
+      continue;
+    }
+    if(!d) continue;
+    const done=routineDone(d), auto=!d.payload;
+    h+=`<div class="rtrow${done?' ok':''}${auto?' auto':''}">`
+      +`<span class="bx">${done?ic('check'):''}</span>`
+      +`<span class="k">${RT[k].k}</span>`
+      +`<span class="v">${routineLine(k,d,done,auto)}</span>`
+      +`${done||auto?'':routineGoHTML(k,d)}</div>`;
+  }
+  return h+`</div>`;
+}
+function pLabel(pid){
+  const p=allP.find(x=>x.id===pid);
+  return p?esc([p.book,p.unit,p.title].filter(Boolean).join(' · ')):'(삭제된 지문)';
+}
+function routineLine(k,d,done,auto){
+  if(k==='reading') return pLabel(d.payload&&d.payload.passage_id);
+  if(k==='retry') return auto?'오늘은 다시 읽을 문장이 없어요'
+    :`막혔던 문장 ${(d.payload.indexes||[]).length}개`;
+  return auto?'오늘 복습할 단어가 없어요':`복습 ${(d.payload.word_ids||[]).length}단어`;
+}
+// 쓰다 만 독해가 있으면 "시작" 대신 "이어서"로 바꿔 부담을 줄인다
+function routineGoHTML(k,d){
+  let key=null;
+  if(k==='reading') key=draftKeyOf(d.payload.passage_id,null,null);
+  else if(k==='retry'){
+    const fb=retryFbFor(d.payload);
+    if(fb) key=draftKeyOf(d.payload.passage_id,fb,d.payload.indexes||[]);
+  }
+  const cont=key&&draftExists(key);
+  return `<button class="go${cont?' soft':''}" onclick="startRoutine('${k}')">${cont?'이어서':'시작'}</button>`;
+}
+// 재독해 힌트·성장 비교에 쓸 진단 (myFeedback은 최신순)
+function retryFbFor(pl){
+  if(!pl) return null;
+  return myFeedback.find(f=>f.passage_id===pl.passage_id
+    &&(f.sentence_notes||[]).some(n=>(pl.indexes||[]).includes(n.index)))||null;
+}
+function startRoutine(k){
+  const d=todayRow(k); if(!d||!d.payload) return;
+  if(k==='reading') return pickRead(d.payload.passage_id);
+  if(k==='retry') return startSentenceRead(d.payload.passage_id,d.payload.indexes||[]);
+  navTab('vocab');
+}
+
+// ---------- 기록 탭: 루틴 월간 달력 + 통계 ----------
+let calOff=0;   // 0 = 이번 달
+function calShift(n){ if(calOff+n>0) return; calOff+=n; renderMe(); window.scrollTo({top:0}); }
+function routineDayStats(){
+  const per=new Map();
+  for(const d of myDays){
+    const e=per.get(d.log_date)||{done:0,total:0};
+    e.total++; if(routineDone(d)) e.done++;
+    per.set(d.log_date,e);
+  }
+  return per;
+}
+function longestStreak(days){
+  let best=0,cur=0,prev=null;
+  for(const k of [...days].sort()){
+    cur=(prev&&Math.round((new Date(k)-new Date(prev))/86400000)===1)?cur+1:1;
+    prev=k; if(cur>best) best=cur;
+  }
+  return best;
+}
+// 루틴으로 읽은 문장 수 — 독해는 지문 전체, 재독해는 뽑힌 문장만
+function routineSentences(){
+  let n=0;
+  for(const d of myDays){
+    if(!d.payload||!routineDone(d)) continue;
+    if(d.kind==='reading'){
+      const p=allP.find(x=>x.id===d.payload.passage_id); n+=p?p.sentences.length:0;
+    }else if(d.kind==='retry') n+=(d.payload.indexes||[]).length;
+  }
+  return n;
+}
+function routineRecordHTML(){
+  if(routineMissing) return '';
+  const per=routineDayStats();
+  if(!per.size) return '';
+  const doneDays=routineDoneDays();
+  // 보여줄 달 계산
+  const base=new Date(); base.setHours(base.getHours()-DAY_START);
+  base.setDate(1); base.setMonth(base.getMonth()+calOff);
+  const y=base.getFullYear(), m=base.getMonth();
+  const first=(new Date(y,m,1).getDay()+6)%7;          // 월=0
+  const last=new Date(y,m+1,0).getDate();
+  const today=routineDate();
+  let cells='';
+  for(let i=0;i<first;i++) cells+=`<i class="cd pad"></i>`;
+  let monDone=0, monHas=0;
+  for(let d=1;d<=last;d++){
+    const key=dstr(new Date(y,m,d));
+    const e=per.get(key);
+    let cls='lnone';
+    if(e){
+      monHas++; if(doneDays.has(key)) monDone++;
+      cls='l'+Math.min(e.done,3);
+    }
+    cells+=`<i class="cd ${cls}${key===today?' now':''}">${d}</i>`;
+  }
+  const dowHtml=['월','화','수','목','금','토','일'].map(x=>`<span class="dow">${x}</span>`).join('');
+  const pct=monHas?Math.round(monDone/monHas*100):0;
+  let html=`<div class="calh"><b>${y}년 ${m+1}월</b><span class="nav"><button onclick="calShift(-1)">‹</button><button onclick="calShift(1)" ${calOff>=0?'disabled':''}>›</button></span></div>`;
+  html+=`<div class="cal">${dowHtml}${cells}</div>`;
+  html+=`<div class="stats4">
+    <div class="stat"><b>${longestStreak(doneDays)}</b><span>최장 연속</span></div>
+    <div class="stat"><b>${pct}%</b><span>이 달 달성률</span></div>
+    <div class="stat"><b>${doneDays.size}</b><span>루틴 완주일</span></div>
+    <div class="stat"><b>${routineSentences()}</b><span>읽은 문장</span></div>
+  </div>`;
+  // 재독해 루틴의 보상 — 다시 읽어서 잡은 문장
+  const {cleared}=sentenceStore();
+  if(cleared.length){
+    const tags=new Map();
+    for(const e of cleared){ const k=e.skill_tag||'기타'; tags.set(k,(tags.get(k)||0)+1); }
+    const rank=[...tags].sort((a,b)=>b[1]-a[1]);
+    const top=rank[0][1];
+    html+=`<div class="caught"><div class="hint" style="margin:0">다시 읽어서 잡은 문장</div>
+      <div class="big">${cleared.length}개</div>`
+      +rank.map(([k,n])=>`<div class="tagbar"><span class="nm">${esc(k)}</span>`
+        +`<span class="br"><i style="width:${Math.round(n/top*100)}%"></i></span>`
+        +`<span class="n">${n}</span></div>`).join('')
+      +`</div>`;
+  }
+  return `<div class="ptitle">루틴 기록</div>`+html;
+}
+
+// ---------- 홈: 오늘의 루틴 + 이번 차시 숙제 + 스트릭 ----------
 function activityDays(){
   const days=new Set();
   for(const a of myAtts) if(a.user_id===session.user.id&&a.created_at) days.add(a.created_at.slice(0,10));
@@ -671,7 +1016,7 @@ function activityDays(){
 }
 function dstr(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 function streakCount(days){
-  let n=0; const d=new Date();
+  let n=0; const d=new Date(); d.setHours(d.getHours()-DAY_START);   // 하루 경계 = 새벽 2시
   if(!days.has(dstr(d))) d.setDate(d.getDate()-1);   // 오늘 아직 안 했으면 어제부터 셈
   while(days.has(dstr(d))){ n++; d.setDate(d.getDate()-1); }
   return n;
@@ -689,15 +1034,18 @@ function asgStatus(a){
 }
 function stepName(s){ return s==='order'?'순서':'독해'; }
 function renderHome(){
-  const days=activityDays(), sk=streakCount(days);
+  // 루틴 표가 살아 있으면 스트릭은 루틴 기준. 없으면 예전 활동 기준으로 돈다.
+  const days=routineMissing?activityDays():routineDoneDays(), sk=streakCount(days);
   // 주간 잔디 (월~일)
-  const now=new Date(); const dow=(now.getDay()+6)%7; // 월=0
-  let dots='';
+  const now=new Date(); now.setHours(now.getHours()-DAY_START);   // 하루 경계 = 새벽 2시
+  const dow=(now.getDay()+6)%7; // 월=0
+  let dots='', weekDone=0;
   for(let i=0;i<7;i++){
     const d=new Date(now); d.setDate(now.getDate()-dow+i);
     const key=dstr(d);
     const cls= key===dstr(now) ? (days.has(key)?'on':'today') : (days.has(key)?'on':'');
     dots+=`<i class="wd ${cls}"></i>`;
+    if(days.has(key)) weekDone++;
   }
   let html=topBar();
   html+=`<div class="card" style="display:flex;gap:14px;align-items:center;margin-bottom:14px">
@@ -708,7 +1056,9 @@ function renderHome(){
     <div style="flex:1">
       <div style="font-weight:700;font-size:15px">${sk>0?'오늘도 이어가요':'오늘부터 다시 시작해요'}</div>
       <div class="wdots">${dots}</div>
+      <div class="hint" style="margin:6px 0 0">이번 주 ${weekDone}/7</div>
     </div></div>`;
+  html+=routineCardHTML();
   // 이번 차시 숙제
   const open=myAsg.filter(a=>!asgStatus(a).done);
   const doneAsg=myAsg.filter(a=>asgStatus(a).done);
@@ -732,7 +1082,7 @@ function renderHome(){
   // 오늘의 처방
   const due=vocabLegacy?0:dueWords().length;
   const retries=readingRetryList();
-  if(due||retries.length){
+  if(routineMissing&&(due||retries.length)){   // 루틴이 이미 재독해·단어를 챙기므로 중복은 감춘다
     html+=`<div class="ptitle" style="margin-top:18px">오늘의 처방</div>`;
     if(due) html+=`<button class="psg" onclick="navTab('vocab')">단어 복습 퀴즈${vocabLegacy?'':''}<span class="cnt" style="color:var(--warn);font-weight:700">${due}단어</span></button>`;
     for(const {p,fb} of retries){
@@ -819,10 +1169,64 @@ function renderCourse(){
   parts.forEach((pt,i)=>{ html+=rail(pt.state,pt.inner,i===parts.length-1); });
   app.innerHTML=html+`<div style="height:20px"></div>`;
 }
+// ---- 다시 읽을 문장 창고 ----
+// 표를 새로 만들지 않는다. reading_feedback.sentence_notes를 (지문, 문장번호)로 접어 매번 계산한다.
+// 입장 = partial·missed 누적 2회 이상 · 졸업 = 가장 최근 판정이 good (나중에 또 걸리면 자동 복귀)
+function sentenceStore(){
+  const m=new Map();
+  const asc=myFeedback.slice().sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+  for(const fb of asc) for(const n of (fb.sentence_notes||[])){
+    if(!n||typeof n.index!=='number') continue;
+    const key=fb.passage_id+'#'+n.index;
+    const e=m.get(key)||{passage_id:fb.passage_id,index:n.index,miss:0,
+      sentence:'',verdict:null,at:null,skill_tag:''};
+    if(n.verdict==='partial'||n.verdict==='missed') e.miss++;
+    if(n.verdict) e.verdict=n.verdict;
+    e.at=fb.created_at;                        // 마지막으로 진단된 날
+    if(n.sentence) e.sentence=n.sentence;
+    if(n.skill_tag) e.skill_tag=n.skill_tag;
+    m.set(key,e);
+  }
+  const open=[], cleared=[];
+  for(const e of m.values()){
+    if(e.miss<2) continue;                     // 한 번 걸린 건 창고에 안 들인다
+    const p=allP.find(x=>x.id===e.passage_id); if(!p) continue;
+    e.p=p; if(!e.sentence) e.sentence=p.sentences[e.index]||'';
+    (e.verdict==='good'?cleared:open).push(e);
+  }
+  open.sort((a,b)=>b.miss-a.miss||new Date(a.at)-new Date(b.at));   // 많이 걸린 순 → 오래된 순
+  cleared.sort((a,b)=>new Date(b.at)-new Date(a.at));
+  return {open,cleared};
+}
+let storeAll=false, storeCleared=false;
+const STORE_TOP=5;
+function toggleStoreAll(){ storeAll=!storeAll; renderWrong(); }
+function toggleStoreCleared(){ storeCleared=!storeCleared; storeAll=false; renderWrong(); }
+function sentenceStoreHTML(){
+  const {open,cleared}=sentenceStore();
+  if(!open.length&&!cleared.length) return '';
+  const list=storeCleared?cleared:open;
+  let h=`<div class="storehead"><span class="t">${storeCleared?'잡은 문장':'다시 읽을 문장'} ${list.length}개</span>`
+    +`<span class="more" onclick="toggleStoreCleared()">${storeCleared?'‹ 다시 읽을 문장':`잡은 문장 ${cleared.length}개 ›`}</span></div>`;
+  if(!list.length) return h+`<div class="empty" style="padding:18px 0">${storeCleared
+    ?'아직 잡은 문장이 없어요. 다시 읽어서 통과하면 여기로 와요'
+    :`${ic('check','ok')} 상습적으로 걸리는 문장이 없어요!`}</div><div style="height:14px"></div>`;
+  for(const e of (storeAll?list:list.slice(0,STORE_TOP))){
+    const label=[e.p.book,e.p.unit,e.p.title].filter(Boolean).join(' · ');
+    h+=`<button class="stitem${storeCleared?' done':''}" onclick="startStoreRead('${e.passage_id}',${e.index})">`
+      +`<span class="miss">${storeCleared?'잡음':e.miss+'회'}</span><span class="body">`
+      +`<span class="meta">${e.skill_tag?`<span class="tag">${esc(e.skill_tag)}</span>`:''}${esc(label)} · ${e.index+1}번째 문장</span>`
+      +`<span class="en">${esc(e.sentence)}</span></span></button>`;
+  }
+  if(list.length>STORE_TOP)
+    h+=`<div class="storehead" style="margin:2px 2px 12px"><span class="more" style="margin-left:0"`
+      +` onclick="toggleStoreAll()">${storeAll?'접기':`${list.length-STORE_TOP}개 더 보기`}</span></div>`;
+  return h+`<div style="height:14px"></div>`;
+}
 function renderWrong(){
   const wrongList=allP.filter(p=>wrongIds.has(p.id))
     .sort((a,b)=>nat(a.book,b.book)||nat(a.unit,b.unit)||nat(a.title,b.title));
-  let html=topBar()+`<div class="ptitle">순서 맞추기에서 틀렸던 지문</div>`;
+  let html=topBar()+sentenceStoreHTML()+`<div class="ptitle">순서 맞추기에서 틀렸던 지문</div>`;
   if(!wrongList.length){ html+=`<div class="empty">${ic('check','ok')} 지금은 틀린 지문이 없어요!</div>`; }
   else for(const p of wrongList){
     const label=[p.book,p.unit,p.title].filter(Boolean).join(' · ');
@@ -974,7 +1378,8 @@ function renderMe(){
   const total=attempted.size;
   const solved=Object.values(latest).filter(a=>a.is_correct).length;
   const acc=total?Math.round(solved/total*100):0;
-  let html=topBar()+`<div class="ptitle">내 학습 기록</div>`;
+  let html=topBar()+routineRecordHTML();
+  html+=`<div class="ptitle" style="margin-top:18px">순서 맞추기 기록</div>`;
   html+=`<div class="stats3">
     <div class="stat"><b>${total}</b><span>푼 지문</span></div>
     <div class="stat"><b>${solved}</b><span>해결</span></div>
@@ -1680,6 +2085,7 @@ function quizNext(){
 }
 function renderQuizEnd(){
   qActive=false; removeQBan();
+  syncRoutineDone();
   const total=qRight.length+qWrongList.length;
   const wrongHtml=qWrongList.length
     ? `<div class="ptitle" style="margin-top:18px">틀린 단어는 내일 또 나와요</div>`+
@@ -1695,7 +2101,25 @@ function renderQuizEnd(){
 
 // ----- 독해 자동저장 (쓰다 만 내용을 기기에 임시저장 → 다시 들어오면 이어서) -----
 let rDraftLoaded=false, draftTimer=null;
-function draftKey(){ return `so_rdraft_${session.user.id}_${rP.id}_${rRetryFb?rRetryFb.id:'full'}`; }
+function draftKey(){ return draftKeyOf(rP.id,rRetryFb,rSeq); }
+// 읽기를 시작하지 않은 상태에서도 키를 만들 수 있어야 한다 (홈에서 "이어서" 판단)
+function draftKeyOf(pid,fb,seq){
+  if(!fb) return `so_rdraft_${session.user.id}_${pid}_full`;
+  // 같은 진단이라도 읽는 문장 묶음이 다르면 초안을 분리한다
+  // (창고에서 한 문장만 골랐을 때 재독해 초안이 지워지지 않게)
+  const flg=[...(fb.flagged||[])].sort((a,b)=>a-b).join('-');
+  const cur=[...(seq||[])].sort((a,b)=>a-b).join('-');
+  const base=`so_rdraft_${session.user.id}_${pid}_${fb.id}`;
+  return cur===flg?base:`${base}_s${cur}`;
+}
+function draftExists(key){
+  try{
+    const d=JSON.parse(localStorage.getItem(key)||'null');
+    if(!d) return false;
+    return (d.interp||[]).some(x=>x)||(d.under||[]).some(x=>x)
+      ||(d.react||[]).some(x=>x)||!!d.topic;
+  }catch(_){ return false; }
+}
 function saveDraft(){
   if(!rActive||!rP||!session) return;
   saveReadInputs();
@@ -1750,13 +2174,30 @@ function startRetryRead(fbId){
   removeBar(); showTabBar(true);
   renderReadStep();
 }
+// 창고에서 한 문장만 바로 다시 읽기 (루틴을 기다리지 않아도 됨)
+function startStoreRead(pid,index){ startSentenceRead(pid,[index]); }
+// 한 지문 안의 문장 몇 개만 골라 다시 읽기. 루틴 재독해 칸도 이걸 쓴다.
+function startSentenceRead(pid,indexes){
+  const p=allP.find(x=>x.id===pid); if(!p) return;
+  const seq=[...(indexes||[])].sort((a,b)=>a-b).filter(i=>i>=0&&i<p.sentences.length);
+  if(!seq.length) return;
+  // 힌트와 성장 비교를 위해 이 문장들이 마지막으로 실린 진단을 물려준다 (myFeedback은 최신순)
+  const fb=myFeedback.find(f=>f.passage_id===pid
+    &&(f.sentence_notes||[]).some(n=>seq.includes(n.index)));
+  if(!fb) return;
+  rP=p; rSeq=seq; rRetryFb=fb;
+  rIdx=0; rInterp=[]; rUnder=[]; rReact=[]; rMarks=[]; rTopic=''; rActive=true;
+  loadDraft();
+  removeBar(); showTabBar(true);
+  renderReadStep();
+}
 function vocabMeaningOf(token){
   const k=cleanWord(token).toLowerCase(); if(!k) return null;
   const v=myVocab.find(x=>x.word_key===k&&x.meaning);
   return v?v.meaning:null;
 }
 function renderReadStep(){
-  rTip='';
+  hideWordTip();
   const N=rSeq.length, si=rSeq[rIdx];
   const toks=rP.sentences[si].split(/\s+/);
   const marked=new Set((rMarks[rIdx]||[]).map(m=>m.i));
@@ -1800,25 +2241,105 @@ function renderReadStep(){
   if(rea){ rea.addEventListener('keydown',readKey); rea.addEventListener('input',saveDraftSoon); }
   saveDraft(); rDraftLoaded=false;
 }
-let rTip='';   // 탭한 단어의 단어장 뜻 (폰에서는 hover가 없어서 여기로 보여줌)
+// ----- 형광펜 뜻 말풍선 -----
+// 단어장에 있는 단어면 품사별 뜻을, 처음 보는 단어면 담아둔다는 것만 알려준다.
+// (처음 보는 단어의 뜻은 제출 후 AI 진단이 채운다 — 그 전에 알려주면 추론 기록이 오염된다)
+function sensesTipHTML(word,ss){
+  return `<b>${esc(word)}</b>`+ss.slice(0,3).map(s=>{
+    const p=POS_ABBR[s.pos]||s.pos||'';
+    return `<i>${p?`<span class="pos">${esc(p)}</span>`:''}${esc(s.meaning)}</i>`;
+  }).join('');
+}
+// 단어장에 있으면 바로, 없으면 엣지 함수에 물어본다 (같은 세션에서는 한 번만)
+const glossCache=new Map();
+function wordTip(token){
+  const w=cleanWord(token); if(!w) return null;
+  const k=w.toLowerCase();
+  const v=myVocab.find(x=>x.word_key===k);
+  const ss=(v&&Array.isArray(v.senses))?v.senses.filter(s=>s&&s.meaning):[];
+  if(ss.length) return {word:w,html:sensesTipHTML(w,ss)};
+  if(v&&v.meaning) return {word:w,html:`<b>${esc(w)}</b><i>${esc(v.meaning)}</i>`};
+  const c=glossCache.get(k);
+  if(c) return {word:w,html:sensesTipHTML(c.word||w,c.senses||[])};
+  return {word:w,html:`<b>${esc(w)}</b><i class="soft">뜻 찾는 중…</i>`,lookup:true};
+}
+async function lookupGloss(word,sentence){
+  const k=word.toLowerCase();
+  if(glossCache.has(k)) return glossCache.get(k);
+  const res=await fetch(`${SUPABASE_URL}/functions/v1/clever-api`,{
+    method:'POST',
+    headers:{'Content-Type':'application/json',apikey:SUPABASE_ANON_KEY,
+      Authorization:'Bearer '+(session&&session.access_token?session.access_token:SUPABASE_ANON_KEY)},
+    body:JSON.stringify({type:'word_gloss',word,sentence})
+  });
+  if(!res.ok) throw new Error('gloss '+res.status);
+  const j=await res.json();
+  if(!j||!Array.isArray(j.senses)||!j.senses.length) throw new Error('empty');
+  glossCache.set(k,j);
+  return j;
+}
+let tipTimer=null, tipEl=null, tipSpan=null, tipSeq=0;
+function hideWordTip(){
+  clearTimeout(tipTimer); tipSeq++;
+  if(tipEl){ const el=tipEl; tipEl=null; tipSpan=null; el.classList.remove('on');
+    setTimeout(()=>{ if(el.parentNode) el.parentNode.removeChild(el); },200); }
+}
+// 단어 위 가운데에 붙이되 화면 밖으로 삐져나가지 않게 좌우를 당겨준다
+function placeWordTip(){
+  if(!tipEl||!tipSpan) return;
+  const r=tipSpan.getBoundingClientRect();
+  tipEl.style.top=Math.round(r.top+window.scrollY)+'px';
+  tipEl.style.left=Math.round(r.left+r.width/2)+'px';
+  const box=tipEl.getBoundingClientRect(), pad=10;
+  let shift=0;
+  if(box.left<pad) shift=pad-box.left;
+  else if(box.right>window.innerWidth-pad) shift=window.innerWidth-pad-box.right;
+  if(shift) tipEl.style.left=Math.round(r.left+r.width/2+shift)+'px';
+}
+function showWordTip(span,html,hold){
+  hideWordTip();
+  if(!span||!html) return 0;
+  const el=document.createElement('div');
+  el.className='wtip'; el.innerHTML=html;
+  document.body.appendChild(el); tipEl=el; tipSpan=span;
+  placeWordTip();
+  // rAF는 탭이 비활성이면 안 돌아서 말풍선이 영영 안 뜬다. 리플로우를 강제해 전환만 태운다
+  void el.offsetWidth;
+  el.classList.add('on');
+  if(!hold) tipTimer=setTimeout(hideWordTip,2400);   // 조회 중이면 결과가 온 뒤에 센다
+  return tipSeq;
+}
+// 조회 결과로 내용만 갈아끼운다. 그 사이 다른 단어를 눌렀으면 버린다.
+function fillWordTip(seq,html){
+  if(!tipEl||seq!==tipSeq) return;
+  tipEl.innerHTML=html;
+  placeWordTip();
+  clearTimeout(tipTimer);
+  tipTimer=setTimeout(hideWordTip,2600);
+}
+window.addEventListener('scroll',hideWordTip,{passive:true});
 function updateMarkHelp(){
   const el=$('rhelp'); if(!el) return;
   const c=(rMarks[rIdx]||[]).length;
-  el.innerHTML=`${ic('cursor','muted')} 모르는 단어를 눌러 형광펜으로 표시해요${c?` · <span style="color:var(--warn)">${c}개 표시됨</span>`:''}`
-    +(rTip?` · <span style="color:var(--accent)">${ic('bookmark','sm ok')} ${esc(rTip)}</span>`:'');
+  el.innerHTML=`${ic('cursor','muted')} 모르는 단어를 눌러 형광펜으로 표시해요${c?` · <span style="color:var(--warn)">${c}개 표시됨</span>`:''}`;
 }
 function toggleWord(wi){
   const marks=rMarks[rIdx]||(rMarks[rIdx]=[]);
   const at=marks.findIndex(m=>m.i===wi);
   const span=document.querySelectorAll('#rsent .rword')[wi];
   const tok=rP.sentences[rSeq[rIdx]].split(/\s+/)[wi];
-  if(at>=0){ marks.splice(at,1); if(span) span.classList.remove('mark'); rTip=''; }
+  if(at>=0){ marks.splice(at,1); if(span) span.classList.remove('mark'); hideWordTip(); }
   else{
     const w=cleanWord(tok);
     if(!w) return;                       // 순수 기호는 표시 안 함
     marks.push({i:wi,w}); if(span) span.classList.add('mark');
-    const mean=vocabMeaningOf(tok);      // 단어장에 뜻이 있으면 같이 보여주기
-    rTip=mean?`${w}: ${mean}`:'';
+    const tip=wordTip(tok);               // 그 단어 위에 뜻을 잠깐 띄운다
+    if(tip){
+      const seq=showWordTip(span,tip.html,tip.lookup);
+      if(tip.lookup) lookupGloss(tip.word,rP.sentences[rSeq[rIdx]])
+        .then(j=>fillWordTip(seq,sensesTipHTML(j.word||tip.word,j.senses)))
+        .catch(()=>fillWordTip(seq,`<b>${esc(tip.word)}</b><i class="soft">지금은 못 가져왔어요 · 단어장에 담아둘게요</i>`));
+    }
   }
   updateMarkHelp();
   saveDraftSoon();
@@ -1917,6 +2438,7 @@ async function submitReading(){
   }
   clearDraft();
   rActive=false;
+  await syncRoutineDone();   // 앱을 껐다 켜도 오늘 칸이 살아 있게 바로 박아둔다
   showReadDone(newReading?newReading.id:null);
 }
 function showReadDone(readingId){

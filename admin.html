@@ -119,6 +119,11 @@
   .view{display:none} .view.active{display:block}
   /* 학생 메뉴 서브탭 */
   .subtabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:16px;flex-wrap:wrap}
+  .stock{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}
+  .stockb{font-size:12px;font-weight:700;border-radius:999px;padding:6px 13px;cursor:pointer;
+    font-family:inherit;border:1px solid var(--line);background:var(--card);color:var(--sub)}
+  .stockb.warn{border-color:var(--warnb);background:var(--warn-bg);color:var(--warn)}
+  .stockb.bad{border-color:var(--no);background:var(--card);color:var(--no)}
   .stab{border:none;background:none;font-family:inherit;font-size:13.5px;font-weight:700;color:var(--sub);
     padding:9px 13px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
   .stab.active{color:var(--accent);border-bottom-color:var(--accent)}
@@ -180,6 +185,7 @@
         <button class="navbtn" data-v="student" onclick="showView('student')"><svg class="ic" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>학생</button>
         <button class="navbtn" data-v="passages" onclick="showView('passages')"><svg class="ic" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>지문</button>
         <button class="navbtn" data-v="homework" onclick="showView('homework')"><svg class="ic" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>숙제</button>
+        <button class="navbtn" data-v="routine" onclick="showView('routine')"><svg class="ic" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>루틴</button>
       </nav>
 
       <main class="main">
@@ -271,6 +277,28 @@
           </div>
           <h3 class="subt">내준 숙제</h3>
           <div id="hwList"></div>
+        </section>
+
+        <section class="view" data-view="routine">
+          <h2 class="vtitle">루틴 지문 풀</h2>
+          <p class="sub" style="margin:-8px 0 16px">여기에 지문을 쌓아두면 앱이 매일 하나씩 꺼내 배급해요. 민주는 "오늘 뭐 읽지"를 정하지 않아도 됩니다.</p>
+          <div class="card">
+            <div class="row" style="align-items:end">
+              <div><label>학생</label>
+                <select id="rtStudent" onchange="renderRoutine()" style="width:100%;border:1px solid var(--line);border-radius:11px;padding:12px;font-size:15px;font-family:inherit;background:var(--card)"></select></div>
+              <div><label>풀에 넣을 지문</label>
+                <select id="rtPassage" style="width:100%;border:1px solid var(--line);border-radius:11px;padding:12px;font-size:15px;font-family:inherit;background:var(--card)"></select></div>
+            </div>
+            <div id="rtMsg"></div>
+            <div class="row" style="margin-top:12px">
+              <button class="btn primary" onclick="addToPool()">풀에 추가</button>
+              <button class="btn ghost" onclick="addAllUnread()">안 읽은 지문 전부 담기</button>
+            </div>
+          </div>
+          <h3 class="subt">대기 중</h3>
+          <div id="rtQueue"></div>
+          <h3 class="subt">이미 나간 지문</h3>
+          <div id="rtServed"></div>
         </section>
 
       </main>
@@ -478,7 +506,7 @@ function renderToday(){
   }
   _tq=items;
   const cnt=k=>items.filter(x=>x.kind===k).length;
-  let html=`<div class="kpis">
+  let html=routineStockHTML()+`<div class="kpis">
     <div class="kpi"><b style="color:var(--accent)">${cnt('sub')}</b><span>새 제출</span></div>
     <div class="kpi"><b style="color:#c98a2b">${cnt('hw')}</b><span>챙길 숙제</span></div>
     <div class="kpi"><b style="color:#c0584b">${cnt('flag')}</b><span>재독해 방치</span></div>
@@ -648,6 +676,7 @@ async function loadHomework(){
     db.from('assignments').select('*').order('created_at',{ascending:false})
   ]);
   gStuAtts=aRes.data||[]; gStuReads=rRes.data||[]; gAsg=(!gRes.error&&gRes.data)?gRes.data:[];
+  loadRoutine();   // 학생 목록이 채워진 뒤에 루틴 화면도 같이 갱신
   if(gRes.error){
     $('hwList').innerHTML=`<p class="sub">숙제 표(assignments)가 아직 없어요. redesign-plan.md의 SQL을 SQL Editor에서 실행해주세요.<br><span style="font-size:12px">${esc(gRes.error.message)}</span></p>`;
     renderToday();
@@ -749,6 +778,132 @@ async function delAssignment(id){
   if(!confirm('이 숙제를 삭제할까요?')) return;
   const { error } = await db.from('assignments').delete().eq('id',id);
   if(!error) loadHomework();
+}
+
+// ---------- 루틴 지문 풀 ----------
+// 채영님이 쌓아두면 앱이 매일 하나씩 배급한다. 순서는 sort 값(작은 것부터).
+let gPool=[], poolMissing=false;
+async function loadRoutine(){
+  const { data, error } = await db.from('routine_pool').select('*').order('sort',{ascending:true});
+  poolMissing=!!error; gPool=(!error&&data)?data:[];
+  const stu=new Map();
+  for(const x of [...gStuAtts,...gStuReads]) if(x.user_id&&x.student_name) stu.set(x.user_id,x.student_name);
+  const sel=$('rtStudent'); if(!sel) return;
+  const keep=sel.value;
+  sel.innerHTML=[...stu].map(([id,name])=>`<option value="${id}">${esc(name)}</option>`).join('')
+    ||'<option value="">학생 기록이 아직 없어요</option>';
+  if(keep&&stu.has(keep)) sel.value=keep;
+  $('rtPassage').innerHTML=[...allP].sort((a,b)=>nat(a.book,b.book)||nat(a.unit,b.unit)||nat(a.title,b.title))
+    .map(p=>`<option value="${p.id}">${esc([p.book,p.unit,p.title].filter(Boolean).join(' · '))}</option>`).join('');
+  renderRoutine();
+  renderToday();   // 풀을 읽은 뒤라야 홈 재고 배지가 맞는 숫자로 뜬다
+}
+function poolOf(sid){ return gPool.filter(r=>r.student_id===sid); }
+// admin 홈 재고 배지 — 루틴이 조용히 멈추지 않게
+function routineStockHTML(){
+  if(poolMissing) return '';
+  const stu=new Map();
+  for(const x of [...gStuAtts,...gStuReads]) if(x.user_id&&x.student_name) stu.set(x.user_id,x.student_name);
+  // 루틴을 실제로 쓰는 학생만 센다. 풀에 한 번도 안 담긴 사람(옛 테스트 계정 등)까지
+  // 매일 빨간 경고를 띄우면 경고가 무의미해진다. 풀에 담는 순간 감시가 시작된다.
+  const using=[...stu].filter(([id])=>gPool.some(r=>r.student_id===id));
+  if(!using.length) return '';
+  return `<div class="stock">`+using.map(([id,name])=>{
+    const n=poolOf(id).filter(r=>!r.served_on).length;
+    const cls=n===0?'bad':n<=3?'warn':'';
+    const txt=n===0?`${esc(name)} 루틴이 멈췄어요`:`${esc(name)} 루틴 지문 ${n}개 남음`;
+    return `<button class="stockb ${cls}" onclick="showView('routine')">${txt}</button>`;
+  }).join('')+`</div>`;
+}
+function renderRoutine(){
+  const q=$('rtQueue'), s=$('rtServed'); if(!q) return;
+  if(poolMissing){
+    q.innerHTML=`<p class="sub">루틴 표(routine_pool)가 아직 없어요. <b>routine-tables.sql</b>을 Supabase SQL Editor에 붙여넣고 RUN 해주세요.</p>`;
+    s.innerHTML=''; return;
+  }
+  const sid=$('rtStudent').value;
+  const mine=poolOf(sid);
+  const wait=mine.filter(r=>!r.served_on).sort((a,b)=>(a.sort||0)-(b.sort||0));
+  const done=mine.filter(r=>r.served_on).sort((a,b)=>String(b.served_on).localeCompare(String(a.served_on)));
+  // 재고 경고 — 조용히 바닥나지 않게
+  const tone=wait.length===0?'var(--no)':wait.length<=3?'var(--warn)':'var(--sub)';
+  const warn=wait.length===0?'루틴이 멈춰요. 지문을 채워주세요'
+    :wait.length<=3?`${wait.length}개 남았어요. 곧 채워주세요`:`${wait.length}개 남았어요`;
+  let html=`<p class="sub" style="color:${tone};font-weight:${wait.length<=3?700:400};margin:0 0 10px">${esc(warn)}</p>`;
+  if(!wait.length) html+='<p class="sub">대기 중인 지문이 없어요.</p>';
+  else html+=`<div class="card">`+wait.map((r,i)=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 2px;font-size:13px;${i?'border-top:1px solid var(--line)':''}">`
+      +`<span style="flex:0 0 22px;color:var(--sub);font-weight:700">${i+1}</span>`
+      +`<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${pLabelOf(r.passage_id)}</span>`
+      +`<button class="btn ghost small" ${i===0?'disabled':''} onclick="movePool('${r.id}',-1)">↑</button>`
+      +`<button class="btn ghost small" ${i===wait.length-1?'disabled':''} onclick="movePool('${r.id}',1)">↓</button>`
+      +`<a style="color:#c0584b;cursor:pointer;font-size:12px" onclick="delPool('${r.id}')">삭제</a>`
+      +`</div>`).join('')+`</div>`;
+  q.innerHTML=html;
+  s.innerHTML=done.length?`<div class="card">`+done.map((r,i)=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 2px;font-size:13px;${i?'border-top:1px solid var(--line)':''}">`
+      +`<span style="flex:0 0 46px;color:var(--sub)">${esc(String(r.served_on).slice(5).replace('-','/'))}</span>`
+      +`<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${pLabelOf(r.passage_id)}</span>`
+      +`<a style="color:var(--sub);cursor:pointer;font-size:12px" onclick="requeuePool('${r.id}')">다시 대기열로</a>`
+      +`</div>`).join('')+`</div>`
+    :'<p class="sub">아직 나간 지문이 없어요.</p>';
+}
+function nextSort(sid){ const m=poolOf(sid).map(r=>r.sort||0); return (m.length?Math.max(...m):0)+1; }
+async function addToPool(){
+  const student_id=$('rtStudent').value, passage_id=$('rtPassage').value;
+  if(!student_id){ msg('rtMsg','학생 기록이 아직 없어요. 민주가 한 번 활동하면 목록에 떠요','err'); return; }
+  if(!passage_id){ msg('rtMsg','지문을 선택하세요','err'); return; }
+  if(poolOf(student_id).some(r=>r.passage_id===passage_id&&!r.served_on)){
+    msg('rtMsg','이 지문은 이미 대기열에 있어요','err'); return; }
+  const { error } = await db.from('routine_pool')
+    .insert({ student_id, passage_id, sort:nextSort(student_id) });
+  if(error){ msg('rtMsg','추가 실패: '+error.message,'err'); return; }
+  msg('rtMsg','풀에 넣었어요 ✓','ok');
+  loadRoutine();
+}
+// 아직 한 번도 안 읽은 지문을 한꺼번에 담는다 (풀을 처음 채울 때)
+async function addAllUnread(){
+  const student_id=$('rtStudent').value;
+  if(!student_id){ msg('rtMsg','학생 기록이 아직 없어요','err'); return; }
+  const read=new Set(gStuReads.filter(r=>r.user_id===student_id).map(r=>r.passage_id));
+  const inPool=new Set(poolOf(student_id).map(r=>r.passage_id));
+  const rest=[...allP].sort((a,b)=>nat(a.book,b.book)||nat(a.unit,b.unit)||nat(a.title,b.title))
+    .filter(p=>!read.has(p.id)&&!inPool.has(p.id));
+  if(!rest.length){ msg('rtMsg','담을 지문이 없어요. 등록된 지문을 다 읽었거나 이미 풀에 있어요','err'); return; }
+  let n=nextSort(student_id);
+  const { error } = await db.from('routine_pool')
+    .insert(rest.map(p=>({ student_id, passage_id:p.id, sort:n++ })));
+  if(error){ msg('rtMsg','추가 실패: '+error.message,'err'); return; }
+  msg('rtMsg',`지문 ${rest.length}개를 풀에 담았어요 ✓`,'ok');
+  loadRoutine();
+}
+// 위아래 이동 = 이웃과 sort 값을 맞바꾼다
+async function movePool(id,dir){
+  const r=gPool.find(x=>x.id===id); if(!r) return;
+  const wait=poolOf(r.student_id).filter(x=>!x.served_on).sort((a,b)=>(a.sort||0)-(b.sort||0));
+  const i=wait.findIndex(x=>x.id===id), j=i+dir;
+  if(i<0||j<0||j>=wait.length) return;
+  wait.splice(j,0,wait.splice(i,1)[0]);
+  // upsert는 student_id(not null)까지 요구하므로 쓰지 않는다. 1..n으로 다시 매기고 바뀐 행만 update.
+  // (같은 sort 값이 섞여 있어도 자리가 제대로 잡힌다)
+  const changed=wait.map((x,k)=>({row:x,sort:k+1})).filter(c=>(c.row.sort||0)!==c.sort);
+  for(const c of changed){
+    const { error } = await db.from('routine_pool').update({sort:c.sort}).eq('id',c.row.id);
+    if(error){ msg('rtMsg','순서 변경 실패: '+error.message,'err'); return; }
+  }
+  loadRoutine();
+}
+async function delPool(id){
+  if(!confirm('이 지문을 풀에서 뺄까요?')) return;
+  const { error } = await db.from('routine_pool').delete().eq('id',id);
+  if(error){ msg('rtMsg','삭제 실패: '+error.message,'err'); return; }
+  loadRoutine();
+}
+// 이미 나간 지문을 다시 대기열로 (한 번 더 읽히고 싶을 때)
+async function requeuePool(id){
+  const r=gPool.find(x=>x.id===id); if(!r) return;
+  const { error } = await db.from('routine_pool')
+    .update({ served_on:null, sort:nextSort(r.student_id) }).eq('id',id);
+  if(error){ msg('rtMsg','되돌리기 실패: '+error.message,'err'); return; }
+  loadRoutine();
 }
 
 // ---------- 학생 단어장 ----------
