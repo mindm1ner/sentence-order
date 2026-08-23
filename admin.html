@@ -285,7 +285,7 @@
           <div class="card">
             <div class="row" style="align-items:end">
               <div><label>학생</label>
-                <select id="rtStudent" onchange="renderRoutine()" style="width:100%;border:1px solid var(--line);border-radius:11px;padding:12px;font-size:15px;font-family:inherit;background:var(--card)"></select></div>
+                <select id="rtStudent" onchange="onStudentChange()" style="width:100%;border:1px solid var(--line);border-radius:11px;padding:12px;font-size:15px;font-family:inherit;background:var(--card)"></select></div>
               <div><label>풀에 넣을 지문</label>
                 <select id="rtPassage" style="width:100%;border:1px solid var(--line);border-radius:11px;padding:12px;font-size:15px;font-family:inherit;background:var(--card)"></select></div>
             </div>
@@ -786,6 +786,7 @@ let gPool=[], poolMissing=false;
 async function loadRoutine(){
   const { data, error } = await db.from('routine_pool').select('*').order('sort',{ascending:true});
   poolMissing=!!error; gPool=(!error&&data)?data:[];
+  poolSel=new Set([...poolSel].filter(id=>gPool.some(r=>r.id===id)));   // 사라진 행의 선택은 버린다
   const stu=new Map();
   for(const x of [...gStuAtts,...gStuReads]) if(x.user_id&&x.student_name) stu.set(x.user_id,x.student_name);
   const sel=$('rtStudent'); if(!sel) return;
@@ -815,31 +816,73 @@ function routineStockHTML(){
     return `<button class="stockb ${cls}" onclick="showView('routine')">${txt}</button>`;
   }).join('')+`</div>`;
 }
+// 선택 삭제용 체크 상태 (대기·나간 목록 공용, id는 서로 겹치지 않는다)
+let poolSel=new Set();
+function onStudentChange(){ poolSel.clear(); renderRoutine(); }
+function poolLists(){
+  const mine=poolOf($('rtStudent').value);
+  return {
+    wait: mine.filter(r=>!r.served_on).sort((a,b)=>(a.sort||0)-(b.sort||0)),
+    done: mine.filter(r=>r.served_on).sort((a,b)=>String(b.served_on).localeCompare(String(a.served_on)))
+  };
+}
+function poolSelToggle(id,on){ if(on) poolSel.add(id); else poolSel.delete(id); renderRoutine(); }
+function poolSelAll(kind,on){
+  const L=poolLists();
+  (kind==='wait'?L.wait:L.done).forEach(r=>on?poolSel.add(r.id):poolSel.delete(r.id));
+  renderRoutine();
+}
+function cbox(id){
+  return `<input type="checkbox" style="width:auto;flex:0 0 auto;margin:0;cursor:pointer"`
+    +` ${poolSel.has(id)?'checked':''} onchange="poolSelToggle('${id}',this.checked)">`;
+}
+// 목록 위 선택 바 — 전체 선택 + 선택 삭제
+function poolBarHTML(kind,list){
+  const picked=list.filter(r=>poolSel.has(r.id)).length;
+  const all=list.length>0&&picked===list.length;
+  return `<div style="display:flex;align-items:center;gap:9px;padding:0 3px 8px">`
+    +`<label style="display:flex;align-items:center;gap:7px;margin:0;font-size:12px;color:var(--sub);cursor:pointer;font-weight:400">`
+    +`<input type="checkbox" style="width:auto;margin:0;cursor:pointer" ${all?'checked':''}`
+    +` onchange="poolSelAll('${kind}',this.checked)"> 전체 선택</label>`
+    +`<button class="btn ghost small" ${picked?'':'disabled'}`
+    +` style="margin-left:auto${picked?';color:var(--no);border-color:var(--no)':''}"`
+    +` onclick="delSelectedPool()">선택 삭제${picked?` ${picked}`:''}</button></div>`;
+}
+async function delSelectedPool(){
+  const ids=[...poolSel]; if(!ids.length) return;
+  if(!confirm(`선택한 지문 ${ids.length}개를 풀에서 뺄까요?`)) return;
+  const { error } = await db.from('routine_pool').delete().in('id',ids);
+  if(error){ msg('rtMsg','삭제 실패: '+error.message,'err'); return; }
+  poolSel.clear();
+  msg('rtMsg',`지문 ${ids.length}개를 풀에서 뺐어요`,'ok');
+  loadRoutine();
+}
 function renderRoutine(){
   const q=$('rtQueue'), s=$('rtServed'); if(!q) return;
   if(poolMissing){
     q.innerHTML=`<p class="sub">루틴 표(routine_pool)가 아직 없어요. <b>routine-tables.sql</b>을 Supabase SQL Editor에 붙여넣고 RUN 해주세요.</p>`;
     s.innerHTML=''; return;
   }
-  const sid=$('rtStudent').value;
-  const mine=poolOf(sid);
-  const wait=mine.filter(r=>!r.served_on).sort((a,b)=>(a.sort||0)-(b.sort||0));
-  const done=mine.filter(r=>r.served_on).sort((a,b)=>String(b.served_on).localeCompare(String(a.served_on)));
+  const {wait,done}=poolLists();
   // 재고 경고 — 조용히 바닥나지 않게
   const tone=wait.length===0?'var(--no)':wait.length<=3?'var(--warn)':'var(--sub)';
   const warn=wait.length===0?'루틴이 멈춰요. 지문을 채워주세요'
     :wait.length<=3?`${wait.length}개 남았어요. 곧 채워주세요`:`${wait.length}개 남았어요`;
   let html=`<p class="sub" style="color:${tone};font-weight:${wait.length<=3?700:400};margin:0 0 10px">${esc(warn)}</p>`;
   if(!wait.length) html+='<p class="sub">대기 중인 지문이 없어요.</p>';
-  else html+=`<div class="card">`+wait.map((r,i)=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 2px;font-size:13px;${i?'border-top:1px solid var(--line)':''}">`
-      +`<span style="flex:0 0 22px;color:var(--sub);font-weight:700">${i+1}</span>`
+  else html+=poolBarHTML('wait',wait)+`<div class="card">`+wait.map((r,i)=>
+      `<div style="display:flex;align-items:center;gap:10px;padding:9px 2px;font-size:13px;${i?'border-top:1px solid var(--line)':''}">`
+      +cbox(r.id)
+      +`<span style="flex:0 0 20px;color:var(--sub);font-weight:700">${i+1}</span>`
       +`<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${pLabelOf(r.passage_id)}</span>`
       +`<button class="btn ghost small" ${i===0?'disabled':''} onclick="movePool('${r.id}',-1)">↑</button>`
       +`<button class="btn ghost small" ${i===wait.length-1?'disabled':''} onclick="movePool('${r.id}',1)">↓</button>`
-      +`<a style="color:#c0584b;cursor:pointer;font-size:12px" onclick="delPool('${r.id}')">삭제</a>`
+      +`<a style="color:var(--no);cursor:pointer;font-size:12px" onclick="delPool('${r.id}')">삭제</a>`
       +`</div>`).join('')+`</div>`;
   q.innerHTML=html;
-  s.innerHTML=done.length?`<div class="card">`+done.map((r,i)=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 2px;font-size:13px;${i?'border-top:1px solid var(--line)':''}">`
+  s.innerHTML=done.length?poolBarHTML('done',done)+`<div class="card">`+done.map((r,i)=>
+      `<div style="display:flex;align-items:center;gap:10px;padding:9px 2px;font-size:13px;${i?'border-top:1px solid var(--line)':''}">`
+      +cbox(r.id)
       +`<span style="flex:0 0 46px;color:var(--sub)">${esc(String(r.served_on).slice(5).replace('-','/'))}</span>`
       +`<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${pLabelOf(r.passage_id)}</span>`
       +`<a style="color:var(--sub);cursor:pointer;font-size:12px" onclick="requeuePool('${r.id}')">다시 대기열로</a>`
