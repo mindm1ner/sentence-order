@@ -328,6 +328,8 @@
               <button class="btn ghost" onclick="addAllUnread()">안 읽은 지문 전부 담기</button>
             </div>
           </div>
+          <h3 class="subt">최근 루틴 현황</h3>
+          <div id="rtLog"></div>
           <h3 class="subt">대기 중</h3>
           <div id="rtQueue"></div>
           <h3 class="subt">이미 나간 지문</h3>
@@ -843,9 +845,11 @@ async function delAssignment(id){
 
 // ---------- 루틴 지문 풀 ----------
 // 채영님이 쌓아두면 앱이 매일 하나씩 배급한다. 순서는 sort 값(작은 것부터).
-let gPool=[], poolMissing=false;
+let gPool=[], gDays=[], poolMissing=false;
 async function loadRoutine(){
   const { data, error } = await db.from('routine_pool').select('*').order('sort',{ascending:true});
+  const dRes = await db.from('routine_days').select('*');
+  gDays=(!dRes.error&&dRes.data)?dRes.data:[];
   poolMissing=!!error; gPool=(!error&&data)?data:[];
   poolSel=new Set([...poolSel].filter(id=>gPool.some(r=>r.id===id)));   // 사라진 행의 선택은 버린다
   const stu=new Map();
@@ -959,6 +963,46 @@ function routineStockHTML(){
     return `<button class="stockb ${cls}" onclick="showView('routine')">${txt}</button>`;
   }).join('')+`</div>`;
 }
+// ---------- 학생 루틴 현황 ----------
+// 복습을 했는지 볼 데가 없어서 만들었다. routine_days만 읽으면 되므로 표를 더 만들지 않는다.
+const RT_KIND=[["reading","독해"],["retry","재독해"],["vocab","단어"]];
+function routineDateA(at){   // 하루 경계 새벽 2시 — 학생 화면의 DAY_START와 같게
+  const d=at?new Date(at):new Date(); d.setHours(d.getHours()-2);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function renderRoutineLog(){
+  const el=$('rtLog'); if(!el) return;
+  const sid=$('rtStudent').value;
+  const mine=gDays.filter(d=>d.user_id===sid);
+  if(!mine.length){ el.innerHTML='<p class="sub">아직 루틴 기록이 없어요.</p>'; return; }
+  const today=routineDateA();
+  const days=[];
+  for(let i=6;i>=0;i--){
+    const d=new Date(today); d.setDate(d.getDate()-i);
+    days.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+  }
+  const cell=(k,day)=>{
+    const r=mine.find(x=>x.log_date===day&&x.kind===k);
+    if(!r) return '<td style="color:var(--line)">·</td>';
+    if(r.done_at) return '<td style="color:var(--accent);font-weight:700">✓</td>';
+    return '<td style="color:var(--no)">✗</td>';
+  };
+  let h=`<div class="card" style="overflow-x:auto"><table style="border-collapse:collapse;font-size:13px;width:100%;text-align:center">`
+    +`<tr><th style="text-align:left;font-weight:400;color:var(--sub);font-size:12px"></th>`
+    +days.map(d=>`<th style="font-weight:400;color:var(--sub);font-size:11px;padding:4px 0">${d.slice(5).replace('-','/')}</th>`).join('')
+    +`</tr>`;
+  for(const [k,nm] of RT_KIND){
+    h+=`<tr><td style="text-align:left;font-weight:700;padding:5px 0">${nm}</td>`
+      +days.map(d=>cell(k,d)).join('')+`</tr>`;
+  }
+  const doneDays=days.filter(d=>{
+    const rows=mine.filter(x=>x.log_date===d);
+    return rows.length&&rows.every(x=>x.done_at);
+  }).length;
+  h+=`</table><p class="sub" style="margin:10px 0 0;font-size:12px">최근 7일 중 <b style="color:var(--accent)">${doneDays}일</b> 완주 · ✓ 완료 · ✗ 미완료 · · 배급 없음</p></div>`;
+  el.innerHTML=h;
+}
+
 // 선택 삭제용 체크 상태 (대기·나간 목록 공용, id는 서로 겹치지 않는다)
 let poolSel=new Set();
 function onStudentChange(){ poolSel.clear(); renderRoutine(); }
@@ -1023,6 +1067,7 @@ function renderRoutine(){
       +`<a style="color:var(--no);cursor:pointer;font-size:12px" onclick="delPool('${r.id}')">삭제</a>`
       +`</div>`).join('')+`</div>`;
   q.innerHTML=html;
+  renderRoutineLog();
   s.innerHTML=done.length?poolBarHTML('done',done)+`<div class="card">`+done.map((r,i)=>
       `<div style="display:flex;align-items:center;gap:10px;padding:9px 2px;font-size:13px;${i?'border-top:1px solid var(--line)':''}">`
       +cbox(r.id)

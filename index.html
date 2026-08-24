@@ -834,6 +834,19 @@ async function ensureRoutine(){
   }
   await syncRoutineDone();
 }
+// 한 바퀴 돌았으면 그 자리에서 완료로 찍는다.
+// ⚠️ 단어 칸을 "배급된 단어가 전부 다음 복습일로 넘어감"으로만 판정하면,
+//    하나라도 틀린 날은 그 단어가 오늘 다시 나오므로(next_due=오늘) 칸이 영영 안 켜진다.
+//    틀린 건 내일 또 나오면 되는 것이지, 그날 복습을 안 한 게 아니다.
+async function stampRoutineDone(kind,ref){
+  if(routineMissing||!session) return;
+  const d=todayRow(kind);
+  if(!d||d.done_at) return;
+  const at=new Date().toISOString();
+  const { error } = await db.from('routine_days')
+    .update({done_at:at,ref_id:ref||null}).eq('id',d.id);
+  if(!error){ d.done_at=at; d.ref_id=ref||null; }
+}
 // 증거(제출·복습 상태)로 완료가 확인되면 done_at을 박아둔다. 지난 날은 이 기록만 남는다.
 async function syncRoutineDone(){
   if(routineMissing||!session) return;
@@ -1803,7 +1816,7 @@ function startQuiz(practice){
   let pool=practice?[...myVocab]:dueWords();
   if(!pool.length) return;
   qDeck=shuffleArr(pool); if(practice) qDeck=qDeck.slice(0,10);
-  qIdx=0; qRight=[]; qWrongList=[]; qActive=true; qAnswered=false; qPractice=!!practice;
+  qIdx=0; qRight=[]; qWrongList=[]; qActive=true; qAnswered=false; qPractice=!!practice; srFail=0;
   removeBar(); renderQuiz();
 }
 function startWrongQuiz(){ // 방금 틀린 단어만 연습으로 다시
@@ -1836,6 +1849,7 @@ function quizHintHTML(){
 // 퀴즈는 단어마다 최대 3단계: ① 뜻 쓰기(주관식, 순서 무관 전부) → ② 문맥 해석(예문마다 어떤 뜻인지) → ③ 빈칸에 단어 쓰기
 // 모든 단계를 통과해야 그 단어를 아는 것으로 침. 없는 단계(뜻 정보 없음, 뜻 1개뿐)는 건너뜀
 let qMeanOK=true, qCtxOK=true, qTargets=null, qCtxItems=[], qTDone=[], qPhaseTries=0;
+let srFail=0;   // 복습 결과 저장에 실패한 횟수 (0이 아니면 결과 화면에서 알린다)
 // 우리말 뜻 채점: 괄호 주석·띄어쓰기·문장부호 무시, 쉼표로 나뉜 동의어 중 하나면 정답, 작은 어미 차이 흡수
 function normKo(s){ return String(s||'').toLowerCase().replace(/\(.*?\)/g,'').replace(/[\s,;·/~\-–—.!?'"’‘…]/g,''); }
 function lev1(a,b){                       // 편집거리 1 이하인지 (바라다/바랐다 류)
@@ -2075,7 +2089,11 @@ async function updateWordSR(v,ok){
     patch={level:0,next_due:t,wrong_count:(v.wrong_count||0)+1};
   }
   Object.assign(v,patch);
-  try{ await db.from('vocab_words').update(patch).eq('id',v.id); }catch(_){}
+  // 조용히 삼키면 화면만 멀쩡하고 기록이 안 남는다. 실패는 알린다.
+  try{
+    const { error } = await db.from('vocab_words').update(patch).eq('id',v.id);
+    if(error) srFail=(srFail||0)+1;
+  }catch(_){ srFail=(srFail||0)+1; }
 }
 function quizNext(){
   removeQBan();
@@ -2086,6 +2104,7 @@ function quizNext(){
 function renderQuizEnd(){
   qActive=false; removeQBan();
   syncRoutineDone();
+  if(!qPractice) stampRoutineDone('vocab');   // 연습 말고 오늘 복습을 끝냈으면 칸을 켠다
   const total=qRight.length+qWrongList.length;
   const wrongHtml=qWrongList.length
     ? `<div class="ptitle" style="margin-top:18px">틀린 단어는 내일 또 나와요</div>`+
@@ -2093,6 +2112,7 @@ function renderQuizEnd(){
     : '';
   app.innerHTML=`
     <div class="done" style="margin-top:20px">${ic('check','ok')} 복습 완료! ${total}개 중 <b>${qRight.length}개</b> 맞았어요</div>
+    ${srFail?`<div class="msg err" style="margin-top:10px">기록 저장에 ${srFail}건 실패했어요. 인터넷을 확인하고 다시 한 번 해주세요.</div>`:''}
     ${wrongHtml}
     ${qWrongList.length?`<button class="btn primary full" style="margin-top:14px" onclick="startWrongQuiz()">틀린 것만 바로 다시 (연습)</button>`:''}
     <button class="btn ghost full" style="margin-top:8px" onclick="showTab('vocab')">단어장으로</button>
