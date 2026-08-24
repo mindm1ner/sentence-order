@@ -911,7 +911,9 @@ function routineLine(k,d,done,auto){
   if(k==='reading') return pLabel(d.payload&&d.payload.passage_id);
   if(k==='retry') return auto?'오늘은 다시 읽을 문장이 없어요'
     :`막혔던 문장 ${(d.payload.indexes||[]).length}개`;
-  return auto?'오늘 복습할 단어가 없어요':`복습 ${(d.payload.word_ids||[]).length}단어`;
+  if(auto) return '오늘 복습할 단어가 없어요';
+  const left=todayVocabDeck().length;   // 이미 맞힌 건 빠진 실제 남은 개수
+  return left?`복습 ${left}단어`:'다 했어요';
 }
 // 쓰다 만 독해가 있으면 "시작" 대신 "이어서"로 바꿔 부담을 줄인다
 function routineGoHTML(k,d){
@@ -1750,14 +1752,15 @@ function renderVocabTab(){
       : `<div class="empty">아직 표시한 단어가 없어요.<br>독해하면서 모르는 단어를 눌러 형광펜 표시해봐요.</div>`;
     app.innerHTML=html; return;
   }
-  const due=dueWords();
+  const due=dueWords(), today=todayVocabDeck();
   let html=topBar()+`<div class="ptitle">독해에서 형광펜 친 단어들이에요. 뜻을 채우고 퀴즈로 복습해요</div>`;
   html+=`<div class="stats3">
     <div class="stat"><b>${myVocab.length}</b><span>전체 단어</span></div>
-    <div class="stat"><b>${due.length}</b><span>오늘 복습</span></div>
+    <div class="stat"><b>${today.length}</b><span>오늘 몫</span></div>
     <div class="stat"><b>${myVocab.filter(v=>(v.level||0)>=3).length}</b><span>익숙해진 단어</span></div>
   </div>`;
-  if(due.length) html+=`<button class="btn primary full" style="margin:2px 0 16px" onclick="startQuiz(false)">${ic('edit')} 오늘 복습 퀴즈 (${due.length}단어)</button>`;
+  if(today.length) html+=`<button class="btn primary full" style="margin:2px 0 16px" onclick="startQuiz(false)">${ic('edit')} 오늘 복습 퀴즈 (${today.length}단어)</button>`;
+  else if(due.length) html+=`<div class="done" style="margin:2px 0 10px">${ic('check','ok')} 오늘 몫을 다 했어요! 밀린 단어 ${due.length}개는 내일부터 조금씩 나와요</div>`;
   else if(myVocab.length) html+=`<button class="btn ghost full" style="margin:2px 0 16px" onclick="startQuiz(true)">오늘 복습은 끝! 전체에서 무작위 복습하기</button>`;
   if(!myVocab.length) html+=`<div class="empty">아직 단어가 없어요.<br>독해하면서 모르는 단어를 눌러 형광펜 표시하면 여기에 쌓여요.</div>`;
   else{
@@ -1810,12 +1813,26 @@ async function lookupDef(id){
 }
 
 // ---------- 복습 퀴즈 (예문 빈칸 + 간격 반복) ----------
+const DAILY_VOCAB=10;   // 하루 몫. 단어마다 3단계라 이보다 늘리면 끝이 안 보인다
+// 오늘 풀 단어. 루틴이 배급한 것을 그대로 쓴다 — 홈 카드 숫자와 퀴즈가 어긋나면 안 된다.
+// 그중 이미 맞혀서 다음 복습일로 넘어간 것은 빠지고, 틀린 것은 남아 오늘 다시 나온다.
+function todayVocabDeck(){
+  const due=dueWords();
+  const row=routineMissing?null:todayRow('vocab');
+  const ids=row&&row.payload?(row.payload.word_ids||[]):null;
+  if(ids&&ids.length){
+    const pick=ids.map(id=>due.find(v=>v.id===id)).filter(Boolean);
+    if(pick.length) return pick;
+    return [];                       // 배급분을 다 끝냈다
+  }
+  return due.slice(0,DAILY_VOCAB);   // 루틴 표가 없을 때
+}
 const SR_DAYS=[1,3,7,14,30,60];
 function shuffleArr(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
 function startQuiz(practice){
-  let pool=practice?[...myVocab]:dueWords();
+  let pool=practice?[...myVocab]:todayVocabDeck();
   if(!pool.length) return;
-  qDeck=shuffleArr(pool); if(practice) qDeck=qDeck.slice(0,10);
+  qDeck=shuffleArr(pool); if(practice) qDeck=qDeck.slice(0,DAILY_VOCAB);
   qIdx=0; qRight=[]; qWrongList=[]; qActive=true; qAnswered=false; qPractice=!!practice; srFail=0;
   removeBar(); renderQuiz();
 }
