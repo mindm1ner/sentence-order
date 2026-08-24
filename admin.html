@@ -124,6 +124,40 @@
     font-family:inherit;border:1px solid var(--line);background:var(--card);color:var(--sub)}
   .stockb.warn{border-color:var(--warnb);background:var(--warn-bg);color:var(--warn)}
   .stockb.bad{border-color:var(--no);background:var(--card);color:var(--no)}
+  /* 지문 고르기 창 */
+  .pk{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:80;display:none;
+    align-items:center;justify-content:center;padding:24px}
+  .pk.on{display:flex}
+  .pkbox{background:var(--card);border-radius:18px;width:100%;max-width:720px;
+    max-height:86vh;display:flex;flex-direction:column;overflow:hidden;
+    box-shadow:0 18px 60px rgba(0,0,0,.28)}
+  .pkhead{display:flex;align-items:center;gap:10px;padding:16px 20px 12px;
+    border-bottom:1px solid var(--line)}
+  .pkhead b{font-size:15px}
+  .pkhead .x{margin-left:auto;border:none;background:none;font-size:20px;line-height:1;
+    color:var(--sub);cursor:pointer;padding:2px 6px;font-family:inherit}
+  .pkfilt{display:flex;gap:8px;flex-wrap:wrap;padding:12px 20px;border-bottom:1px solid var(--line)}
+  .pkfilt select,.pkfilt input{flex:1;min-width:130px;width:auto;border:1px solid var(--line);
+    border-radius:10px;padding:8px 10px;font-size:13px;font-family:inherit;
+    background:var(--bg);color:var(--ink)}
+  .pkbar{display:flex;align-items:center;gap:10px;padding:9px 20px;
+    border-bottom:1px solid var(--line);font-size:12px;color:var(--sub)}
+  .pkbar label{display:flex;align-items:center;gap:7px;margin:0;font-weight:400;
+    font-size:12px;color:var(--sub);cursor:pointer}
+  .pkbar input{width:auto;margin:0;cursor:pointer}
+  .pklist{flex:1;overflow-y:auto;padding:6px 20px 12px}
+  .pkrow{display:flex;align-items:center;gap:10px;padding:9px 2px;font-size:13px;
+    border-bottom:1px solid var(--line)}
+  .pkrow:last-child{border-bottom:none}
+  .pkrow input{width:auto;margin:0;flex:0 0 auto;cursor:pointer}
+  .pkrow.off{opacity:.45}
+  .pkrow .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pktag{flex:0 0 auto;font-size:10px;font-weight:700;border-radius:999px;padding:2px 8px;
+    background:var(--bg);color:var(--sub);border:1px solid var(--line)}
+  .pktag.read{color:var(--accent);border-color:var(--okb);background:var(--accent-soft)}
+  .pktag.inpool{color:var(--warn);border-color:var(--warnb);background:var(--warn-bg)}
+  .pkfoot{display:flex;align-items:center;gap:10px;padding:13px 20px;border-top:1px solid var(--line)}
+  .pkfoot .n{font-size:13px;font-weight:700;color:var(--accent)}
   .stab{border:none;background:none;font-family:inherit;font-size:13.5px;font-weight:700;color:var(--sub);
     padding:9px 13px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
   .stab.active{color:var(--accent);border-bottom-color:var(--accent)}
@@ -286,12 +320,11 @@
             <div class="row" style="align-items:end">
               <div><label>학생</label>
                 <select id="rtStudent" onchange="onStudentChange()" style="width:100%;border:1px solid var(--line);border-radius:11px;padding:12px;font-size:15px;font-family:inherit;background:var(--card)"></select></div>
-              <div><label>풀에 넣을 지문</label>
-                <select id="rtPassage" style="width:100%;border:1px solid var(--line);border-radius:11px;padding:12px;font-size:15px;font-family:inherit;background:var(--card)"></select></div>
+              <div><label>지문 고르기</label>
+                <button class="btn ghost" style="width:100%;justify-content:center" onclick="openPicker()">교재·강으로 골라 담기</button></div>
             </div>
             <div id="rtMsg"></div>
             <div class="row" style="margin-top:12px">
-              <button class="btn primary" onclick="addToPool()">풀에 추가</button>
               <button class="btn ghost" onclick="addAllUnread()">안 읽은 지문 전부 담기</button>
             </div>
           </div>
@@ -305,6 +338,34 @@
     </div>
   </div>
 
+</div>
+
+<div class="pk" id="pk" onclick="if(event.target===this)closePicker()">
+  <div class="pkbox">
+    <div class="pkhead"><b>지문 고르기</b>
+      <span class="sub" id="pkWho" style="font-size:12px"></span>
+      <button class="x" onclick="closePicker()" aria-label="닫기">×</button></div>
+    <div class="pkfilt">
+      <select id="pkBook" onchange="pkBookChange()"></select>
+      <select id="pkUnit" onchange="renderPicker()"></select>
+      <select id="pkStat" onchange="renderPicker()">
+        <option value="unread">안 읽은 것만</option>
+        <option value="all">전체</option>
+        <option value="read">읽은 것만</option>
+      </select>
+      <input id="pkQ" placeholder="지문 번호·제목 검색" oninput="renderPicker()">
+    </div>
+    <div class="pkbar">
+      <label><input type="checkbox" id="pkAll" onchange="pkAllToggle(this.checked)"> 보이는 것 전체 선택</label>
+      <span id="pkCount" style="margin-left:auto"></span>
+    </div>
+    <div class="pklist" id="pkList"></div>
+    <div class="pkfoot">
+      <span class="n" id="pkSel">0개 선택</span>
+      <button class="btn ghost small" style="margin-left:auto" onclick="closePicker()">취소</button>
+      <button class="btn primary" id="pkGo" onclick="addPicked()">담기</button>
+    </div>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -794,12 +855,94 @@ async function loadRoutine(){
   sel.innerHTML=[...stu].map(([id,name])=>`<option value="${id}">${esc(name)}</option>`).join('')
     ||'<option value="">학생 기록이 아직 없어요</option>';
   if(keep&&stu.has(keep)) sel.value=keep;
-  $('rtPassage').innerHTML=[...allP].sort((a,b)=>nat(a.book,b.book)||nat(a.unit,b.unit)||nat(a.title,b.title))
-    .map(p=>`<option value="${p.id}">${esc([p.book,p.unit,p.title].filter(Boolean).join(' · '))}</option>`).join('');
   renderRoutine();
   renderToday();   // 풀을 읽은 뒤라야 홈 재고 배지가 맞는 숫자로 뜬다
 }
 function poolOf(sid){ return gPool.filter(r=>r.student_id===sid); }
+// ---------- 지문 고르기 창 ----------
+// 하나씩 고르기와 전부 담기 사이가 없어서 만들었다. 교재·강·읽음 여부로 걸러 여러 개를 한 번에.
+let pkSel=new Set();
+function readSetOf(sid){
+  return new Set(gStuReads.filter(r=>r.user_id===sid).map(r=>r.passage_id));
+}
+function openPicker(){
+  const sid=$('rtStudent').value;
+  if(!sid){ msg('rtMsg','학생 기록이 아직 없어요. 민주가 한 번 활동하면 목록에 떠요','err'); return; }
+  pkSel.clear();
+  $('pkWho').textContent=$('rtStudent').selectedOptions[0].text;
+  const books=[...new Set(allP.map(p=>p.book||'미분류'))].sort(nat);
+  $('pkBook').innerHTML='<option value="">교재 전체</option>'
+    +books.map(b=>`<option>${esc(b)}</option>`).join('');
+  pkBookChange();
+  $('pk').classList.add('on');
+}
+function closePicker(){ $('pk').classList.remove('on'); }
+// 교재를 고르면 그 교재의 강만 보여준다
+function pkBookChange(){
+  const b=$('pkBook').value;
+  const units=[...new Set(allP.filter(p=>!b||(p.book||'미분류')===b)
+    .map(p=>p.unit||'').filter(Boolean))].sort(nat);
+  $('pkUnit').innerHTML='<option value="">강 전체</option>'
+    +units.map(u=>`<option>${esc(u)}</option>`).join('');
+  renderPicker();
+}
+// 지금 필터에 걸리는 지문들
+function pkVisible(){
+  const sid=$('rtStudent').value;
+  const read=readSetOf(sid);
+  const b=$('pkBook').value, u=$('pkUnit').value, st=$('pkStat').value;
+  const q=$('pkQ').value.trim().toLowerCase();
+  const waiting=new Set(poolOf(sid).filter(r=>!r.served_on).map(r=>r.passage_id));
+  return [...allP]
+    .sort((a,b2)=>nat(a.book,b2.book)||nat(a.unit,b2.unit)||nat(a.title,b2.title))
+    .filter(p=>!b||(p.book||'미분류')===b)
+    .filter(p=>!u||(p.unit||'')===u)
+    .filter(p=>st==='all'||(st==='read'?read.has(p.id):!read.has(p.id)))
+    .filter(p=>!q||[p.book,p.unit,p.title].filter(Boolean).join(' ').toLowerCase().includes(q))
+    .map(p=>({p, read:read.has(p.id), inPool:waiting.has(p.id)}));
+}
+function renderPicker(){
+  const rows=pkVisible();
+  const pickable=rows.filter(r=>!r.inPool);
+  $('pkList').innerHTML=rows.length?rows.map(r=>{
+    const label=[r.p.book,r.p.unit,r.p.title].filter(Boolean).join(' · ');
+    const tags=(r.inPool?'<span class="pktag inpool">풀에 있음</span>':'')
+      +(r.read?'<span class="pktag read">읽음</span>':'');
+    return `<div class="pkrow${r.inPool?' off':''}">`
+      +`<input type="checkbox" ${r.inPool?'disabled':''} ${pkSel.has(r.p.id)?'checked':''}`
+      +` onchange="pkToggle('${r.p.id}',this.checked)">`
+      +`<span class="nm">${esc(label)}</span>${tags}`
+      +`<span class="pktag">문장 ${r.p.sentences.length}</span></div>`;
+  }).join(''):'<p class="sub" style="padding:18px 0">조건에 맞는 지문이 없어요.</p>';
+  const pickedHere=pickable.filter(r=>pkSel.has(r.p.id)).length;
+  $('pkAll').checked=pickable.length>0&&pickedHere===pickable.length;
+  $('pkAll').disabled=!pickable.length;
+  $('pkCount').textContent=`${rows.length}개 · 담을 수 있는 것 ${pickable.length}개`;
+  $('pkSel').textContent=`${pkSel.size}개 선택`;
+  $('pkGo').disabled=!pkSel.size;
+  $('pkGo').textContent=pkSel.size?`${pkSel.size}개 담기`:'담기';
+}
+function pkToggle(id,on){ if(on) pkSel.add(id); else pkSel.delete(id); renderPicker(); }
+// 화면에 보이는 것만 대상. 필터 밖에서 고른 선택은 건드리지 않는다
+function pkAllToggle(on){
+  pkVisible().filter(r=>!r.inPool).forEach(r=>on?pkSel.add(r.p.id):pkSel.delete(r.p.id));
+  renderPicker();
+}
+async function addPicked(){
+  const sid=$('rtStudent').value;
+  const ids=[...pkSel]; if(!ids.length) return;
+  // 순서는 화면에 보이던 정렬(교재·강·번호) 그대로 매긴다
+  const order=[...allP].sort((a,b)=>nat(a.book,b.book)||nat(a.unit,b.unit)||nat(a.title,b.title))
+    .filter(p=>ids.includes(p.id));
+  let n=nextSort(sid);
+  const { error } = await db.from('routine_pool')
+    .insert(order.map(p=>({ student_id:sid, passage_id:p.id, sort:n++ })));
+  if(error){ msg('rtMsg','담기 실패: '+error.message,'err'); return; }
+  pkSel.clear(); closePicker();
+  msg('rtMsg',`지문 ${order.length}개를 풀에 담았어요 ✓`,'ok');
+  loadRoutine();
+}
+
 // admin 홈 재고 배지 — 루틴이 조용히 멈추지 않게
 function routineStockHTML(){
   if(poolMissing) return '';
@@ -890,18 +1033,6 @@ function renderRoutine(){
     :'<p class="sub">아직 나간 지문이 없어요.</p>';
 }
 function nextSort(sid){ const m=poolOf(sid).map(r=>r.sort||0); return (m.length?Math.max(...m):0)+1; }
-async function addToPool(){
-  const student_id=$('rtStudent').value, passage_id=$('rtPassage').value;
-  if(!student_id){ msg('rtMsg','학생 기록이 아직 없어요. 민주가 한 번 활동하면 목록에 떠요','err'); return; }
-  if(!passage_id){ msg('rtMsg','지문을 선택하세요','err'); return; }
-  if(poolOf(student_id).some(r=>r.passage_id===passage_id&&!r.served_on)){
-    msg('rtMsg','이 지문은 이미 대기열에 있어요','err'); return; }
-  const { error } = await db.from('routine_pool')
-    .insert({ student_id, passage_id, sort:nextSort(student_id) });
-  if(error){ msg('rtMsg','추가 실패: '+error.message,'err'); return; }
-  msg('rtMsg','풀에 넣었어요 ✓','ok');
-  loadRoutine();
-}
 // 아직 한 번도 안 읽은 지문을 한꺼번에 담는다 (풀을 처음 채울 때)
 async function addAllUnread(){
   const student_id=$('rtStudent').value;
