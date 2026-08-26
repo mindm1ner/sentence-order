@@ -238,6 +238,7 @@
             <button class="stab" data-s="sfb" onclick="showSub('sfb')">AI 진단</button>
             <button class="stab" data-s="srefl" onclick="showSub('srefl')">이유 쓰기</button>
             <button class="stab" data-s="svoc" onclick="showSub('svoc')">단어장</button>
+            <button class="stab" data-s="srt" onclick="showSub('srt')">루틴 결과</button>
           </div>
           <div class="spane active" data-s="sins"><div id="insightView"></div></div>
           <div class="spane" data-s="srec"><div id="records"></div></div>
@@ -245,6 +246,7 @@
           <div class="spane" data-s="sfb"><div id="feedbackAdmin"></div></div>
           <div class="spane" data-s="srefl"><div id="reflections"></div></div>
           <div class="spane" data-s="svoc"><div id="vocabAdmin"></div></div>
+          <div class="spane" data-s="srt"><div id="routineStu"></div></div>
         </section>
 
         <section class="view" data-view="passages">
@@ -845,7 +847,7 @@ async function delAssignment(id){
 
 // ---------- 루틴 지문 풀 ----------
 // 채영님이 쌓아두면 앱이 매일 하나씩 배급한다. 순서는 sort 값(작은 것부터).
-let gPool=[], gDays=[], poolMissing=false;
+let gPool=[], gDays=[], gVocab=[], poolMissing=false;
 async function loadRoutine(){
   const { data, error } = await db.from('routine_pool').select('*').order('sort',{ascending:true});
   const dRes = await db.from('routine_days').select('*');
@@ -860,6 +862,7 @@ async function loadRoutine(){
     ||'<option value="">학생 기록이 아직 없어요</option>';
   if(keep&&stu.has(keep)) sel.value=keep;
   renderRoutine();
+  renderRoutineStudent();
   renderToday();   // 풀을 읽은 뒤라야 홈 재고 배지가 맞는 숫자로 뜬다
 }
 function poolOf(sid){ return gPool.filter(r=>r.student_id===sid); }
@@ -1125,10 +1128,185 @@ async function requeuePool(id){
   loadRoutine();
 }
 
+// ---------- 학생 탭: 루틴 시행 결과 ----------
+// 루틴 화면의 ✓/✗ 표는 "했는지"만 보여준다. 여기는 "무엇을 어떻게 했는지"를 편다.
+// 그날 배급된 지문·문장·단어와 그 결과(제출 · AI 진단 · 복습 통과)를 하루 카드 하나에 모은다.
+// 표를 새로 만들지 않는다 — routine_days의 payload·ref_id로 readings·reading_feedback·vocab_words를 잇는다.
+const RT_NAME={reading:'독해',retry:'재독해',vocab:'단어'};
+const RT_DOW=['일','월','화','수','목','금','토'];
+function rtDow(ds){ try{ return RT_DOW[new Date(ds+'T12:00:00').getDay()]; }catch(_){ return ''; } }
+function rtMD(ds){ return String(ds).slice(5).replace('-','/'); }
+// 완료 근거 찾기 — ref_id가 있으면 그것으로, 없으면 같은 날·같은 지문 제출로 되짚는다
+function rtReadingOf(uid,d){
+  if(d.ref_id){ const hit=gStuReads.find(x=>x.id===d.ref_id); if(hit) return hit; }
+  if(!d.payload||!d.payload.passage_id) return null;
+  return gStuReads.find(x=>x.user_id===uid&&x.passage_id===d.payload.passage_id
+    &&routineDateA(x.created_at)===d.log_date&&(d.kind==='retry'?!!x.is_retry:!x.is_retry))||null;
+}
+function rtVerdicts(fb){
+  const c={good:0,partial:0,missed:0};
+  for(const n of (fb.sentence_notes||[])) if(c[n.verdict]!=null) c[n.verdict]++;
+  return c;
+}
+// AI 진단 한 줄. 진단은 웹훅으로 1~2분 뒤 붙으므로, 없다고 곧장 실패는 아니다.
+function rtFbHTML(uid,r){
+  if(!r) return '';
+  const fb=gFb.find(f=>f.reading_id===r.id);
+  if(!fb){
+    const mins=Math.round((Date.now()-new Date(r.created_at))/60000);
+    return `<div class="sub" style="font-size:12px;margin-top:4px">AI 진단 ${mins<10?'대기 중이에요 (보통 1~2분)':'이 아직 안 붙었어요'}</div>`;
+  }
+  const c=rtVerdicts(fb), n=(fb.flagged||[]).length;
+  return `<div style="font-size:12px;margin-top:5px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">`
+    +`<span style="font-weight:700;color:var(--sub)">AI 진단</span>`
+    +`<span style="color:#3a7d5d;font-weight:700">잘 읽음 ${c.good}</span>`
+    +`<span style="color:#c98a2b;font-weight:700">절반 ${c.partial}</span>`
+    +`<span style="color:var(--no);font-weight:700">놓침 ${c.missed}</span>`
+    +`<span style="color:var(--line)">|</span>`
+    +`<span style="color:${n?'#c98a2b':'var(--accent)'}">${n?`재독해 ${n}문장`:'통과'}</span>`
+    +`<a style="color:var(--accent);cursor:pointer;margin-left:auto" onclick="openFeedback('${fb.id}')">진단 보기 ›</a></div>`
+    +(fb.summary?`<div class="sub" style="font-size:12px;margin-top:3px;line-height:1.55">${esc(fb.summary)}</div>`:'');
+}
+// 단어 칸 — 그날 배급된 단어가 지금 어디까지 올라갔는지
+function rtVocabHTML(uid,d){
+  const ids=(d.payload&&d.payload.word_ids)||[];
+  if(!ids.length) return `<span class="sub" style="font-size:12.5px">복습할 단어가 없던 날이에요</span>`;
+  const rows=ids.map(id=>gVocab.find(v=>v.id===id)).filter(Boolean);
+  const gone=ids.length-rows.length;
+  const today=todayStrA();
+  const isToday=d.log_date===routineDateA();
+  const passed=rows.filter(v=>v.next_due&&v.next_due>today).length;
+  // 한 번도 답한 적 없는 단어. 칸이 ✓인데 이 숫자가 남아 있으면 도장과 실제 진도가 어긋난 것이다.
+  const untouched=rows.filter(v=>!(v.correct_count||0)&&!(v.wrong_count||0)).length;
+  const head=`<span style="font-size:12.5px">배급 ${ids.length}개`
+    +(isToday?` · <b style="color:${rows.length&&passed===rows.length?'var(--accent)':'#c98a2b'}">지금 ${passed}개 통과</b>`:'')
+    +(untouched?` · <b style="color:var(--no)">손 안 댄 단어 ${untouched}개</b>`:'')
+    +(gone?` · <span class="sub">지워진 단어 ${gone}개</span>`:'')+`</span>`;
+  const chips=rows.map(v=>{
+    const on=v.next_due&&v.next_due>today;
+    return `<span style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;border:1px solid var(--line);`
+      +`border-radius:999px;padding:2px 9px;margin:3px 4px 0 0;background:${on?'var(--accent-soft)':'#fff'}">`
+      +`<b>${esc(v.word)}</b><span class="sub">${v.level||0}단계 · ✓${v.correct_count||0} ✗${v.wrong_count||0}`
+      +`${v.next_due?` · 다음 ${rtMD(v.next_due)}`:''}</span></span>`;
+  }).join('');
+  return head+(chips?`<div style="margin-top:2px">${chips}</div>`:'');
+}
+// 재독해 칸 — 어느 지문의 몇 번째 문장을 다시 읽었는지 (payload.indexes는 0부터)
+function rtRetryLine(d){
+  const idx=(d.payload&&d.payload.indexes)||[];
+  const p=allP.find(x=>x.id===d.payload.passage_id);
+  const sents=idx.map(i=>(p&&p.sentences&&p.sentences[i])?p.sentences[i]:null);
+  return `<div style="font-size:12.5px">${pLabelOf(d.payload.passage_id)} `
+    +`<span class="sub">· ${idx.map(i=>i+1).join('·')}번째 문장</span></div>`
+    +sents.filter(Boolean).map(t=>`<div class="sub" style="font-size:12px;margin-top:3px;line-height:1.5">${esc(t)}</div>`).join('');
+}
+function rtCellHTML(uid,d){
+  const done=!!d.done_at;
+  const auto=!d.payload;
+  const tone=done?(auto?'var(--sub)':'var(--accent)'):'var(--no)';
+  const mark=done?(auto?'—':'✓'):'✗';
+  const when=d.done_at?fmt(d.done_at):'';
+  let body='';
+  if(auto) body=`<span class="sub" style="font-size:12.5px">${d.kind==='vocab'?'복습할 단어가 없던 날이에요':'다시 읽을 문장이 없던 날이에요'} (자동 완료)</span>`;
+  else if(d.kind==='vocab') body=rtVocabHTML(uid,d);
+  else {
+    const r=rtReadingOf(uid,d);
+    const line=d.kind==='retry'?rtRetryLine(d)
+      :`<div style="font-size:12.5px">${pLabelOf(d.payload.passage_id)}</div>`;
+    const link=r?`<div style="margin-top:4px"><a style="color:var(--accent);cursor:pointer;font-size:12px" onclick="openReading('${uid}','${d.payload.passage_id}','${r.id}')">제출 보기 ›</a></div>`:'';
+    body=line+link+rtFbHTML(uid,r);
+  }
+  return `<div style="display:flex;gap:10px;padding:9px 0;border-top:1px solid #eee9df">
+    <span style="flex:0 0 54px;font-size:12px;font-weight:700;color:var(--sub)">${RT_NAME[d.kind]||d.kind}</span>
+    <span style="flex:0 0 16px;color:${tone};font-weight:800">${mark}</span>
+    <span style="flex:1;min-width:0">${body}</span>
+    <span style="flex:0 0 46px;text-align:right;font-size:11px;color:var(--sub)">${esc(when)}</span>
+  </div>`;
+}
+function openFeedback(id){
+  showView('student'); showSub('sfb');
+  const el=document.getElementById('fbc_'+id); if(!el) return;
+  setTimeout(()=>{
+    el.scrollIntoView({behavior:'smooth',block:'start'});
+    el.style.transition='box-shadow .35s'; el.style.boxShadow='0 0 0 3px var(--accent)';
+    setTimeout(()=>{ el.style.boxShadow=''; },1800);
+  },80);
+}
+const RT_SHOW=14;   // 최근 며칠을 펼칠지
+function renderRoutineStudent(){
+  const el=$('routineStu'); if(!el) return;
+  if(poolMissing){
+    el.innerHTML=`<p class="sub">루틴 표가 아직 없어요. <b>routine-tables.sql</b>을 Supabase SQL Editor에 붙여넣고 RUN 해주세요.</p>`;
+    return;
+  }
+  const uidMe=window._session?window._session.user.id:null;
+  const stus=new Map();
+  for(const x of [...gStuReads,...gStuAtts])
+    if(x.user_id&&x.student_name&&x.user_id!==uidMe) stus.set(x.user_id,x.student_name);
+  if(!stus.size){ el.innerHTML='<p class="sub">학생 기록이 쌓이면 루틴 결과가 여기 떠요.</p>'; return; }
+  const today=routineDateA();
+  let html='';
+  for(const [uid,name] of stus){
+    const mine=gDays.filter(d=>d.user_id===uid);
+    if(!mine.length&&!poolOf(uid).length) continue;
+    const dates=[...new Set(mine.map(d=>d.log_date))].sort().reverse();
+    // 저장이 살아 있는지 — 루틴 칸은 학생이 앱을 열 때 만들어진다. 오늘 칸이 없으면 아직 안 들어온 것.
+    const todayRows=mine.filter(d=>d.log_date===today);
+    const lastSaved=mine.map(d=>d.created_at).filter(Boolean).sort().pop();
+    const lastDone=mine.map(d=>d.done_at).filter(Boolean).sort().pop();
+    const alive=todayRows.length>0;
+    const health=`<div class="card" style="margin-bottom:12px;padding:12px 14px">`
+      +`<div style="display:flex;align-items:center;gap:8px;font-size:13px">`
+      +`<span style="width:8px;height:8px;border-radius:50%;background:${alive?'var(--accent)':'#c98a2b'};flex:0 0 auto"></span>`
+      +`<b>${alive?`오늘(${rtMD(today)}) 루틴 ${todayRows.length}칸이 배급됐어요`:`오늘(${rtMD(today)}) 배급이 아직 없어요`}</b></div>`
+      +`<div class="sub" style="font-size:12px;margin-top:5px;line-height:1.6">`
+      +(alive?'':'루틴 칸은 학생이 앱을 열 때 만들어져요. 아직 안 들어왔다는 뜻이에요.<br>')
+      +`마지막 배급 ${lastSaved?fmt(lastSaved):'없음'} · 마지막 완료 ${lastDone?fmt(lastDone):'없음'} · 기록된 날 ${dates.length}일`
+      +`</div></div>`;
+    const recent=dates.slice(0,RT_SHOW);
+    const full=recent.filter(ds=>{ const rs=mine.filter(d=>d.log_date===ds); return rs.length&&rs.every(d=>d.done_at); }).length;
+    const rtReads=mine.filter(d=>d.kind==='reading'&&d.done_at&&d.payload).length;
+    const rtRetries=mine.filter(d=>d.kind==='retry'&&d.done_at&&d.payload).length;
+    const waitN=poolOf(uid).filter(r=>!r.served_on).length;
+    html+=`<div style="margin-bottom:26px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <div style="width:32px;height:32px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px">${esc(name.charAt(0))}</div>
+        <div style="font-weight:700;font-size:15px">${esc(name)} 루틴</div>
+      </div>
+      ${health}
+      <div class="kpis" style="margin-bottom:14px">
+        <div class="kpi"><b>${full}/${recent.length}</b><span>최근 완주일</span></div>
+        <div class="kpi"><b>${rtReads}</b><span>루틴 독해</span></div>
+        <div class="kpi"><b>${rtRetries}</b><span>루틴 재독해</span></div>
+        <div class="kpi"><b>${waitN}</b><span>남은 지문</span></div>
+      </div>`;
+    if(!recent.length) html+='<p class="sub">아직 루틴 기록이 없어요.</p>';
+    for(const ds of recent){
+      const rows=RT_KIND.map(([k])=>mine.find(d=>d.log_date===ds&&d.kind===k)).filter(Boolean);
+      const doneN=rows.filter(d=>d.done_at).length;
+      const allDone=doneN===rows.length;
+      html+=`<div class="card" style="margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700">
+          <span>${rtMD(ds)} <span class="sub" style="font-weight:400">(${rtDow(ds)})</span></span>
+          ${ds===today?'<span style="font-size:10.5px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:1px 8px">오늘</span>':''}
+          <span style="margin-left:auto;font-size:12px;color:${allDone?'var(--accent)':'var(--sub)'}">${doneN}/${rows.length} 완료</span>
+        </div>
+        ${rows.map(d=>rtCellHTML(uid,d)).join('')}
+      </div>`;
+    }
+    if(dates.length>recent.length)
+      html+=`<p class="sub" style="font-size:12px">그 앞으로 ${dates.length-recent.length}일치 기록이 더 있어요.</p>`;
+    html+='</div>';
+  }
+  el.innerHTML=html||'<p class="sub">아직 루틴을 쓰는 학생이 없어요.</p>';
+}
+
 // ---------- 학생 단어장 ----------
 async function loadVocabAdmin(){
   const { data, error } = await db.from('vocab_words').select('*').order('created_at',{ascending:false});
   const el=$('vocabAdmin');
+  gVocab=(!error&&data)?data:[];
+  renderRoutineStudent();   // 단어 칸의 통과 여부는 이 표가 있어야 계산된다
   if(error){ el.innerHTML=`<p class="sub">단어장 표가 아직 없어요. UPDATE 가이드의 SQL을 먼저 실행해주세요.<br><span style="font-size:12px">${esc(error.message)}</span></p>`; return; }
   if(!data||!data.length){ el.innerHTML='<p class="sub">아직 저장된 단어가 없어요.</p>'; return; }
   const byS={};
@@ -1161,6 +1339,7 @@ async function loadFeedbackAdmin(){
   const el=$('feedbackAdmin');
   gFb=(!error&&data)?data:[];
   renderToday();
+  renderRoutineStudent();
   if(error){ el.innerHTML=`<p class="sub">진단 표가 아직 없어요. UPDATE 가이드의 SQL을 먼저 실행해주세요.<br><span style="font-size:12px">${esc(error.message)}</span></p>`; return; }
   if(!data||!data.length){ el.innerHTML='<p class="sub">아직 진단 기록이 없어요. Claude Code에서 「민주 독해 진단」을 실행해보세요.</p>'; return; }
   const V={good:['잘 읽음','#3a7d5d'],partial:['절반','#c98a2b'],missed:['놓침','#c0584b']};
@@ -1169,7 +1348,7 @@ async function loadFeedbackAdmin(){
     const p=allP.find(x=>x.id===fb.passage_id);
     const label=p?[p.book,p.unit,p.title].filter(Boolean).join(' · '):'(삭제된 지문)';
     const flagged=(fb.flagged||[]).length;
-    html+=`<div class="card" style="margin-bottom:14px">
+    html+=`<div class="card" id="fbc_${fb.id}" style="margin-bottom:14px">
       <div style="font-weight:700">${esc(label)} <span class="sub" style="font-weight:400;font-size:12px;float:right">${fmt(fb.created_at)}${flagged?` · 재독해 ${flagged}문장`:' · 통과'}</span></div>
       <div class="sub" style="margin:8px 0 4px;line-height:1.6"><b>총평</b> ${esc(fb.summary||'')}</div>
       ${fb.strengths?`<div class="sub" style="margin-bottom:4px"><b>잘한 점</b> ${esc(fb.strengths)}</div>`:''}
