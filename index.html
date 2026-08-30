@@ -2454,9 +2454,14 @@ async function submitReading(){
   const row={
     passage_id:rP.id, user_id:session.user.id,
     student_email:session.user.email, student_name:studentName,
-    interpretations, topic:topic||null, is_retry:!!rRetryFb
+    interpretations, topic:topic||null, is_retry:!!rRetryFb,
+    retry_of:rRetryFb?rRetryFb.id:null   // 어느 진단에 대한 재도전인지 (재채점이 통과 기준을 찾는 열쇠)
   };
   let { data:insData, error } = await db.from('readings').insert(row).select();
+  if(error&&/retry_of/.test(error.message||'')){  // retry_of 열이 아직 없으면 빼고 재시도
+    delete row.retry_of;
+    ({ data:insData, error } = await db.from('readings').insert(row).select());
+  }
   if(error&&/is_retry/.test(error.message||'')){  // is_retry 열이 아직 없으면 빼고 재시도
     delete row.is_retry;
     ({ data:insData, error } = await db.from('readings').insert(row).select());
