@@ -797,17 +797,38 @@ function pickRetryPayload(){
   const same=cand.filter(e=>e.passage_id===head.passage_id).slice(0,2);
   return { passage_id:head.passage_id, indexes:same.map(e=>e.index).sort((a,b)=>a-b) };
 }
+// 안 하고 넘어간 독해 하나 — 오래된 것부터. 없으면 null.
+// ⚠️ 배급 판정이 served_on(나갔는가) 하나뿐이라, 예전에는 손도 안 댄 지문이 그대로
+//    흘러갔다. 실제로 7일 중 3일치가 그렇게 샜다. 그래서 새 지문보다 이걸 먼저 낸다.
+//    "그날 칸을 나중에 채울 수 있다"는 뜻은 아니다. 지난 칸은 여전히 done_at만 인정한다.
+function carriedOver(){
+  const t=routineDate();
+  // 읽기만 하면 풀린다 — 어느 날 읽었든 그 지문은 더 안 끌고 온다 (같은 지문 무한 반복 방지)
+  const readDone=new Set(myReadings.filter(r=>!r.is_retry).map(r=>r.passage_id));
+  return myDays
+    .filter(d=>d.kind==='reading'&&d.log_date<t&&!d.done_at
+      &&d.payload&&d.payload.passage_id
+      &&!readDone.has(d.payload.passage_id)
+      &&allP.some(p=>p.id===d.payload.passage_id))   // 지워진 지문은 건너뛴다
+    .sort((a,b)=>a.log_date<b.log_date?-1:1)[0]||null;
+}
 // 접속할 때 세 칸을 검사해 없으면 그 자리에서 뽑는다. 재료가 없으면 바로 완료로 켜준다.
 async function ensureRoutine(){
   if(routineMissing||!session) return;
   const t=routineDate(), rows=[];
   let servedPool=null;
   if(!todayRow('reading')){
-    const next=myPool.filter(r=>!r.served_on&&allP.some(p=>p.id===r.passage_id))
-      .sort((a,b)=>(a.sort||0)-(b.sort||0))[0];
-    if(next){                                       // 지문이 떨어지면 행을 안 만든다 (홈에 경고)
-      servedPool=next;
-      rows.push({kind:'reading',payload:{passage_id:next.passage_id,pool_id:next.id}});
+    const missed=carriedOver();                     // 놓친 게 있으면 그것부터. 풀은 안 건드린다
+    if(missed){
+      rows.push({kind:'reading',
+        payload:{...missed.payload,carried_from:missed.log_date}});
+    }else{
+      const next=myPool.filter(r=>!r.served_on&&allP.some(p=>p.id===r.passage_id))
+        .sort((a,b)=>(a.sort||0)-(b.sort||0))[0];
+      if(next){                                     // 지문이 떨어지면 행을 안 만든다 (홈에 경고)
+        servedPool=next;
+        rows.push({kind:'reading',payload:{passage_id:next.passage_id,pool_id:next.id}});
+      }
     }
   }
   if(!todayRow('retry')){
