@@ -1200,6 +1200,16 @@ function rtRetryLine(d){
     +`<span class="sub">· ${idx.map(i=>i+1).join('·')}번째 문장</span></div>`
     +sents.filter(Boolean).map(t=>`<div class="sub" style="font-size:12px;margin-top:3px;line-height:1.5">${esc(t)}</div>`).join('');
 }
+// 중간까지 하고 나간 칸 — 학생 앱이 payload.progress에 남긴다. ✗ 하나로 뭉뚱그리지 않게 편다.
+function rtProgHTML(d){
+  const pg=d.payload&&d.payload.progress;
+  if(!pg||!pg.done||d.done_at) return '';
+  const unit=pg.step==='단어'?'단어':'문장';
+  const pct=pg.total?Math.round(pg.done/pg.total*100):0;
+  return `<div style="font-size:12px;margin-top:4px;color:#c98a2b;font-weight:700">`
+    +`하다가 멈춤 · ${pg.done}/${pg.total}${unit}까지 (${pct}%)`
+    +`<span class="sub" style="font-weight:400">${pg.at?` · 마지막 ${fmt(pg.at)}`:''}</span></div>`;
+}
 function rtCellHTML(uid,d){
   const done=!!d.done_at;
   const auto=!d.payload;
@@ -1216,6 +1226,7 @@ function rtCellHTML(uid,d){
     const link=r?`<div style="margin-top:4px"><a style="color:var(--accent);cursor:pointer;font-size:12px" onclick="openReading('${uid}','${d.payload.passage_id}','${r.id}')">제출 보기 ›</a></div>`:'';
     body=line+link+rtFbHTML(uid,r);
   }
+  if(!done) body+=rtProgHTML(d);
   return `<div style="display:flex;gap:10px;padding:9px 0;border-top:1px solid #eee9df">
     <span style="flex:0 0 54px;font-size:12px;font-weight:700;color:var(--sub)">${RT_NAME[d.kind]||d.kind}</span>
     <span style="flex:0 0 16px;color:${tone};font-weight:800">${mark}</span>
@@ -1289,7 +1300,7 @@ function renderRoutineStudent(){
         <div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700">
           <span>${rtMD(ds)} <span class="sub" style="font-weight:400">(${rtDow(ds)})</span></span>
           ${ds===today?'<span style="font-size:10.5px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:1px 8px">오늘</span>':''}
-          <span style="margin-left:auto;font-size:12px;color:${allDone?'var(--accent)':'var(--sub)'}">${doneN}/${rows.length} 완료</span>
+          <span style="margin-left:auto;font-size:12px;color:${allDone?'var(--accent)':'var(--sub)'}">${doneN}/${rows.length} 완료${rows.some(d=>!d.done_at&&d.payload&&d.payload.progress&&d.payload.progress.done)?' <span style="color:#c98a2b">· 하다 만 칸 있음</span>':''}</span>
         </div>
         ${rows.map(d=>rtCellHTML(uid,d)).join('')}
       </div>`;

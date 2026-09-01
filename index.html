@@ -533,7 +533,7 @@ let rP=null, rIdx=0, rInterp=[], rUnder=[], rReact=[], rMarks=[], rTopic='', rAc
 let rSeq=[], rRetryFb=null;   // rSeq: 이번에 읽을 문장 번호들(다시 독해면 일부만)
 // 단어장·복습 퀴즈
 let myVocab=[], vocabLegacy=false;
-let qDeck=[], qIdx=0, qCur=null, qRight=[], qWrongList=[], qActive=false, qAnswered=false, qPractice=false;
+let qDeck=[], qIdx=0, qCur=null, qRight=[], qWrongList=[], qSoftList=[], qActive=false, qAnswered=false, qPractice=false;
 // AI 독해 진단
 let myFeedback=[];
 // 숙제·코스
@@ -847,6 +847,27 @@ async function stampRoutineDone(kind,ref){
     .update({done_at:at,ref_id:ref||null}).eq('id',d.id);
   if(!error){ d.done_at=at; d.ref_id=ref||null; }
 }
+// 중간에 나가도 어디까지 갔는지는 남긴다.
+// 표를 더 만들지 않고 payload에 얹는다 (payload.word_ids 같은 배급 정보는 그대로 둔다).
+// 선생님 화면(admin)도 같은 자리를 읽어 "지금 3/10"을 띄운다.
+async function saveRoutineProgress(kind,prog){
+  if(routineMissing||!session) return;
+  const d=todayRow(kind);
+  if(!d||!d.payload||d.done_at) return;
+  const cur=d.payload.progress||{};
+  if(cur.done===prog.done&&cur.total===prog.total&&cur.step===prog.step) return;   // 값이 같으면 쓰지 않는다
+  const payload={...d.payload,progress:{...prog,at:new Date().toISOString()}};
+  const { error } = await db.from('routine_days').update({payload}).eq('id',d.id);
+  if(!error) d.payload=payload;
+}
+// 독해는 루틴이 배급한 그 지문일 때만 진행을 남긴다 (딴 지문을 읽는 건 루틴 칸이 아니다)
+function saveReadProgress(done,step){
+  if(!rActive||!rP||!done) return;   // 0개는 남기지 않는다 (뒤로 갔다고 진행이 깎이면 안 된다)
+  const k=rRetryFb?'retry':'reading';
+  const d=todayRow(k);
+  if(!d||!d.payload||d.payload.passage_id!==rP.id) return;
+  saveRoutineProgress(k,{done,total:(rSeq||[]).length,step:step||'문장'});
+}
 // 증거(제출·복습 상태)로 완료가 확인되면 done_at을 박아둔다. 지난 날은 이 기록만 남는다.
 async function syncRoutineDone(){
   if(routineMissing||!session) return;
@@ -908,9 +929,11 @@ function pLabel(pid){
   return p?esc([p.book,p.unit,p.title].filter(Boolean).join(' · ')):'(삭제된 지문)';
 }
 function routineLine(k,d,done,auto){
-  if(k==='reading') return pLabel(d.payload&&d.payload.passage_id);
+  const pg=(!done&&d.payload&&d.payload.progress&&d.payload.progress.done)?d.payload.progress:null;
+  const tail=pg?` <span class="sub">· ${pg.done}/${pg.total}${pg.step==='단어'?'단어':'문장'}까지</span>`:'';
+  if(k==='reading') return pLabel(d.payload&&d.payload.passage_id)+tail;
   if(k==='retry') return auto?'오늘은 다시 읽을 문장이 없어요'
-    :`막혔던 문장 ${(d.payload.indexes||[]).length}개`;
+    :`막혔던 문장 ${(d.payload.indexes||[]).length}개`+tail;
   if(auto) return '오늘 복습할 단어가 없어요';
   const left=todayVocabDeck().length;   // 이미 맞힌 건 빠진 실제 남은 개수
   return left?`복습 ${left}단어`:'다 했어요';
@@ -1464,11 +1487,13 @@ function closeModal(yes){
 // 풀이 화면 떠나기 가드
 function tryLeave(go){
   if(rActive){
-    confirmModal('독해를 아직 제출하지 않았어요.<br>쓴 내용은 자동 저장돼서, 다시 들어오면 이어서 쓸 수 있어요.', ()=>{ saveDraft(); rActive=false; rRetryFb=null; go(); });
+    confirmModal('독해를 아직 제출하지 않았어요.<br>쓴 내용은 자동 저장돼서, 다시 들어오면 이어서 쓸 수 있어요.', ()=>{ saveDraft(); saveReadProgress(rIdx); rActive=false; rRetryFb=null; go(); });
     return;
   }
   if(qActive){
-    confirmModal('복습 퀴즈가 진행 중이에요.<br>지금까지 푼 단어까지만 기록돼요.', ()=>{ qActive=false; go(); });
+    confirmModal('복습 퀴즈가 진행 중이에요.<br>지금까지 푼 단어까지만 기록돼요.', ()=>{
+      if(!qPractice) saveRoutineProgress('vocab',{done:qIdx,total:qDeck.length,step:'단어'});
+      qActive=false; go(); });
     return;
   }
   if(solving && !(state.length && state.every((s,i)=>s.idx===i))){
@@ -1833,12 +1858,12 @@ function startQuiz(practice){
   let pool=practice?[...myVocab]:todayVocabDeck();
   if(!pool.length) return;
   qDeck=shuffleArr(pool); if(practice) qDeck=qDeck.slice(0,DAILY_VOCAB);
-  qIdx=0; qRight=[]; qWrongList=[]; qActive=true; qAnswered=false; qPractice=!!practice; srFail=0;
+  qIdx=0; qRight=[]; qWrongList=[]; qSoftList=[]; qActive=true; qAnswered=false; qPractice=!!practice; srFail=0;
   removeBar(); renderQuiz();
 }
 function startWrongQuiz(){ // 방금 틀린 단어만 연습으로 다시
   if(!qWrongList.length) return;
-  qDeck=shuffleArr(qWrongList); qIdx=0; qRight=[]; qWrongList=[];
+  qDeck=shuffleArr(qWrongList); qIdx=0; qRight=[]; qWrongList=[]; qSoftList=[];
   qActive=true; qAnswered=false; qPractice=true;
   renderQuiz();
 }
@@ -1904,7 +1929,7 @@ function stepLb(name){
   return `${st.indexOf(name)+1} / ${st.length} 단계 · ${({'뜻':'뜻 쓰기','문맥':'문맥 해석','빈칸':'빈칸에 쓰기'})[name]}`;
 }
 function renderQuiz(){
-  qCur=qDeck[qIdx]; qAnswered=false; qTries=0;
+  qCur=qDeck[qIdx]; qAnswered=false; qTries=0; qHardFail=false; qCtxSoft=false;
   removeQBan();
   const ss=Array.isArray(qCur.senses)?qCur.senses.filter(s=>s&&s.meaning):[];
   qTargets=ss.length?ss.map(s=>({pos:POS_ABBR[s.pos]||s.pos||'',mean:s.meaning}))
@@ -1952,14 +1977,20 @@ function quizMeanSubmit(){
   const remaining=qTDone.filter(x=>!x).length;
   if(!remaining){ quizPhaseDone('mean',true); return; }
   qPhaseTries++;
-  if(qPhaseTries>=3){ quizPhaseDone('mean',false); return; }
+  if(qPhaseTries>=3){ qHardFail=true; quizPhaseDone('mean',false); return; }
   const w=$('qword'); if(w){ w.classList.remove('shakeX'); void w.offsetWidth; w.classList.add('shakeX'); }
   $('qtry').textContent=`아직 ${remaining}개 남았어요 · 남은 기회 ${3-qPhaseTries}번`;
   const open=qTargets.map((_,i)=>$('qm_'+i)).find(x=>x&&!x.readOnly);
   if(open){ open.focus(); if(open.value) open.select(); }
 }
-// ② 문맥 해석: 독해 진단과 같은 기준으로 AI가 채점(good/partial/missed). good에 도달할 때까지 계속 재시도
-let qCtxRound=0, qCtxGrading=false;
+// ② 문맥 해석: 독해 진단과 같은 기준으로 AI가 채점(good/partial/missed).
+// ⚠️ 예전엔 good이 나올 때까지 무한 재시도였다. "수치"를 "숫자"라고 쓴 것처럼 사실상 맞는 답도
+//    partial로 떨어지는데, 통과는 good뿐이라 영영 못 빠져나오고 루틴 전체가 멈췄다. 지금 규칙:
+//    · partial → 통과시키되 이유를 보여주고, 그 단어는 내일 다시 (오늘 또 물으면 방금 본 답을 외워 답한다)
+//    · missed  → 다시 쓰기. 3번까지만. 넘으면 정답을 보여주고 다음 단계로 (뜻 단계와 같은 규칙)
+//    · AI 호출 실패 → 화면에 알리고 통과. 채점을 못 했으니 그 단어는 내일 다시
+const CTX_MAX=3;                       // 문맥 단계 최대 시도. 뜻 단계와 같게 맞춘다
+let qCtxRound=0, qCtxGrading=false, qCtxSoft=false, qCtxHard=false, qHardFail=false;
 async function gradeCtxAI(items){
   const res=await fetch(`${SUPABASE_URL}/functions/v1/clever-api`,{
     method:'POST',
@@ -1970,13 +2001,24 @@ async function gradeCtxAI(items){
   if(!res.ok) throw new Error('grade '+res.status);
   return res.json();
 }
+// 문맥에서 뭘 놓쳤는지 그 뜻(sense)에 붙여 둔다. 다음에 같은 단어가 나오면 AI에게 같이 넘겨
+// "그때 지적한 부분을 이번엔 챙겼는지"를 보게 한다. senses 안에 넣어 표를 더 만들지 않는다.
+async function saveCtxMiss(){
+  if(!qCur||!qCur.id||!Array.isArray(qCur.senses)) return;
+  try{ await db.from('vocab_words').update({senses:qCur.senses}).eq('id',qCur.id); }catch(_){}
+}
+function lockCtx(x){
+  qTDone[x.i]=true; x.inp.readOnly=true;
+  x.inp.classList.remove('qin-no'); x.inp.classList.add('qin-ok');
+}
 function renderQuizContext(){
-  qCtxRound=0; qTDone=qCtxItems.map(()=>false);
+  qCtxRound=0; qCtxSoft=false; qCtxHard=false; qTDone=qCtxItems.map(()=>false);
   quizShell(`
     <div class="qstep">${stepLb('문맥')}</div>
-    <div class="qhint" style="margin:2px 2px 8px"><b>${esc(qCur.word)}</b> — 각 문장에서 <b>어떤 뜻</b>으로 쓰였는지 적으면 AI 선생님이 채점해요. 통과할 때까지 다시 써봐요</div>
+    <div class="qhint" style="margin:2px 2px 8px"><b>${esc(qCur.word)}</b>가 각 문장에서 <b>어떤 뜻</b>으로 쓰였는지 적어봐요. AI 선생님이 채점해요</div>
     ${qCtxItems.map((s,i)=>`
       <div class="rsent" style="font-size:15px;line-height:1.8;padding:13px 15px;margin-top:${i?'12px':'0'};margin-bottom:0">${hlWord(s.example,qCur.word)}</div>
+      ${s.miss?`<div class="qtry" style="min-height:0;margin:5px 2px 0;font-weight:500;color:var(--warn)">${s.miss.ungraded?'지난번엔 채점을 못 하고 넘어간 문장이에요':`지난번에 반만 맞았던 문장이에요${s.miss.note?` · ${esc(s.miss.note)}`:''}`}</div>`:''}
       <input id="qc_${i}" placeholder="이 문장에서의 뜻" autocomplete="off" style="margin-top:8px">
       <div class="qtry" id="qcn_${i}" style="min-height:0;margin:4px 2px 0;font-weight:500"></div>`).join('')}
     <div class="qtry" id="qtry"></div>
@@ -1997,25 +2039,48 @@ async function quizCtxSubmit(){
   const btn=$('qbtn'); setBusy(btn,true,'AI 선생님이 채점 중…');
   let results=null;
   try{
-    const out=await gradeCtxAI(open.map(x=>({word:qCur.word,example:x.s.example,target:x.s.meaning,answer:x.inp.value.trim()})));
-    results=out&&out.results;
-  }catch(_){ results=null; }   // AI를 못 부르면 아래에서 로컬 채점으로 폴백
+    const out=await gradeCtxAI(open.map(x=>({word:qCur.word,example:x.s.example,target:x.s.meaning,
+      answer:x.inp.value.trim(), prev:x.s.miss?{answer:x.s.miss.answer,note:x.s.miss.note||''}:null})));
+    // 개수가 모자라면 짝이 어긋나 엉뚱한 칸을 채점하게 된다. 그럴 바엔 채점 못 한 것으로 친다.
+    results=(out&&Array.isArray(out.results)&&out.results.length>=open.length)?out.results:null;
+  }catch(_){ results=null; }
   qCtxGrading=false; setBusy(btn,false);
+  const last=qCtxRound>=CTX_MAX;
   open.forEach((x,k)=>{
-    const r=results&&results[k];
-    const pass=r?(r.verdict==='good'):matchMean(x.inp.value.trim(),x.s.meaning);
     const noteEl=$('qcn_'+x.i);
-    if(pass){
-      qTDone[x.i]=true; x.inp.readOnly=true; x.inp.classList.remove('qin-no'); x.inp.classList.add('qin-ok');
-      if(noteEl) noteEl.textContent='';
-    }else{
-      x.inp.classList.remove('qin-no'); void x.inp.offsetWidth; x.inp.classList.add('qin-no');
-      if(noteEl) noteEl.innerHTML=`<span style="color:var(--warn)">${esc((r&&r.note)||'이 문장 상황에 맞는 의미인지 다시 생각해봐요')}</span>`;
+    const ans=x.inp.value.trim();
+    if(!results){                      // AI를 못 불렀다 → 갇히는 것보다 넘어가는 게 낫다
+      lockCtx(x); qCtxSoft=true;
+      x.s.miss={answer:ans,note:'',at:todayStr(),ungraded:true};
+      if(noteEl) noteEl.innerHTML=`<span class="sub">AI 선생님을 못 불러서 이번엔 채점 없이 넘어가요. 이 단어는 내일 다시 나와요</span>`;
+      return;
     }
+    const r=results[k]||{}, v=r.verdict;
+    if(v==='good'){
+      const fixed=x.s.miss&&r.prev_fixed==='yes';
+      lockCtx(x); delete x.s.miss;     // 제대로 잡았으니 지난 지적은 지운다
+      if(noteEl) noteEl.innerHTML=fixed?`<span style="color:var(--ok)">지난번에 짚었던 부분까지 챙겼어요!</span>`:'';
+      return;
+    }
+    if(v==='partial'||last){           // 반만 맞았거나, 마지막 기회를 다 썼거나
+      if(v!=='partial'){ qCtxHard=true; qHardFail=true; } else qCtxSoft=true;
+      lockCtx(x);
+      x.s.miss={answer:ans,note:r.note||'',at:todayStr()};
+      if(noteEl) noteEl.innerHTML=`<span style="color:var(--warn)">${esc(r.note||'문맥 속 의미를 절반만 잡았어요')}</span>`;
+      return;
+    }
+    qCtxHard=true; qHardFail=true;     // 아예 다른 뜻 → 오늘 다시 나와야 한다
+    x.inp.classList.remove('qin-no'); void x.inp.offsetWidth; x.inp.classList.add('qin-no');
+    if(noteEl) noteEl.innerHTML=`<span style="color:var(--warn)">${esc(r.note||'이 문장 상황에 맞는 의미인지 다시 생각해봐요')}</span>`;
   });
+  saveCtxMiss();
   const remaining=qTDone.filter(x=>!x).length;
-  if(!remaining){ quizPhaseDone('ctx',qCtxRound===1); return; }   // 첫 시도에 전부 통과해야 이 단어를 아는 것으로
-  $('qtry').textContent=`아직 ${remaining}개 남았어요. AI 힌트를 보고 통과할 때까지 다시 써봐요`;
+  if(!remaining){
+    const clean=qCtxRound===1&&!qCtxSoft&&!qCtxHard;
+    quizPhaseDone('ctx',clean,qCtxHard?'hard':'soft');
+    return;
+  }
+  $('qtry').textContent=`아직 ${remaining}개 남았어요 · 남은 기회 ${CTX_MAX-qCtxRound}번`;
   const o=qCtxItems.map((_,i)=>$('qc_'+i)).find(x=>x&&!x.readOnly);
   if(o){ o.focus(); if(o.value) o.select(); }
 }
@@ -2025,13 +2090,13 @@ function quizRecapHTML(phase){
   return `<div class="vocab" style="margin-top:8px">${qCtxItems.map(s=>
     `<div class="senses"><span class="pos">${esc(POS_ABBR[s.pos]||s.pos||'')}</span>${esc(s.meaning)}<div class="ex" style="margin-top:3px">${hlWord(s.example,qCur.word)}</div></div>`).join('')}</div>`;
 }
-function quizPhaseDone(phase,ok){
+function quizPhaseDone(phase,ok,mode){
   if(phase==='mean') qMeanOK=ok; else qCtxOK=ok;
   const btn=$('qbtn'); if(btn) btn.style.display='none';
   const t=$('qtry'); if(t) t.textContent='';
   const next=(phase==='mean'&&qCtxItems.length)?'renderQuizContext()':'renderQuizCloze()';
-  const failMsg=phase==='ctx'
-    ? '통과했어요! 다만 한 번에 못 잡았으니 이 단어는 오늘 다시 나와요'
+  const failMsg=(phase==='ctx'&&mode==='soft')
+    ? '통과! 다만 뜻이 살짝 흐렸어요. 아래 뜻을 확인하고, 이 단어는 내일 다시 만나요'
     : '정답을 확인하고 넘어가요. 이 단어는 오늘 다시 나와요';
   $('qnext').innerHTML=`
     ${ok?`<div class="qhint" style="margin:10px 2px 4px;color:var(--ok);font-weight:700">전부 맞았어요!</div>`
@@ -2069,12 +2134,14 @@ function quizSubmit(){
   if(val===qCur.word_key){
     qAnswered=true;
     const overall=qMeanOK&&qCtxOK;   // 뜻·문맥·빈칸 모든 단계를 첫 시도에 통과해야 정답
-    (overall?qRight:qWrongList).push(qCur); updateWordSR(qCur,overall);
+    const soft=!overall&&!qHardFail;  // 반만 맞았거나 채점을 못 한 경우 → 오늘 말고 내일 다시
+    (overall?qRight:(soft?qSoftList:qWrongList)).push(qCur); updateWordSR(qCur,overall,soft);
     if(bl){ bl.textContent=qCur.word; bl.classList.add('okfill'); }
     if(overall) card.classList.add('glowOK');
     $('qbtn').style.display='none'; $('qtry').textContent='';
     if(overall) showQBan(true, qTries===0?'정답이에요!':'맞았어요! 끝까지 해냈어요',
       qCur.meaning?`${esc(qCur.word)} (${esc(qCur.meaning)})`:'');
+    else if(soft) showQBan(true, '여기까지 통과!', '문맥 뜻이 살짝 흐려서 내일 한 번 더 확인할게요');
     else showQBan(false, '빈칸은 맞았는데 뜻이 헷갈렸어요', '뜻까지 잡게 오늘 한 번 더 나와요');
   }else{
     qTries++;
@@ -2091,8 +2158,9 @@ function quizSubmit(){
     }
   }
 }
-async function updateWordSR(v,ok){
+async function updateWordSR(v,ok,soft){
   // 간격 반복: 맞히면 1→3→7→14→30→60일 뒤, 틀리면 처음부터
+  // soft = 반만 맞음. 오늘 또 물으면 방금 본 답을 외워 답하므로 단계는 그대로 두고 내일로 미룬다.
   const t=todayStr(); let patch;
   if(ok){
     if(qPractice){ patch={correct_count:(v.correct_count||0)+1}; }
@@ -2101,6 +2169,12 @@ async function updateWordSR(v,ok){
       const d=new Date(); d.setDate(d.getDate()+SR_DAYS[lvl-1]);
       patch={level:lvl,next_due:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`,
         correct_count:(v.correct_count||0)+1};
+    }
+  }else if(soft){
+    if(qPractice){ patch={wrong_count:(v.wrong_count||0)+1}; }
+    else{
+      const d=new Date(); d.setDate(d.getDate()+1);
+      patch={next_due:dstr(d),wrong_count:(v.wrong_count||0)+1};
     }
   }else{
     patch={level:0,next_due:t,wrong_count:(v.wrong_count||0)+1};
@@ -2115,6 +2189,7 @@ async function updateWordSR(v,ok){
 function quizNext(){
   removeQBan();
   qIdx++;
+  if(!qPractice) saveRoutineProgress('vocab',{done:qIdx,total:qDeck.length,step:'단어'});
   if(qIdx<qDeck.length){ renderQuiz(); window.scrollTo({top:0}); }
   else renderQuizEnd();
 }
@@ -2122,7 +2197,12 @@ function renderQuizEnd(){
   qActive=false; removeQBan();
   syncRoutineDone();
   if(!qPractice) stampRoutineDone('vocab');   // 연습 말고 오늘 복습을 끝냈으면 칸을 켠다
-  const total=qRight.length+qWrongList.length;
+  const total=qRight.length+qWrongList.length+qSoftList.length;
+  const softHtml=qSoftList.length
+    ? `<div class="ptitle" style="margin-top:18px">문맥 뜻이 흐렸던 단어는 내일 다시 나와요</div>`+
+      qSoftList.map(v=>`<div class="vocab"><div class="w">${esc(v.word)}${v.meaning?` <span style="font-weight:400;font-size:13px;color:var(--sub)">${esc(v.meaning)}</span>`:''}</div>`+
+        (Array.isArray(v.senses)?v.senses.filter(s=>s&&s.miss&&s.miss.note).map(s=>`<div class="ex" style="color:var(--warn)">${esc(s.miss.note)}</div>`).join(''):'')+`</div>`).join('')
+    : '';
   const wrongHtml=qWrongList.length
     ? `<div class="ptitle" style="margin-top:18px">틀린 단어는 내일 또 나와요</div>`+
       qWrongList.map(v=>`<div class="vocab"><div class="w">${esc(v.word)}${v.meaning?` <span style="font-weight:400;font-size:13px;color:var(--sub)">${esc(v.meaning)}</span>`:''}</div><div class="ex">${hlWord(v.example||'',v.word)}</div></div>`).join('')
@@ -2131,6 +2211,7 @@ function renderQuizEnd(){
     <div class="done" style="margin-top:20px">${ic('check','ok')} 복습 완료! ${total}개 중 <b>${qRight.length}개</b> 맞았어요</div>
     ${srFail?`<div class="msg err" style="margin-top:10px">기록 저장에 ${srFail}건 실패했어요. 인터넷을 확인하고 다시 한 번 해주세요.</div>`:''}
     ${wrongHtml}
+    ${softHtml}
     ${qWrongList.length?`<button class="btn primary full" style="margin-top:14px" onclick="startWrongQuiz()">틀린 것만 바로 다시 (연습)</button>`:''}
     <button class="btn ghost full" style="margin-top:8px" onclick="showTab('vocab')">단어장으로</button>
     <div style="height:40px"></div>`;
@@ -2234,6 +2315,7 @@ function vocabMeaningOf(token){
   return v?v.meaning:null;
 }
 function renderReadStep(){
+  saveReadProgress(rIdx);   // 여기까지 왔다는 것만 남긴다 (중간에 나가도 선생님 화면에 보이게)
   hideWordTip();
   const N=rSeq.length, si=rSeq[rIdx];
   const toks=rP.sentences[si].split(/\s+/);
@@ -2412,6 +2494,7 @@ function readPrev(){
   if(rIdx>0){ rIdx--; renderReadStep(); window.scrollTo({top:0}); }
 }
 function renderTopic(){
+  saveReadProgress((rSeq||[]).length,'주제');
   const head=[rP.book,rP.unit,rP.title].filter(Boolean).join(' · ');
   const draftNote=rDraftLoaded
     ? `<div class="msg okmsg" style="display:flex;align-items:center;gap:10px">쓰다 만 내용을 불러왔어요. 이어서 쓰면 돼요
