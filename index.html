@@ -836,7 +836,7 @@ async function ensureRoutine(){
     rows.push({kind:'retry',payload:pick,done_at:pick?null:new Date().toISOString()});
   }
   if(!todayRow('vocab')){
-    const due=vocabLegacy?[]:dueWords().slice(0,10);
+    const due=vocabLegacy?[]:pickDailyVocab();
     rows.push({kind:'vocab',payload:due.length?{word_ids:due.map(v=>v.id)}:null,
       done_at:due.length?null:new Date().toISOString()});
   }
@@ -1860,6 +1860,19 @@ async function lookupDef(id){
 
 // ---------- 복습 퀴즈 (예문 빈칸 + 간격 반복) ----------
 const DAILY_VOCAB=10;   // 하루 몫. 단어마다 3단계라 이보다 늘리면 끝이 안 보인다
+const DAILY_NEW=4;      // 그중 처음 보는 단어 몫. 복습이 모자라면 새 단어로, 새 단어가 모자라면 복습으로 채운다
+// 하루 몫 고르기. 복습(한 번이라도 답해 본 단어)은 오래 밀린 순, 새 단어는 먼저 형광펜 친 순.
+// ⚠️ 예전엔 DB가 돌려준 순서대로 앞 10개를 잘랐다. 앞쪽 단어 20개 남짓이 1일·3일 간격으로
+//    계속 자리를 차지해서, 통과해도 같은 세트가 돌고 나머지 200개는 한 번도 안 나왔다 (2026-09-12).
+function pickDailyVocab(){
+  const due=dueWords(), seen=v=>(v.correct_count||0)+(v.wrong_count||0)>0;
+  const rev=due.filter(seen).sort((a,b)=>
+    (a.next_due||'').localeCompare(b.next_due||'')||(a.level||0)-(b.level||0));
+  const fresh=due.filter(v=>!seen(v)).sort((a,b)=>
+    (a.created_at||'').localeCompare(b.created_at||'')||String(a.word_key).localeCompare(String(b.word_key)));
+  const nNew=Math.min(fresh.length,Math.max(DAILY_NEW,DAILY_VOCAB-rev.length));
+  return rev.slice(0,DAILY_VOCAB-nNew).concat(fresh.slice(0,nNew));
+}
 // 오늘 풀 단어. 루틴이 배급한 것을 그대로 쓴다 — 홈 카드 숫자와 퀴즈가 어긋나면 안 된다.
 // 그중 이미 맞혀서 다음 복습일로 넘어간 것은 빠지고, 틀린 것은 남아 오늘 다시 나온다.
 function todayVocabDeck(){
@@ -1871,7 +1884,7 @@ function todayVocabDeck(){
     if(pick.length) return pick;
     return [];                       // 배급분을 다 끝냈다
   }
-  return due.slice(0,DAILY_VOCAB);   // 루틴 표가 없을 때
+  return pickDailyVocab();           // 루틴 표가 없을 때
 }
 const SR_DAYS=[1,3,7,14,30,60];
 function shuffleArr(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
