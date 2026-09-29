@@ -1480,8 +1480,8 @@ async function loadFeedbackAdmin(){
         return `<div style="padding:8px 2px;border-top:1px solid #eee9df;font-size:13px">
           <span style="font-size:11px;font-weight:700;color:#fff;background:${v[1]};padding:1px 8px;border-radius:999px">${v[0]}</span>
           <div style="margin-top:5px">${esc(n.sentence||'')}</div>
-          ${n.reading_note?`<div class="sub" style="margin-top:4px"><b>독해</b> ${esc(n.reading_note)}</div>`:''}
-          ${n.understanding_note?`<div class="sub" style="margin-top:3px"><b>이해</b> ${esc(n.understanding_note)}</div>`:''}
+          ${n.reading_note?`<div class="sub" style="margin-top:4px"><b>독해</b>${n.skill_detail?` <b style="color:#c98a2b">[${esc(n.skill_tag?n.skill_tag+' · '+n.skill_detail:n.skill_detail)}]</b>`:''} ${esc(n.reading_note)}</div>`:''}
+          ${n.understanding_note?`<div class="sub" style="margin-top:3px"><b>이해</b>${n.understanding_type?` <b style="color:${['예시','바꿔 말하기','짧은 문장'].includes(n.understanding_type)?'#2F7A56':n.understanding_type==='재탕'?'#c98a2b':'#c0584b'}">[${esc(n.understanding_type)}]</b>`:''} ${esc(n.understanding_note)}</div>`:''}
           ${n.note?`<div class="sub" style="margin-top:4px">→ ${esc(n.note)}</div>`:''}
           ${(n.missed_words||[]).length?`<div class="sub" style="margin-top:3px;font-size:12px"><b>단어장 추가</b> ${n.missed_words.map(m=>esc(m.word)).join(', ')}</div>`:''}
         </div>`;
@@ -1663,7 +1663,7 @@ function readingBlockHTML(r,n){
       <span class="p">${(it.index!=null?it.index:0)+1}</span>
       <span class="s"><b>${esc(it.sentence||'')}</b><br>
         <span style="color:var(--sub)">해석 → ${esc(it.my_reading||'(미작성)')}</span>
-        ${it.my_understanding?`<br><span style="color:#3a7d5d">하고싶은말 → ${esc(it.my_understanding)}</span>`:''}
+        ${it.my_understanding?`<br><span style="color:#3a7d5d">내 말로 → ${esc(it.my_understanding)}</span>`:''}
         ${it.reaction?`<br><span style="color:#c98a2b">반응 → ${esc(it.reaction)}</span>`:''}
         ${marks.length?`<br><span style="font-size:11px;color:var(--no)">모르는 단어: ${marks.map(esc).join(', ')}</span>`:''}
       </span></div>`;

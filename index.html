@@ -409,6 +409,10 @@
   .fb .my{font-size:13px;color:var(--sub);margin-top:5px}
   .fb .note{font-size:13px;color:var(--ink);margin-top:7px;padding-top:7px;border-top:1px dashed var(--line);line-height:1.6}
   .fb .note .lb,.fb .my .lb{font-size:11px;font-weight:700;opacity:.7;margin-right:5px}
+  .fb .cause{display:inline-block;font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px;margin-right:6px;white-space:nowrap;
+    background:var(--warn-bg);color:var(--warn)}
+  .fb .cause.ok{background:var(--ok-bg);color:var(--ok)}
+  .fb .cause.no{background:var(--no-bg);color:var(--no)}
   .fbsum{border:1px solid var(--okb);background:var(--accent-soft);border-radius:14px;padding:14px 16px;margin-bottom:12px;font-size:14px;line-height:1.7}
   .fbsum .t{font-weight:700;color:var(--accent);margin-bottom:6px;display:flex;align-items:center;gap:6px}
   .fblb{display:block;font-size:11px;font-weight:700;color:var(--accent);letter-spacing:.07em;margin:11px 0 2px}
@@ -1213,7 +1217,7 @@ function renderCourse(){
     const active=!steps.includes('order')||orderDone;
     parts.push({state:readDone?'done':(active?'now':'wait'),inner:`<div class="card" style="padding:12px 14px${readDone?';opacity:.75':''}">
       <div style="font-weight:700;font-size:14px">한줄 독해</div>
-      <div class="hint" style="margin:2px 0 ${readDone?'0':'10px'}">${readDone?'제출 완료! AI 진단을 확인해요':'해석하고, 하고 싶은 말을 내 말로'}</div>
+      <div class="hint" style="margin:2px 0 ${readDone?'0':'10px'}">${readDone?'제출 완료! AI 진단을 확인해요':'해석하고, 쉬운 내 말로 바꾸기'}</div>
       ${readDone?`<button class="btn ghost" style="margin-top:8px;padding:8px 14px;font-size:13px" onclick="pickRead('${p.id}')">다시 독해하기</button>`
         :`<button class="btn primary full" style="margin-top:0" onclick="pickRead('${p.id}')">시작하기</button>`}</div>`});
   }
@@ -1359,6 +1363,8 @@ function feedbackBodyHTML(fb,opts){
   const p=allP.find(x=>x.id===fb.passage_id)||{sentences:[]};
   const reading=myReadings.find(r=>r.id===fb.reading_id);
   const flagged=(fb.flagged||[]);
+  // 이해 판정 원인 이름표 색: 통과 단계=초록, 재탕=주황, 뜻 어긋남=빨강
+  const UTYPE_CLS={'예시':'ok','바꿔 말하기':'ok','짧은 문장':'ok','재탕':'','빠뜨림':'no','헛짚음':'no','예시 어긋남':'no'};
   const notes=(fb.sentence_notes||[]).slice().sort((a,b)=>a.index-b.index);
   // 스코어 헤더: 문장 판정 세그먼트 + 성장 배지
   const segColor={good:'var(--ok)',partial:'var(--warn)',missed:'var(--no)'};
@@ -1383,9 +1389,10 @@ function feedbackBodyHTML(fb,opts){
     html+=`<div class="fb ${v.cls}"><span class="vlb">${v.lb}</span>
       <div class="en">${espHTML(n.sentence||p.sentences[n.index]||'',n.error_spans)}</div>
       ${my&&my.my_reading?`<div class="my"><span class="lb">내 해석</span>${esc(my.my_reading)}</div>`:''}
-      ${my&&my.my_understanding?`<div class="my"><span class="lb">내 설명</span>${esc(my.my_understanding)}</div>`:''}
-      ${n.reading_note?`<div class="note"><span class="lb">독해</span>${esc(n.reading_note)}</div>`:''}
-      ${n.understanding_note?`<div class="note" style="border-top:none;padding-top:0"><span class="lb">이해</span>${esc(n.understanding_note)}</div>`:''}
+      ${my&&my.my_understanding?`<div class="my"><span class="lb">내 말로</span>${esc(my.my_understanding)}</div>`:''}
+      ${my&&my.reaction?`<div class="my"><span class="lb">예시·반응</span>${esc(my.reaction)}</div>`:''}
+      ${n.reading_note?`<div class="note"><span class="lb">독해</span>${n.skill_detail?`<span class="cause ${n.verdict==='missed'?'no':''}">${esc(n.skill_tag?n.skill_tag+' · '+n.skill_detail:n.skill_detail)}</span>`:''}${esc(n.reading_note)}</div>`:''}
+      ${n.understanding_note?`<div class="note" style="border-top:none;padding-top:0"><span class="lb">이해</span>${n.understanding_type?`<span class="cause ${UTYPE_CLS[n.understanding_type]||''}">${esc(n.understanding_type)}</span>`:''}${esc(n.understanding_note)}</div>`:''}
       ${n.note?`<div class="note"><span class="lb">코치</span>${esc(n.note)}</div>`:''}</div>`;
   }
   // AI가 발견해 단어장에 자동 등록한 단어들
@@ -2377,12 +2384,12 @@ function renderReadStep(){
     ${draftNote}${retryNote}
     <div class="rsent" id="rsent">${words}</div>
     <div class="rhelp" id="rhelp"></div>
-    <label style="margin-top:2px">① 이 문장, 내 말로 해석해보기</label>
+    <label style="margin-top:2px">① 이 문장 해석해보기 <span class="hint">(끊어 읽어도 돼요)</span></label>
     <textarea class="rinput" id="rinput" placeholder="예: 이 문장은 ~라는 뜻인 것 같아 (엔터 → 다음 칸)">${esc(rInterp[rIdx]||'')}</textarea>
-    <label style="margin-top:12px">② 그래서 이 문장이 하고 싶은 말은? <span class="hint">(번역 말고, 네 말로 설명)</span></label>
-    <textarea class="rinput" id="runder" placeholder="예: 한마디로 ~가 중요하다는 말 / 앞 문장을 반박하려고 예를 드는 거야">${esc(rUnder[rIdx]||'')}</textarea>
-    <label style="margin-top:12px">③ 내 생각·반응 <span class="hint">(안 써도 돼요, 엔터로 다음 문장)</span></label>
-    <textarea class="rinput" id="rreact" placeholder="예: 이건 좀 의외인데? / 왜 그럴까? / 아까 내 질문의 답이 나왔네!">${esc(rReact[rIdx]||'')}</textarea>
+    <label style="margin-top:12px">② 쉬운 내 말로 바꾸면? <span class="hint">(친구한테 설명하듯, 해석과 다른 단어로)</span></label>
+    <textarea class="rinput" id="runder" placeholder="예: 기록이 거의 없는 평범한 사람들 얘기도 소설은 다룰 수 있다는 거">${esc(rUnder[rIdx]||'')}</textarea>
+    <label style="margin-top:12px">③ 예를 들면? 또는 내 생각 <span class="hint">(안 써도 돼요, 엔터로 다음 문장)</span></label>
+    <textarea class="rinput" id="rreact" placeholder="예: 영화 '명량'도 기록에 없는 장면을 지어냈지 / 왜 그럴까? / 아까 내 질문의 답이 나왔네!">${esc(rReact[rIdx]||'')}</textarea>
     <div id="rmsg"></div>
     <button class="btn primary full" style="margin-top:12px" onclick="readNext()">${last?(rRetryFb?'다시 독해 제출하기':'주제 쓰러 가기 →'):'다음 문장 →'}</button>
     ${rIdx>0?`<button class="btn ghost full" style="margin-top:8px" onclick="readPrev()">← 이전 문장</button>`:''}
@@ -2517,7 +2524,7 @@ function readNext(){
   const inp=$('rinput'); const val=(inp?inp.value:'').trim();
   if(!val){ $('rmsg').innerHTML=`<div class="msg err">이 문장을 내 말로 한 마디라도 적어야 넘어갈 수 있어요.</div>`; if(inp) inp.focus(); return; }
   const und=$('runder'); const uval=(und?und.value:'').trim();
-  if(!uval){ $('rmsg').innerHTML=`<div class="msg err">②에 이 문장이 하고 싶은 말을 네 말로 적어봐요. 번역이 아니어도, 틀려도 괜찮아요!</div>`; if(und) und.focus(); return; }
+  if(!uval){ $('rmsg').innerHTML=`<div class="msg err">②에 이 문장을 쉬운 내 말로 바꿔 적어봐요. 틀려도 괜찮아요!</div>`; if(und) und.focus(); return; }
   saveReadInputs();
   if(rIdx+1<rSeq.length){ rIdx++; renderReadStep(); window.scrollTo({top:0}); }
   else if(rRetryFb) submitReading();     // 다시 독해는 주제 생략, 바로 제출
@@ -2536,7 +2543,7 @@ function renderTopic(){
     : '';
   const recap=rSeq.map((si,i)=>`<div class="rritem"><div class="en">${esc(rP.sentences[si])}</div>
     <div class="ko"><span class="lb">해석</span>${esc(rInterp[i]||'')}</div>
-    ${rUnder[i]?`<div class="un"><span class="lb">하고싶은말</span>${esc(rUnder[i])}</div>`:''}
+    ${rUnder[i]?`<div class="un"><span class="lb">내 말로</span>${esc(rUnder[i])}</div>`:''}
     ${rReact[i]?`<div class="re"><span class="lb">반응</span>${esc(rReact[i])}</div>`:''}</div>`).join('');
   app.innerHTML=`
     <button class="back" onclick="backToLast()">‹ 마지막 문장</button>
