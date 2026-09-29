@@ -100,8 +100,30 @@
   .pdrawer-bg{position:fixed;inset:0;background:rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .2s;z-index:40}
   .pdrawer{position:fixed;top:0;right:0;bottom:0;width:min(640px,100%);background:var(--card);border-left:1px solid var(--line);
     box-shadow:var(--shadow);padding:20px 22px 40px;overflow:auto;transform:translateX(105%);transition:transform .22s;z-index:41}
-  .pform-on .pdrawer{transform:none}
-  .pform-on .pdrawer-bg{opacity:1;pointer-events:auto}
+  .pform-on #pform,.pk-on #pk{transform:none}
+  .pform-on #pformBg,.pk-on #pkBg{opacity:1;pointer-events:auto}
+  /* 숙제 탭: 지문 고르기 서랍 */
+  #pk{display:flex;flex-direction:column;gap:10px;overflow:hidden;padding-bottom:18px}
+  .pkbody{display:grid;grid-template-columns:210px 1fr;gap:10px;flex:1;min-height:0}
+  .pklist{overflow:auto;border:1px solid var(--line);border-radius:14px;padding:6px}
+  .pkhead{display:flex;align-items:center;gap:8px;padding:6px 8px 8px;font-size:13px;color:var(--sub)}
+  .pkrow{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:14px;margin:0;color:var(--ink)}
+  .pkrow:hover{background:var(--bg)}
+  .pkrow input{width:auto;margin:0}
+  .pkrow .c{margin-left:auto;font-size:11px;color:var(--sub);white-space:nowrap}
+  .pkrow.dis{opacity:.45;cursor:default}
+  .pkfoot{display:flex;align-items:center;gap:8px}
+  .pkfoot .n{margin-right:auto;font-size:13px;font-weight:700;color:var(--accent)}
+  .pkfield{width:100%;display:flex;align-items:center;gap:8px;text-align:left;border:1px solid var(--line);border-radius:11px;
+    padding:12px;font-size:15px;background:var(--card);color:var(--ink);cursor:pointer}
+  .pkfield:hover{border-color:var(--accent)}
+  .pkfield .ph{color:var(--sub)}
+  .pkfield .go{margin-left:auto;color:var(--sub);flex:0 0 auto}
+  .pkfield .sel{display:flex;flex-direction:column;gap:2px;min-width:0}
+  @media (max-width:760px){
+    .pkbody{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+    .pkbody .ptree{max-height:170px}
+  }
   .pdh{display:flex;align-items:center;margin-bottom:6px}
   .pdh b{font-size:16px}
   @media (max-width:760px){
@@ -343,8 +365,8 @@
               <div><label>학생</label><select id="hwStudent" style="width:100%;border:1px solid #e7e4dc;border-radius:11px;padding:12px;font-size:15px;font-family:inherit;background:#fff"></select></div>
               <div><label>차시 라벨 (선택)</label><input id="hwRound" placeholder="예: 7월 4주차"></div>
             </div>
-            <label>지문</label>
-            <select id="hwPassage" style="width:100%;border:1px solid #e7e4dc;border-radius:11px;padding:12px;font-size:15px;font-family:inherit;background:#fff"></select>
+            <label>지문 <span class="hint">(여러 개 골라도 돼요)</span></label>
+            <button type="button" class="pkfield" id="hwPassageBtn" onclick="openHwPicker()"></button>
             <div class="row" style="margin-top:14px;align-items:end">
               <div>
                 <label>시킬 것</label>
@@ -360,6 +382,19 @@
           </div>
           <h3 class="subt">내준 숙제</h3>
           <div id="hwList"></div>
+
+          <div class="pdrawer-bg" id="pkBg" onclick="closePicker()"></div>
+          <aside class="pdrawer" id="pk" aria-label="지문 고르기">
+            <div class="pdh"><b id="pkTitle">지문 고르기</b><button class="btn ghost small" style="margin-left:auto" onclick="closePicker()">닫기</button></div>
+            <input id="pkQ" placeholder="검색 (예: 3강, 9월 모평, 2024)" autocomplete="off" oninput="pk.q=this.value;renderPickerList()">
+            <div class="pkbody">
+              <nav class="ptree" id="pkTree" aria-label="교재와 강"></nav>
+              <div class="pklist" id="pkList"></div>
+            </div>
+            <div class="pkfoot"><span class="n" id="pkCnt"></span>
+              <button class="btn ghost small" onclick="pk.sel.clear();renderPickerList()">비우기</button>
+              <button class="btn primary small" onclick="pkDone()">고르기 완료</button></div>
+          </aside>
         </section>
 
         <section class="view" data-view="routine">
@@ -519,7 +554,7 @@ async function save(goHw){
     if(!res.error&&res.data&&res.data[0]) newId=res.data[0].id;
   }
   if(res.error){ msg('formmsg',res.error.message,'err'); return; }
-  pSel={b:book, u:unit};
+  pSel={b:book, u:unit}; pOpen.add(book);
   closePForm();
   msg('pmsg','저장됐어요 ✓','ok'); setTimeout(()=>{ if($('pmsg')) $('pmsg').innerHTML=''; },3000);
   if(goHw===true&&newId) _pendingHwPid=newId;
@@ -770,7 +805,7 @@ function renderInsight(){
 }
 function recAssign(pid,uid){
   showView('homework');
-  if($('hwPassage')) $('hwPassage').value=pid;
+  hwPicked=[pid]; renderHwPicked();
   if($('hwStudent')) $('hwStudent').value=uid;
   msg('hwMsg','인사이트 추천 지문이 선택됐어요. 구성과 마감만 정하고 내주세요','ok');
 }
@@ -798,12 +833,11 @@ async function loadHomework(){
   for(const x of [...gStuAtts,...gStuReads]) if(x.user_id&&x.student_name) stu.set(x.user_id,x.student_name);
   $('hwStudent').innerHTML=[...stu].map(([id,name])=>`<option value="${id}">${esc(name)}</option>`).join('')
     ||'<option value="">학생 기록이 아직 없어요</option>';
-  $('hwPassage').innerHTML=[...allP].sort((a,b)=>nat(a.book,b.book)||nat(a.unit,b.unit)||nat(a.title,b.title))
-    .map(p=>`<option value="${p.id}">${esc([p.book,p.unit,p.title].filter(Boolean).join(' · '))}</option>`).join('');
+  hwPicked=hwPicked.filter(id=>allP.some(p=>p.id===id)); renderHwPicked();
   renderHwList();
   renderToday();
   if(_pendingHwPid){   // "저장하고 바로 숙제 내주기" 체인
-    if($('hwPassage')) $('hwPassage').value=_pendingHwPid;
+    hwPicked=[_pendingHwPid]; renderHwPicked();
     _pendingHwPid=null;
     showView('homework');
     msg('hwMsg','방금 저장한 지문이 선택됐어요. 학생과 구성, 마감만 정하고 내주세요','ok');
@@ -871,7 +905,7 @@ function editRound(round){
   gHwEdit={ round, label:list[0].round_label||'', due:(list.find(a=>a.due_date)||{}).due_date||'',
     students:[...new Set(list.map(a=>a.student_id))],
     rows:list.map(a=>({ id:a.id, student_id:a.student_id, passage_id:a.passage_id, steps:[...(a.steps||[])], del:false })),
-    q:'', addPid:'', addSteps:['reading'] };
+    addSteps:['reading'] };
   renderHwList();
 }
 function hwEditCard(){
@@ -884,11 +918,6 @@ function hwEditCard(){
       <label style="display:flex;align-items:center;gap:4px;margin:0;font-size:12px;color:var(--ink);white-space:nowrap">${stepBox(r.steps.includes('reading'),`hwEditStep(${i},'reading',this.checked)`)}독해</label>
       <a style="flex:0 0 auto;color:${r.del?'var(--accent)':'#c0584b'};cursor:pointer;font-size:12px;text-decoration:none;white-space:nowrap" onclick="hwEditDel(${i})">${r.del?'되살리기':'빼기'}</a>
     </div>`).join('');
-  const q=e.q.trim().toLowerCase();
-  const opts=[...allP].sort((a,b)=>nat(a.book,b.book)||nat(a.unit,b.unit)||nat(a.title,b.title))
-    .map(p=>({ id:p.id, t:[p.book,p.unit,p.title].filter(Boolean).join(' · ') }))
-    .filter(p=>!q||p.t.toLowerCase().includes(q));
-  const sel='border:1px solid var(--line);border-radius:11px;padding:10px;font-size:14px;font-family:inherit;background:var(--card)';
   return `<div class="card" style="margin-bottom:12px;border-color:var(--accent)">
     <div class="row" style="align-items:end">
       <div><label>숙제 이름</label><input id="hwEdLabel" value="${esc(e.label)}" placeholder="예: 9/27" oninput="gHwEdit.label=this.value"></div>
@@ -897,14 +926,11 @@ function hwEditCard(){
     <div style="margin-top:14px">${rows||'<p class="sub" style="margin:8px 0">지문이 없어요</p>'}</div>
     <div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)">
       <label>지문 추가</label>
-      <input placeholder="검색 (예: 수능특강 3강)" value="${esc(e.q)}" oninput="gHwEdit.q=this.value;hwEditFilter()" style="margin-bottom:8px">
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-        <select id="hwEdAdd" onchange="gHwEdit.addPid=this.value" style="flex:1;min-width:200px;${sel}">
-          ${opts.map(p=>`<option value="${p.id}" ${p.id===e.addPid?'selected':''}>${esc(p.t)}</option>`).join('')||'<option value="">검색 결과 없음</option>'}
-        </select>
+        <span class="hint" style="margin-right:auto">새로 넣을 지문에 시킬 것</span>
         <label style="display:flex;align-items:center;gap:4px;margin:0;font-size:13px;color:var(--ink);white-space:nowrap">${stepBox(e.addSteps.includes('order'),`hwEditAddStep('order',this.checked)`)}순서</label>
         <label style="display:flex;align-items:center;gap:4px;margin:0;font-size:13px;color:var(--ink);white-space:nowrap">${stepBox(e.addSteps.includes('reading'),`hwEditAddStep('reading',this.checked)`)}독해</label>
-        <button class="btn ghost small" onclick="hwEditAdd()">추가</button>
+        <button class="btn ghost small" onclick="hwEditAdd()">지문 고르기</button>
       </div>
     </div>
     <div id="hwEdMsg"></div>
@@ -913,12 +939,6 @@ function hwEditCard(){
       <button class="btn primary small" onclick="saveRoundEdit()">저장</button>
     </div>
   </div>`;
-}
-function hwEditFilter(){   // 검색칸 포커스를 잃지 않게 select만 다시 그린다
-  const pos=document.activeElement.selectionStart;
-  renderHwList();
-  const inp=[...document.querySelectorAll('#hwList input')].find(x=>x.placeholder.startsWith('검색'));
-  if(inp){ inp.focus(); inp.setSelectionRange(pos,pos); }
 }
 function hwEditStep(i,s,on){
   const r=gHwEdit.rows[i];
@@ -934,17 +954,16 @@ function hwEditDel(i){
   renderHwList();
 }
 function hwEditAdd(){
-  const e=gHwEdit, pid=$('hwEdAdd').value;
-  if(!pid){ msg('hwEdMsg','지문을 고르세요','err'); return; }
+  const e=gHwEdit;
   if(!e.addSteps.length){ msg('hwEdMsg','순서/독해 중 최소 하나는 체크해야 해요','err'); return; }
-  let n=0;
-  for(const sid of e.students){
-    if(e.rows.some(r=>!r.del&&r.student_id===sid&&r.passage_id===pid)) continue;
-    e.rows.push({ id:null, student_id:sid, passage_id:pid, steps:[...e.addSteps].sort((a,b)=>a==='order'?-1:1), del:false }); n++;
-  }
-  e.addPid=pid;
-  renderHwList();
-  if(!n) msg('hwEdMsg','이미 들어 있는 지문이에요','err');
+  const have=e.rows.filter(r=>!r.del).map(r=>r.passage_id);
+  openPicker([],ids=>{
+    for(const pid of ids) for(const sid of e.students){
+      if(e.rows.some(r=>!r.del&&r.student_id===sid&&r.passage_id===pid)) continue;
+      e.rows.push({ id:null, student_id:sid, passage_id:pid, steps:[...e.addSteps].sort((a,b)=>a==='order'?-1:1), del:false });
+    }
+    renderHwList();
+  },have,'지문 추가');
 }
 async function saveRoundEdit(){
   const e=gHwEdit;
@@ -985,18 +1004,95 @@ async function reuseRound(round){
   loadHomework();
 }
 async function saveAssignment(){
-  const student_id=$('hwStudent').value, passage_id=$('hwPassage').value;
+  const student_id=$('hwStudent').value;
   const steps=[]; if($('hwOrder').checked) steps.push('order'); if($('hwReading').checked) steps.push('reading');
   if(!student_id){ msg('hwMsg','학생 기록이 아직 없어요. 학생이 한 번 로그인해 활동하면 목록에 떠요','err'); return; }
-  if(!passage_id){ msg('hwMsg','지문을 선택하세요','err'); return; }
+  if(!hwPicked.length){ msg('hwMsg','지문을 고르세요','err'); return; }
   if(!steps.length){ msg('hwMsg','순서/독해 중 최소 하나는 체크해야 해요','err'); return; }
-  const row={ student_id, passage_id, steps,
-    round_label:$('hwRound').value.trim()||null, due_date:$('hwDue').value||null };
-  const { error } = await db.from('assignments').insert(row);
+  const round_label=$('hwRound').value.trim()||null, due_date=$('hwDue').value||null;
+  const rows=hwPicked.map(passage_id=>({ student_id, passage_id, steps, round_label, due_date }));
+  const { error } = await db.from('assignments').insert(rows);
   if(error){ msg('hwMsg','저장 실패: '+error.message,'err'); return; }
-  msg('hwMsg','숙제를 내줬어요 ✓ 학생 홈에 바로 떠요','ok');
+  msg('hwMsg',`숙제 ${rows.length}개를 내줬어요 ✓ 학생 홈에 바로 떠요`,'ok');
+  hwPicked=[]; renderHwPicked();
   loadHomework();
 }
+
+// ---------- 지문 고르기 서랍 ----------
+// 지문 탭과 같은 교재·강 탐색기로 고르고, 여러 개를 체크해 한 번에 넘긴다
+let hwPicked=[];
+const pk={ sel:new Set(), cur:null, open:new Set(), q:'', onDone:null, have:new Set() };
+function pkSort(ids){
+  return ids.map(id=>allP.find(p=>p.id===id)).filter(Boolean)
+    .sort((a,b)=>nat(a.book,b.book)||nat(a.unit,b.unit)||nat(a.title,b.title)).map(p=>p.id);
+}
+// 고른 지문을 "교재 · 강 5, 6, 7" 묶음으로
+function pkGroupLabels(ids){
+  const m=new Map();
+  for(const id of pkSort(ids)){
+    const p=allP.find(x=>x.id===id); const k=shortBook(p.book)+(p.unit?' · '+p.unit:'');
+    if(!m.has(k)) m.set(k,[]); m.get(k).push(p.title);
+  }
+  return [...m].map(([k,ts])=>`${k} ${ts.join(', ')}`);
+}
+function renderHwPicked(){
+  const el=$('hwPassageBtn'); if(!el) return;
+  const arrow='<span class="go">›</span>';
+  if(!hwPicked.length){ el.innerHTML='<span class="ph">눌러서 교재·강에서 고르기</span>'+arrow; return; }
+  el.innerHTML=`<span class="sel">${pkGroupLabels(hwPicked).map(s=>`<span>${esc(s)}</span>`).join('')}</span>`
+    +`<span class="cnt" style="margin-left:auto;font-size:12px;color:var(--accent);font-weight:700;white-space:nowrap">${hwPicked.length}개</span>`+arrow;
+}
+function openHwPicker(){ openPicker(hwPicked,ids=>{ hwPicked=ids; renderHwPicked(); },[],'지문 고르기'); }
+function openPicker(initial,onDone,have,title){
+  pk.sel=new Set(initial||[]); pk.onDone=onDone; pk.have=new Set(have||[]); pk.q='';
+  $('pkQ').value=''; $('pkTitle').textContent=title||'지문 고르기';
+  const groups=buildGroups(allP);
+  const first=allP.find(p=>p.id===[...pk.sel][0]);
+  if(first) pk.cur={b:first.book||'미분류', u:first.unit||''};
+  else if(!pk.cur||!groups.has(pk.cur.b)) pk.cur=pSel?{...pSel}:null;
+  if(!pk.cur&&allP.length){ const last=[...allP].sort((x,y)=>String(y.created_at).localeCompare(String(x.created_at)))[0]; pk.cur={b:last.book||'미분류',u:last.unit||''}; }
+  if(pk.cur) pk.open.add(pk.cur.b);
+  renderPickerList();
+  document.body.classList.add('pk-on');
+}
+function closePicker(){ document.body.classList.remove('pk-on'); }
+function pkPick(b,u){ pk.cur=treeNext(buildGroups(allP),pk.cur,pk.open,b,u); pk.q=''; $('pkQ').value=''; renderPickerList(); }
+function renderPickerList(){
+  const groups=buildGroups(allP);
+  if(!pk.cur||!groups.has(pk.cur.b)){ $('pkTree').innerHTML=''; $('pkList').innerHTML='<p class="sub">등록된 지문이 없어요</p>'; return; }
+  if(pk.cur.u!==null&&!(pk.cur.u in groups.get(pk.cur.b))) pk.cur.u=null;
+  $('pkTree').innerHTML=treeHTML(groups,pk.cur,pk.open,'pkPick');
+  const q=pk.q.trim().toLowerCase();
+  let list, head;
+  if(q){
+    list=[...allP].sort((a,b)=>nat(a.book,b.book)||nat(a.unit,b.unit)||nat(a.title,b.title))
+      .filter(p=>[p.book,shortBook(p.book),p.unit,p.title].join(' ').toLowerCase().includes(q));
+    head=`검색 결과 ${list.length}개`;
+  }else{
+    const units=groups.get(pk.cur.b);
+    const shown=pk.cur.u===null?Object.keys(units).sort(nat):[pk.cur.u];
+    list=shown.flatMap(u=>units[u]);
+    head=esc(shortBook(pk.cur.b)+(pk.cur.u?' · '+pk.cur.u:''));
+  }
+  const free=list.filter(p=>!pk.have.has(p.id));
+  const allOn=free.length&&free.every(p=>pk.sel.has(p.id));
+  let h=`<div class="pkhead"><b style="color:var(--ink)">${head}</b>`
+    +(free.length?`<button class="btn ghost small" style="margin-left:auto" onclick="pkAll(${allOn?0:1})">${allOn?'전부 빼기':'전부 고르기'}</button>`:'')+`</div>`;
+  h+=list.map(p=>{
+    const had=pk.have.has(p.id);
+    const nm=q?`${esc(shortBook(p.book))}${p.unit?' · '+esc(p.unit):''} · <b>${esc(p.title)}</b>`:`<b>${esc(p.title)}</b>`;
+    return `<label class="pkrow ${had?'dis':''}"><input type="checkbox" ${had||pk.sel.has(p.id)?'checked':''} ${had?'disabled':''} onchange="pkToggle('${p.id}',this.checked)">`
+      +`<span>${nm}</span><span class="c">${had?'이미 들어 있음':'문장 '+p.sentences.length}</span></label>`;
+  }).join('')||'<p class="sub" style="padding:8px">맞는 지문이 없어요</p>';
+  $('pkList').innerHTML=h;
+  $('pkList').dataset.ids=free.map(p=>p.id).join(',');
+  $('pkCnt').textContent=pk.sel.size?`${pk.sel.size}개 고름`:'';
+}
+function pkToggle(id,on){ if(on) pk.sel.add(id); else pk.sel.delete(id); renderPickerList(); }
+function pkAll(on){ for(const id of ($('pkList').dataset.ids||'').split(',').filter(Boolean)) on?pk.sel.add(id):pk.sel.delete(id); renderPickerList(); }
+function pkDone(){ const ids=pkSort([...pk.sel]); closePicker(); if(pk.onDone) pk.onDone(ids); }
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&document.body.classList.contains('pk-on')) closePicker(); });
+
 async function delAssignment(id){
   if(!confirm('이 숙제를 삭제할까요?')) return;
   const { error } = await db.from('assignments').delete().eq('id',id);
@@ -1606,27 +1702,10 @@ function renderList(){
   if(!pSel||!groups.has(pSel.b)){   // 처음엔 가장 최근에 등록한 지문의 교재·강
     const last=[...allP].sort((x,y)=>String(y.created_at).localeCompare(String(x.created_at)))[0];
     pSel={b:last.book||'미분류', u:last.unit||''};
+    pOpen.add(pSel.b);
   }
   if(pSel.u!==null&&!(pSel.u in groups.get(pSel.b))) pSel.u=null;
-  pOpen.add(pSel.b);
-  const books=[...groups.keys()].sort((a,b)=>nat(shortBook(b),shortBook(a)));   // 최근 연도 먼저
-  let h='';
-  for(const c of BOOK_CATS){
-    const bs=books.filter(b=>bookCat(b)===c); if(!bs.length) continue;
-    h+=`<div class="ptcat">${c}</div>`;
-    for(const b of bs){
-      const units=Object.keys(groups.get(b)).sort(nat);
-      const flat=units.length===1;   // 강이 하나뿐(기출 등)이면 펼칠 게 없다
-      const n=units.reduce((k,u)=>k+groups.get(b)[u].length,0);
-      const on=pSel.b===b&&(flat||pSel.u===null);
-      h+=`<button class="tn ${on?'on':''}" onclick="pPick('${jsStr(b)}',null)" title="${esc(b)}">`
-        +(flat?'<span class="chev"></span>':`<span class="chev ${pOpen.has(b)?'open':''}">›</span>`)
-        +`<span class="nm">${esc(shortBook(b))}</span><span class="n">${n}</span></button>`;
-      if(!flat&&pOpen.has(b)) for(const u of units)
-        h+=`<button class="tn u ${pSel.b===b&&pSel.u===u?'on':''}" onclick="pPick('${jsStr(b)}','${jsStr(u)}')"><span class="nm">${esc(u||'강 없음')}</span><span class="n">${groups.get(b)[u].length}</span></button>`;
-    }
-  }
-  $('ptree').innerHTML=h;
+  $('ptree').innerHTML=treeHTML(groups,pSel,pOpen,'pPick');
   const units=groups.get(pSel.b);
   const shown=pSel.u===null?Object.keys(units).sort(nat):[pSel.u];
   const n=shown.reduce((k,u)=>k+units[u].length,0);
@@ -1643,13 +1722,35 @@ function renderList(){
   }
   $('list').innerHTML=html;
 }
-function pPick(b,u){
-  const units=Object.keys(buildGroups(allP).get(b)||{});
-  if(u===null&&units.length>1){   // 교재 줄: 펼치기/접기 + 교재 전체 보기
-    if(pSel&&pSel.b===b&&pSel.u===null) pOpen.delete(b); else pOpen.add(b);
+function pPick(b,u){ pSel=treeNext(buildGroups(allP),pSel,pOpen,b,u); renderList(); }
+// 교재·강 트리 (지문 탭 탐색기와 숙제 탭 고르기 서랍이 같이 쓴다). sel.u가 null이면 교재 전체
+function treeHTML(groups,sel,open,fn){
+  const books=[...groups.keys()].sort((a,b)=>nat(shortBook(b),shortBook(a)));   // 최근 연도 먼저
+  let h='';
+  for(const c of BOOK_CATS){
+    const bs=books.filter(b=>bookCat(b)===c); if(!bs.length) continue;
+    h+=`<div class="ptcat">${c}</div>`;
+    for(const b of bs){
+      const units=Object.keys(groups.get(b)).sort(nat);
+      const flat=units.length===1;   // 강이 하나뿐(기출 등)이면 펼칠 게 없다
+      const n=units.reduce((k,u)=>k+groups.get(b)[u].length,0);
+      const on=sel&&sel.b===b&&(flat||sel.u===null);
+      h+=`<button class="tn ${on?'on':''}" onclick="${fn}('${jsStr(b)}',null)" title="${esc(b)}">`
+        +(flat?'<span class="chev"></span>':`<span class="chev ${open.has(b)?'open':''}">›</span>`)
+        +`<span class="nm">${esc(shortBook(b))}</span><span class="n">${n}</span></button>`;
+      if(!flat&&open.has(b)) for(const u of units)
+        h+=`<button class="tn u ${sel&&sel.b===b&&sel.u===u?'on':''}" onclick="${fn}('${jsStr(b)}','${jsStr(u)}')"><span class="nm">${esc(u||'강 없음')}</span><span class="n">${groups.get(b)[u].length}</span></button>`;
+    }
   }
-  pSel={b, u:u===null&&units.length===1?units[0]:u};
-  renderList();
+  return h;
+}
+// 트리 클릭: 교재 줄은 펼치기/접기 + 교재 전체 보기, 강 줄은 그 강만
+function treeNext(groups,sel,open,b,u){
+  const units=Object.keys(groups.get(b)||{});
+  if(u===null&&units.length>1){
+    if(sel&&sel.b===b&&sel.u===null&&open.has(b)) open.delete(b); else open.add(b);
+  }
+  return {b, u:u===null&&units.length===1?units[0]:u};
 }
 
 // ---------- 입력 서랍 ----------
@@ -1849,7 +1950,7 @@ function edit(id){
   $('raw').value=''; renderSentCards(p.sentences||[]);
   $('splitwrap').style.display='block'; renderUnitChips();
   $('pformTitle').textContent='지문 수정';
-  pSel={b:p.book||'미분류', u:p.unit||''};
+  pSel={b:p.book||'미분류', u:p.unit||''}; pOpen.add(pSel.b);
   showView('passages'); renderList();
   document.body.classList.add('pform-on');
 }
