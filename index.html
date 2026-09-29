@@ -619,6 +619,57 @@
     body.notab{padding-left:0}
     body.notab header,body.notab .bar,body.notab .qban{left:0}
   }
+  /* 홈 2단(넓은 화면) · 학습 탐색기 */
+  .homegrid{display:block}
+  .ptree{border:1px solid var(--line);border-radius:12px;padding:8px;background:var(--card);display:flex;flex-direction:column;gap:1px}
+  .ptcat{font-size:10px;font-weight:600;letter-spacing:.1em;color:#9C9CA4;padding:10px 9px 5px}
+  .ptcat:first-child{padding-top:4px}
+  .tn{display:flex;align-items:center;gap:6px;width:100%;min-height:36px;padding:5px 9px;border:0;border-radius:8px;background:none;
+    font:inherit;font-size:13.5px;color:var(--ink);text-align:left;cursor:pointer}
+  .tn:hover{background:var(--hover)}
+  .tn.on{background:var(--line2);font-weight:600}
+  .tn .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .tn .n{font-size:11px;color:var(--sub);font-variant-numeric:tabular-nums}
+  .tn .chev{width:10px;color:var(--sub);flex:0 0 auto;transition:transform .15s}
+  .tn .chev.open{transform:rotate(90deg)}
+  .tn.u{padding-left:26px}
+  .hwdot{width:6px;height:6px;border-radius:999px;background:var(--accent);flex:0 0 auto}
+  .ldesk{display:none}
+  .lpickbtn{display:flex;align-items:center;gap:10px;width:100%;min-height:52px;padding:8px 14px;border:1px solid var(--line);border-radius:10px;
+    background:var(--card);color:var(--ink);font:inherit;text-align:left;cursor:pointer;margin-bottom:12px}
+  .lpickbtn .k{display:block;font-size:11.5px;font-weight:600;color:var(--sub)}
+  .lpickbtn .v{display:block;font-weight:600}
+  .lpickbtn .n{font-size:12px;color:var(--sub)}
+  .lpickbtn .chev{color:var(--sub)}
+  .lpane{border:1px solid var(--line);border-radius:12px;background:var(--card);overflow:hidden}
+  .lph{display:none}
+  .llist{padding:2px 15px}
+  .llist .unith{margin:12px 0 2px}
+  .lrow{display:flex;align-items:center;gap:12px;width:100%;min-height:48px;border:0;border-bottom:1px solid var(--line2);background:none;
+    color:var(--ink);font:inherit;text-align:left;cursor:pointer;padding:0}
+  .lrow:last-child{border-bottom:0}
+  .lrow .no{font-weight:600;min-width:52px;font-variant-numeric:tabular-nums}
+  .lrow .c{flex:1;font-size:12.5px;color:var(--sub)}
+  .lrow .chev{color:var(--grip);font-size:18px}
+  .ltag{font-size:12px;color:var(--sub)}
+  .ltag.hw{font-size:11.5px;font-weight:600;padding:1px 9px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}
+  .ltag.wrong{font-size:11.5px;font-weight:600;padding:1px 9px;border-radius:999px;background:var(--warn-bg);color:var(--warn)}
+  .lsheet{max-height:80vh}
+  @media (min-width:861px){
+    .wrap{max-width:1140px;margin:0;padding-left:32px;padding-right:32px}
+    #app{max-width:760px}
+    #app:has(.homegrid),#app:has(.lexp){max-width:none}
+    .homegrid{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:20px;align-items:start}
+    .hg-side{order:2}
+    .hg-main{order:1}
+    .lexp{display:grid;grid-template-columns:250px minmax(0,1fr);gap:18px;align-items:start}
+    .ldesk{display:flex;position:sticky;top:79px;max-height:calc(100vh - 100px);overflow:auto}
+    .lpickbtn{display:none}
+    .lph{display:flex;align-items:baseline;gap:8px;padding:13px 18px;border-bottom:1px solid var(--line2)}
+    .lph b{font-size:18px;font-weight:600;letter-spacing:-.02em}
+    .lph .n{font-size:12.5px;color:var(--sub)}
+    .llist{padding:4px 18px 6px}
+  }
   /* 폰: 겹치는 안쪽 여백 줄이기 (맨 끝에 둬야 앞 규칙을 이긴다) */
   @media (max-width:480px){
     .wrap{padding-left:12px;padding-right:12px}
@@ -1260,7 +1311,7 @@ function renderHome(){
     dots+=`<i class="wd ${cls}"></i>`;
     if(days.has(key)) weekDone++;
   }
-  let html=topBar();
+  let html=topBar()+`<div class="homegrid"><div class="hg-side">`;
   html+=`<div class="card" style="display:flex;gap:14px;align-items:center;margin-bottom:14px">
     <div style="flex:0 0 auto;text-align:center;min-width:64px">
       <div style="font-size:26px;font-weight:800;color:var(--accent);line-height:1.1">${sk}</div>
@@ -1272,12 +1323,11 @@ function renderHome(){
       <div class="hint" style="margin:6px 0 0">이번 주 ${weekDone}/7</div>
     </div></div>`;
   html+=routineCardHTML();
+  html+=`</div><div class="hg-main">`;
   // 숙제: 차시별 카드. 이어서 하기 → 남은 지문(늘 펼침) → 끝낸 지문(기본 접힘)
   const open=myAsg.filter(a=>!asgStatus(a).done);
-  const doneAsg=myAsg.filter(a=>asgStatus(a).done);
-  html+=`<div class="ptitle">숙제</div>`;
-  if(!myAsg.length) html+=`<div class="empty" style="padding:20px 0">아직 받은 숙제가 없어요.<br>학습 탭에서 자유롭게 골라 풀 수 있어요.</div>`;
-  else if(!open.length) html+=`<div class="done">${ic('check','ok')} 숙제를 전부 끝냈어요</div>`;
+  if(!open.length) html+=`<div class="hwc" style="padding-bottom:14px"><div class="hh"><h3>숙제</h3></div>
+    <div class="hint" style="margin-top:8px;font-size:13px">${myAsg.length?'받은 숙제를 전부 끝냈어요':'아직 받은 숙제가 없어요. 학습 탭에서 자유롭게 골라 풀 수 있어요'}</div></div>`;
   html+=homeworkCardsHTML();
   // 오늘의 처방
   const due=vocabLegacy?0:dueWords().length;
@@ -1290,7 +1340,7 @@ function renderHome(){
       html+=`<button class="psg wrong" onclick="showFeedback('${fb.id}')">${esc(label)} 다시 읽기<span class="cnt">${(fb.flagged||[]).length}문장</span></button>`;
     }
   }
-  app.innerHTML=html+`<div style="height:20px"></div>`;
+  app.innerHTML=html+`</div></div><div style="height:20px"></div>`;
 }
 
 // 긴 기출 이름은 홈 카드에서만 짧게 (저장된 이름은 그대로)
@@ -1349,29 +1399,85 @@ function homeworkCardsHTML(){
 function jsq(s){ return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
 
 // ---------- 학습: 교재 → 지문 → 코스 ----------
+function bookCat(b){ if(/수능특강|수능완성|EBS/.test(b)) return 'EBS 교재'; if(/대학수학능력시험|학력평가|모의평가/.test(b)) return '기출'; return '사설·기타'; }
+const BOOK_CATS=['EBS 교재','기출','사설·기타'];
+// 학습 탭: 관리 페이지 지문 탭과 같은 탐색기. 넓은 화면=왼쪽 트리, 폰=위 교재 단추 → 아래에서 올라오는 트리
+let lSel=null; const lOpen=new Set();
+function learnTreeHTML(groups,hwBooks){
+  const books=[...groups.keys()].sort((a,b)=>String(shortBook(b)).localeCompare(String(shortBook(a)),'ko',{numeric:true}));
+  let h='';
+  for(const c of BOOK_CATS){
+    const bs=books.filter(b=>bookCat(b)===c); if(!bs.length) continue;
+    h+=`<div class="ptcat">${c}</div>`;
+    for(const b of bs){
+      const units=Object.keys(groups.get(b)), flat=units.length===1;
+      const n=units.reduce((k,u)=>k+groups.get(b)[u].length,0);
+      const on=lSel.b===b&&(flat||lSel.u===null);
+      h+=`<button class="tn ${on?'on':''}" onclick="lPick('${esc(jsq(b))}',null)" title="${esc(b)}">`
+        +(flat?'<span class="chev"></span>':`<span class="chev ${lOpen.has(b)?'open':''}">›</span>`)
+        +`<span class="nm">${esc(shortBook(b))}</span>${hwBooks.has(b)?'<i class="hwdot"></i>':''}<span class="n">${n}</span></button>`;
+      if(!flat&&lOpen.has(b)) for(const u of units)
+        h+=`<button class="tn u ${lSel.b===b&&lSel.u===u?'on':''}" onclick="lPick('${esc(jsq(b))}','${esc(jsq(u))}')"><span class="nm">${esc(u||'강 없음')}</span><span class="n">${groups.get(b)[u].length}</span></button>`;
+    }
+  }
+  return h;
+}
+function lPick(b,u){
+  const units=Object.keys(buildGroups(allP).get(b)||{});
+  if(u===null&&units.length>1){ if(lSel&&lSel.b===b&&lSel.u===null&&lOpen.has(b)) lOpen.delete(b); else lOpen.add(b); }
+  const multiPick=u===null&&units.length>1;   // 교재 줄은 펼치기만, 폰에서는 서랍을 닫지 않는다
+  lSel={b,u:u===null&&units.length===1?units[0]:u};
+  if(!multiPick) closeLearnSheet();
+  renderLearn();
+  if(multiPick&&document.getElementById('lsheet')&&document.getElementById('lsheet').classList.contains('show')) openLearnSheet();
+}
 function renderLearn(){
   curCourse=null;
   if(!allP.length){ app.innerHTML=topBar()+`<div class="empty">아직 등록된 지문이 없어요.</div>`; return; }
   const groups=buildGroups(allP);
-  const asgIds=new Set(myAsg.filter(a=>!asgStatus(a).done).map(a=>a.passage_id));
-  let html=topBar()+`<div class="ptitle">교재를 펼쳐 지문을 선택하세요</div>`;
-  let first=true;
-  for(const [book,units] of groups){
-    const total=Object.values(units).reduce((n,a)=>n+a.length,0);
-    html+=`<div class="book${first?' open':''}"><button class="bookh" onclick="this.closest('.book').classList.toggle('open')">
-      <span class="chev">›</span> ${ic('book','muted')} ${esc(book)} <span class="cnt">${total}개</span></button><div class="bookbody">`;
-    for(const unit of Object.keys(units)){
-      if(unit) html+=`<div class="unith">${esc(unit)}</div>`;
-      for(const p of units[unit]){
-        const marks=(asgIds.has(p.id)?` <span class="chip2 hwmark">숙제</span>`:'')+(wrongIds.has(p.id)?' '+ic('rotate','sm warn'):'');
-        html+=`<button class="psg" onclick="openCourse('${p.id}')">${esc(p.title)}${marks}<span class="cnt">문장 ${p.sentences.length}</span></button>`;
-      }
-    }
-    html+=`</div></div>`;
-    first=false;
+  const openAsg=myAsg.filter(a=>!asgStatus(a).done);
+  const asgIds=new Set(openAsg.map(a=>a.passage_id));
+  const hwBooks=new Set(allP.filter(p=>asgIds.has(p.id)).map(p=>p.book||'미분류'));
+  if(!lSel||!groups.has(lSel.b)){   // 처음엔 숙제가 있는 교재, 없으면 첫 교재
+    const hp=allP.find(p=>asgIds.has(p.id));
+    const b=hp?(hp.book||'미분류'):[...groups.keys()][0];
+    lSel={b,u:hp?(hp.unit||''):null}; lOpen.add(b);
+    if(Object.keys(groups.get(b)).length===1) lSel.u=Object.keys(groups.get(b))[0];
   }
-  app.innerHTML=html;
+  if(lSel.u!==null&&!(lSel.u in groups.get(lSel.b))) lSel.u=null;
+  const units=groups.get(lSel.b);
+  const shown=lSel.u===null?Object.keys(units):[lSel.u];
+  const n=shown.reduce((k,u)=>k+units[u].length,0);
+  const title=shortBook(lSel.b)+(lSel.u?` · ${lSel.u}`:'');
+  let rows='';
+  for(const u of shown){
+    if(shown.length>1&&u) rows+=`<div class="unith">${esc(u)}</div>`;
+    for(const p of units[u]){
+      const tag=asgIds.has(p.id)?'<span class="ltag hw">숙제</span>'
+        :wrongIds.has(p.id)?'<span class="ltag wrong">오답</span>'
+        :readIds.has(p.id)?'<span class="ltag">독해 끝</span>':'';
+      rows+=`<button class="lrow" onclick="openCourse('${p.id}')"><span class="no">${esc(/^\d+$/.test(p.title)?p.title+'번':p.title)}</span>`
+        +`<span class="c">${p.sentences.length}문장</span>${tag}<span class="chev">›</span></button>`;
+    }
+  }
+  window._learnTree=()=>learnTreeHTML(groups,hwBooks);
+  app.innerHTML=topBar()+`<div class="lexp">
+    <nav class="ptree ldesk" aria-label="교재와 강">${learnTreeHTML(groups,hwBooks)}</nav>
+    <div class="lmain">
+      <button class="lpickbtn" onclick="openLearnSheet()"><span style="flex:1;min-width:0"><span class="k">${esc(bookCat(lSel.b))}</span><span class="v">${esc(title)}</span></span><span class="n">${n}개</span><span class="chev">⌄</span></button>
+      <div class="lpane"><div class="lph"><b>${esc(title)}</b><span class="n">${n}개</span></div><div class="llist">${rows}</div></div>
+    </div></div>`;
 }
+function openLearnSheet(){
+  let el=document.getElementById('lsheet');
+  if(!el){ el=document.createElement('div'); el.id='lsheet'; el.className='sheeto'; document.body.appendChild(el); el.onclick=closeLearnSheet; }
+  el.innerHTML=`<div class="sheet lsheet" onclick="event.stopPropagation()"><div class="grab"></div>
+    <div style="display:flex;align-items:center;padding:0 4px 8px"><b style="font-size:15px">교재 고르기</b>
+      <button class="sitem" style="width:auto;margin-left:auto;padding:8px 6px;font-size:13px;color:var(--sub)" onclick="closeLearnSheet()">닫기</button></div>
+    <div class="ptree" style="border:0;padding:0;max-height:62vh;overflow:auto">${window._learnTree?window._learnTree():''}</div></div>`;
+  el.classList.add('show');
+}
+function closeLearnSheet(){ const el=document.getElementById('lsheet'); if(el) el.classList.remove('show'); }
 function openCourse(pid){ curCourse=pid; curTab='learn'; renderCourse(); }
 function asgForPassage(pid){
   return myAsg.find(a=>a.passage_id===pid&&!asgStatus(a).done)||myAsg.find(a=>a.passage_id===pid)||null;
