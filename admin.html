@@ -18,14 +18,20 @@
     font-display: swap;
   }
   :root{
-    --bg:#f6f5f1; --card:#fff; --ink:#2b2a27; --sub:#8a877f; --line:#e7e4dc;
-    --accent:#2F7A56; --accent-soft:#e4f0e9; --no:#c0584b; --no-bg:#f7e6e3;
-    --shadow:0 1px 2px rgba(0,0,0,.04),0 6px 18px rgba(0,0,0,.05);
+    /* Reviewer 모노톤 + 온고지신 초록 (2026-09-29). --page=바탕 흰색, --bg=카드 안 옅은 채움 */
+    --page:#FFFFFF; --bg:#F5F5F7; --card:#FFFFFF; --ink:#1D1D1F; --sub:#6E6E73; --line:#E5E5EA; --line2:#EBEBEF;
+    --side:#FBFBFC; --accent:#2F7A56; --accent-soft:#E4F0E9; --no:#8A4438; --no-bg:#F6ECEA;
+    --warn:#8A6A2E; --warn-bg:#F6F1E6; --warnb:#E9DFC6;
+    --shadow:none;
   }
+  @font-face{font-family:"Pretendard";src:url("https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/woff2/Pretendard-Regular.woff2") format("woff2");font-weight:400;font-display:swap}
+  @font-face{font-family:"Pretendard";src:url("https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/woff2/Pretendard-Medium.woff2") format("woff2");font-weight:500;font-display:swap}
+  @font-face{font-family:"Pretendard";src:url("https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/woff2/Pretendard-SemiBold.woff2") format("woff2");font-weight:600;font-display:swap}
+  @font-face{font-family:"Pretendard";src:url("https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/woff2/Pretendard-Bold.woff2") format("woff2");font-weight:700 800;font-display:swap}
   *{box-sizing:border-box}
   button,input,textarea,select{font-family:inherit}
-  body{margin:0;background:var(--bg);color:var(--ink);
-    font-family:'87mmDailyRegular',-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR",sans-serif;line-height:1.6}
+  body{margin:0;background:var(--page);color:var(--ink);font-size:13.5px;letter-spacing:-0.012em;-webkit-font-smoothing:antialiased;word-break:keep-all;
+    font-family:"Pretendard",-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR",sans-serif;line-height:1.6}
   .wm{font-family:'HsSummerWaterLight',Batang,serif;font-weight:normal;color:var(--accent);letter-spacing:.08em}
   .wrap{max-width:1180px;margin:0 auto;padding:24px 18px 60px}
   h1{font-size:19px;margin:0 0 2px}
@@ -242,9 +248,66 @@
     border-radius:13px;padding:22px;font-weight:600;font-size:14px}
   .vtitle{font-size:16px;margin:0 0 14px}
   .subt{font-size:14px;font-weight:700;margin:26px 2px 12px;display:flex;align-items:center;gap:6px}
+  /* ===== Reviewer 톤: 왼쪽 사이드바 + 위 제목줄, 선만 쓰고 그림자 없음 ===== */
+  .wrap{max-width:none;padding:0}
+  #login{max-width:440px;margin:0 auto;padding:60px 18px}
+  .adminhead{display:none}
+  .layout{gap:0;align-items:stretch;min-height:100vh}
+  .side{flex:0 0 232px;height:100vh;position:sticky;top:0;background:var(--side);border-right:1px solid var(--line2);
+    padding:14px 12px;gap:2px;overflow-y:auto}
+  .side .brandx{padding:6px 9px 0;margin-bottom:18px;display:flex;align-items:baseline;gap:8px;white-space:nowrap}
+  .side .brandx .t{font-size:12px;font-weight:600;color:var(--sub)}
+  .side .sec{font-size:10px;font-weight:600;letter-spacing:.1em;color:#9C9CA4;padding:0 9px;margin-bottom:7px}
+  .side .grow{flex:1}
+  .side .whox{border-top:1px solid var(--line2);margin-top:8px;padding:10px 9px 2px;font-size:12px;color:var(--sub);display:flex;flex-direction:column;gap:2px}
+  .side .whox a{color:var(--sub);cursor:pointer;text-decoration:underline}
+  .navbtn{padding:7px 9px;border-radius:8px;font-size:13px;font-weight:500;color:#5B5B62;gap:9px}
+  .navbtn:hover{background:#F2F2F5}
+  .navbtn.active{background:#EDEDF1;color:var(--ink);font-weight:600}
+  .main{padding:0 32px 60px}
+  .vtitle,.pvhead{height:55px;display:flex;align-items:center;margin:0 -32px 24px;padding:0 32px;border-bottom:1px solid var(--line2);
+    position:sticky;top:0;background:rgba(255,255,255,.94);backdrop-filter:blur(12px);z-index:5}
+  .vtitle{font-size:14px;font-weight:600}
+  .pvhead{margin-bottom:22px}
+  .pvhead .vtitle{height:auto;margin:0!important;padding:0;border:0;position:static;background:none;backdrop-filter:none}
+  .pexp{height:calc(100vh - 120px)}
+  .subt{font-size:15px;font-weight:600}
+  label{font-size:11.5px;font-weight:600;color:var(--sub)}
+  input,textarea,select{border-radius:9px!important;font-size:13.5px!important}
+  input,textarea{padding:9px 11px}
+  input:focus,textarea:focus,select:focus{outline:none;border-color:var(--ink)!important}
+  .btn{border-radius:9px;padding:9px 14px;font-size:13px}
+  .btn.small{padding:6px 11px;font-size:12.5px}
+  .btn.danger{border-color:transparent;color:var(--no)}
+  .btn.danger:hover{background:var(--no-bg)}
+  .btn.ghost:hover{background:#F7F7F9}
+  .card{border-radius:12px;padding:18px 20px}
+  .book,.statrow,.kpi,.alldone{border-radius:12px}
+  .chip{background:var(--card);font-size:12px}
+  .chip:hover{border-color:var(--ink);color:var(--ink)}
+  .stab.active{color:var(--ink);border-bottom-color:var(--ink)}
+  .msg.ok{background:var(--accent-soft)}
+  /* 지문 탐색기: 선택은 회색, 목록은 선만 */
+  .ptree,.ppane{border-radius:12px}
+  .tn{font-size:13px;color:#5B5B62}
+  .tn:hover{background:#F2F2F5}
+  .tn.on{background:#EDEDF1;color:var(--ink);font-weight:600}
+  .ptcat{font-size:10px;font-weight:600;letter-spacing:.1em;color:#9C9CA4}
+  .pph b{font-size:18px;font-weight:600;letter-spacing:-.02em}
+  .pplist{padding:4px 18px}
+  .pplist .pi{background:none;border:0;border-bottom:1px solid #F1F1F4;border-radius:0;margin:0;padding:9px 0}
+  .pplist .pi .t{font-weight:600}
+  .pplist .pi .c{font-size:12.5px;color:var(--sub);margin-left:0}
+  .pplist .unith{color:var(--sub);border-left:0;padding-left:0;font-size:11.5px;margin:14px 0 2px}
+  .pdrawer{box-shadow:0 12px 40px rgba(0,0,0,.12)}
+  .hpfield{font-size:13.5px;padding:9px 12px;border-radius:9px}
+  .hpfield:hover{border-color:var(--ink)}
   @media(max-width:680px){
     .layout{flex-direction:column;gap:14px}
-    .side{flex-direction:row;overflow-x:auto;position:static;gap:6px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+    .side{flex-direction:row;overflow-x:auto;position:static;gap:6px;padding:8px 12px;border-bottom:1px solid var(--line);height:auto;flex-basis:auto;border-right:0}
+    .side .brandx,.side .sec,.side .grow,.side .whox{display:none}
+    .main{padding:0 16px 60px}
+    .vtitle,.pvhead{margin:0 -16px 18px;padding:0 16px}
     .navbtn{width:auto;white-space:nowrap;padding:8px 12px}
   }
 </style>
@@ -275,11 +338,15 @@
 
     <div class="layout">
       <nav class="side">
+        <div class="brandx"><span class="wm" style="font-size:21px">온고지신</span><span class="t">출제 관리</span></div>
+        <div class="sec">관리</div>
         <button class="navbtn active" data-v="today" onclick="showView('today')"><svg class="ic" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>오늘</button>
         <button class="navbtn" data-v="student" onclick="showView('student')"><svg class="ic" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>학생</button>
         <button class="navbtn" data-v="passages" onclick="showView('passages')"><svg class="ic" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>지문</button>
         <button class="navbtn" data-v="homework" onclick="showView('homework')"><svg class="ic" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>숙제</button>
         <button class="navbtn" data-v="routine" onclick="showView('routine')"><svg class="ic" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>루틴</button>
+        <div class="grow"></div>
+        <div class="whox"><span id="who2"></span><a onclick="logout()">로그아웃</a></div>
       </nav>
 
       <main class="main">
@@ -359,7 +426,8 @@
         </section>
 
         <section class="view" data-view="homework">
-          <h2 class="vtitle">숙제 내주기</h2>
+          <h2 class="vtitle">숙제</h2>
+          <h3 class="subt" style="margin-top:0">숙제 내주기</h3>
           <div class="card">
             <div class="row">
               <div><label>학생</label><select id="hwStudent" style="width:100%;border:1px solid #e7e4dc;border-radius:11px;padding:12px;font-size:15px;font-family:inherit;background:#fff"></select></div>
@@ -493,7 +561,7 @@ function showLogin(){ $('login').style.display='block'; $('admin').style.display
 function showAdmin(session){
   window._session=session;
   $('login').style.display='none'; $('admin').style.display='block';
-  $('who').textContent=session.user.email;
+  $('who').textContent=session.user.email; if($('who2')) $('who2').textContent=session.user.email;
   loadAll();
 }
 
@@ -873,20 +941,21 @@ function renderHwList(){
       const due=a.due_date
         ? `<span class="dline" title="${dLabel(ddays(a.due_date))}">${esc(a.due_date.slice(5).replace('-','/'))}</span>`
         : '<span style="color:var(--sub)">없음</span>';
-      return `<div style="display:flex;align-items:center;gap:10px;padding:9px 2px;border-top:1px solid #eee9df;font-size:13px">
-        <span class="badge ${st.done?'ok':''}" style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;color:#fff;background:${st.done?'var(--accent)':'var(--no)'}">${st.done?'완료':'미완료'}</span>
-        <b style="flex:0 0 auto">${esc(stuNameOf(a.student_id))}</b>
-        <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${pLabelOf(a.passage_id)}</span>
+      return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #F1F1F4;font-size:13px">
+        <span title="${st.done?'완료':'미완료'}" style="flex:0 0 16px;height:16px;border-radius:999px;box-sizing:border-box;${st.done?'background:var(--accent);box-shadow:inset 0 0 0 4px var(--accent-soft)':'border:1.5px solid #C9C9D0'}"></span>
+        <b style="flex:0 0 auto;font-weight:600">${esc(stuNameOf(a.student_id))}</b>
+        <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${st.done?'color:var(--sub)':''}">${pLabelOf(a.passage_id)}</span>
         <span style="flex:0 0 auto;color:var(--sub);font-size:12px">${stepNm}</span>
         <span style="flex:0 0 auto;font-size:12px">마감 ${due}</span>
-        <a style="flex:0 0 auto;color:#c0584b;cursor:pointer;font-size:12px" onclick="delAssignment('${a.id}')">삭제</a>
+        <a style="flex:0 0 auto;color:var(--no);cursor:pointer;font-size:12px" onclick="delAssignment('${a.id}')">삭제</a>
       </div>`;
     }).join('');
     html+=`<div class="card" style="margin-bottom:12px">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-        <b style="font-size:14px">${esc(round)}</b>
-        <span style="flex:1;height:7px;background:var(--bg);border-radius:999px;overflow:hidden"><span style="display:block;height:100%;width:${pct}%;background:var(--accent);border-radius:999px"></span></span>
-        <span style="font-size:12px;color:var(--sub);font-weight:700">${doneN}/${list.length} 완료</span>
+        <b style="font-size:15px;font-weight:600">${esc(round)}</b>
+        <span style="flex:1;max-width:360px;height:5px;background:#DCDCE2;border-radius:999px;overflow:hidden"><span style="display:block;height:100%;width:${pct}%;background:var(--accent);border-radius:999px"></span></span>
+        <span style="font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums">${doneN}/${list.length}</span>
+        <span style="flex:1"></span>
         <button class="btn ghost small" onclick="editRound('${jsStr(round)}')">수정</button>
         <button class="btn ghost small" onclick="reuseRound('${jsStr(round)}')">이 차시 재사용</button>
       </div>

@@ -11,6 +11,10 @@
     font-weight: normal;
     font-display: swap;
   }
+  @font-face{font-family:"Pretendard";src:url("https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/woff2/Pretendard-Regular.woff2") format("woff2");font-weight:400;font-display:swap}
+  @font-face{font-family:"Pretendard";src:url("https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/woff2/Pretendard-Medium.woff2") format("woff2");font-weight:500;font-display:swap}
+  @font-face{font-family:"Pretendard";src:url("https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/woff2/Pretendard-SemiBold.woff2") format("woff2");font-weight:600;font-display:swap}
+  @font-face{font-family:"Pretendard";src:url("https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/woff2/Pretendard-Bold.woff2") format("woff2");font-weight:700 800;font-display:swap}
   @font-face {
     font-family: '87mmDailyRegular';
     src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2201@1.0/87MMILSANG-Regular.woff2') format('woff2');
@@ -18,48 +22,48 @@
     font-display: swap;
   }
   :root{
-    --bg:#f6f5f1; --card:#ffffff; --ink:#2b2a27; --sub:#8a877f;
-    --line:#e7e4dc; --accent:#2F7A56; --accent-soft:#e4f0e9;
-    --ok:#2F7A56; --ok-bg:#e4f0e9; --okb:#bfe0cf;
-    --no:#c0584b; --no-bg:#f7e6e3; --nob:#eecbc4;
-    --warn:#c98a2b; --warn-bg:#f8efdd; --warnb:#f0d9b8;
-    --hl:#ffe9a8; --hlline:#f2c94c;
-    --hover:#efece4; --grip:#cfccc3; --bar-bg:rgba(246,245,241,.96);
-    --shadow:0 1px 2px rgba(0,0,0,.04),0 6px 18px rgba(0,0,0,.05);
+    --page:#FFFFFF; --bg:#F5F5F7; --card:#FFFFFF; --ink:#1D1D1F; --sub:#6E6E73;
+    --line:#E5E5EA; --accent:#2F7A56; --accent-soft:#E4F0E9;
+    --ok:#2F7A56; --ok-bg:#E4F0E9; --okb:#C9E0D3;
+    --no:#8A4438; --no-bg:#F6ECEA; --nob:#E8D2CD;
+    --warn:#8A6A2E; --warn-bg:#F6F1E6; --warnb:#E9DFC6;
+    --hl:#F2E9C8; --hlline:#D9C27A;
+    --hover:#F2F2F5; --grip:#C9C9D0; --bar-bg:rgba(251,251,252,.94);
+    --shadow:none; --side:#FBFBFC; --line2:#EBEBEF;
   }
   /* 다크 모드 — 자동 감지 + 수동 전환(data-theme) */
-  @media (prefers-color-scheme: dark){ :root{ --bg:#1C1B18; --card:#26231E; --ink:#EDE8DF; --sub:#9C9486;
-    --line:#37332C; --accent:#5FA97F; --accent-soft:#24352C;
-    --ok:#5FA97F; --ok-bg:#24352C; --okb:#2F4A3B;
-    --no:#D97A66; --no-bg:#3A2622; --nob:#4A302B;
-    --warn:#D8A554; --warn-bg:#38301F; --warnb:#4A4029;
+  @media (prefers-color-scheme: dark){ :root{ --page:#141415; --bg:#232326; --card:#1C1C1E; --ink:#F2F2F7; --sub:#98989F;
+    --line:#38383A; --accent:#5FA97F; --accent-soft:#233A2E;
+    --ok:#5FA97F; --ok-bg:#233A2E; --okb:#2F4A3B;
+    --no:#D98A7C; --no-bg:#3A2622; --nob:#4A302B;
+    --warn:#D1AE6A; --warn-bg:#352E1F; --warnb:#4A4029;
     --hl:#4A3F14; --hlline:#93752A;
-    --hover:#2E2B25; --grip:#57534A; --bar-bg:rgba(28,27,24,.96);
-    --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.35); } }
-  :root[data-theme="dark"]{ --bg:#1C1B18; --card:#26231E; --ink:#EDE8DF; --sub:#9C9486;
-    --line:#37332C; --accent:#5FA97F; --accent-soft:#24352C;
-    --ok:#5FA97F; --ok-bg:#24352C; --okb:#2F4A3B;
-    --no:#D97A66; --no-bg:#3A2622; --nob:#4A302B;
-    --warn:#D8A554; --warn-bg:#38301F; --warnb:#4A4029;
+    --hover:#2A2A2D; --grip:#56565B; --bar-bg:rgba(28,28,30,.94);
+    --shadow:none; --side:#1A1A1C; --line2:#2C2C2E; } }
+  :root[data-theme="dark"]{ --page:#141415; --bg:#232326; --card:#1C1C1E; --ink:#F2F2F7; --sub:#98989F;
+    --line:#38383A; --accent:#5FA97F; --accent-soft:#233A2E;
+    --ok:#5FA97F; --ok-bg:#233A2E; --okb:#2F4A3B;
+    --no:#D98A7C; --no-bg:#3A2622; --nob:#4A302B;
+    --warn:#D1AE6A; --warn-bg:#352E1F; --warnb:#4A4029;
     --hl:#4A3F14; --hlline:#93752A;
-    --hover:#2E2B25; --grip:#57534A; --bar-bg:rgba(28,27,24,.96);
-    --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.35); }
-  :root[data-theme="light"]{ --bg:#f6f5f1; --card:#ffffff; --ink:#2b2a27; --sub:#8a877f;
-    --line:#e7e4dc; --accent:#2F7A56; --accent-soft:#e4f0e9;
-    --ok:#2F7A56; --ok-bg:#e4f0e9; --okb:#bfe0cf;
-    --no:#c0584b; --no-bg:#f7e6e3; --nob:#eecbc4;
-    --warn:#c98a2b; --warn-bg:#f8efdd; --warnb:#f0d9b8;
-    --hl:#ffe9a8; --hlline:#f2c94c;
-    --hover:#efece4; --grip:#cfccc3; --bar-bg:rgba(246,245,241,.96);
-    --shadow:0 1px 2px rgba(0,0,0,.04),0 6px 18px rgba(0,0,0,.05); }
+    --hover:#2A2A2D; --grip:#56565B; --bar-bg:rgba(28,28,30,.94);
+    --shadow:none; --side:#1A1A1C; --line2:#2C2C2E; }
+  :root[data-theme="light"]{ --page:#FFFFFF; --bg:#F5F5F7; --card:#FFFFFF; --ink:#1D1D1F; --sub:#6E6E73;
+    --line:#E5E5EA; --accent:#2F7A56; --accent-soft:#E4F0E9;
+    --ok:#2F7A56; --ok-bg:#E4F0E9; --okb:#C9E0D3;
+    --no:#8A4438; --no-bg:#F6ECEA; --nob:#E8D2CD;
+    --warn:#8A6A2E; --warn-bg:#F6F1E6; --warnb:#E9DFC6;
+    --hl:#F2E9C8; --hlline:#D9C27A;
+    --hover:#F2F2F5; --grip:#C9C9D0; --bar-bg:rgba(251,251,252,.94);
+    --shadow:none; --side:#FBFBFC; --line2:#EBEBEF; }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   /* 화면 너비: 넓은 화면은 --w 까지, 폰은 겹치는 안쪽 여백을 줄여 글자 폭 확보 */
   :root{--w:760px}
 
   button,input,textarea,select{font-family:inherit}
-  body{margin:0;background:var(--bg);color:var(--ink);
-    font-family:'87mmDailyRegular',-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
-    line-height:1.6}
+  body{margin:0;background:var(--page);color:var(--ink);
+    font-family:"Pretendard",-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+    line-height:1.6;letter-spacing:-0.012em;-webkit-font-smoothing:antialiased;word-break:keep-all}
   .wrap{max-width:var(--w);margin:0 auto;padding:24px 18px 90px}
   header{text-align:center;margin:10px 0 22px}
   header h1{font-family:'HsSummerWaterLight',Batang,"AppleMyungjo",serif;font-size:26px;font-weight:normal;
@@ -487,9 +491,119 @@
   .tagbar .br{flex:1;height:9px;background:var(--card);border-radius:999px;overflow:hidden}
   .tagbar .br i{display:block;height:100%;background:var(--accent);border-radius:999px}
   .tagbar .n{flex:0 0 auto;font-weight:700;font-size:12px;color:var(--accent)}
+  /* ===== Reviewer 톤 (2026-09-29): 모노톤·선만·그림자 없음, 초록은 버튼·진행·좋은 판정에만 ===== */
+  .wrap{padding-top:0}
+  header{display:flex;align-items:center;height:50px;margin:0 -18px 18px;padding:0 18px;text-align:left;
+    border-bottom:1px solid var(--line2);position:sticky;top:0;background:var(--bar-bg);backdrop-filter:blur(12px);z-index:15}
+  header h1{font-size:20px;letter-spacing:.08em;margin-right:0}
+  header p{display:none}
+  .topmenu{position:fixed;top:7px;right:max(18px,calc((100vw - var(--w))/2 + 18px));margin:0;z-index:16}
+  .avatarbtn{width:34px;height:34px;background:var(--line2);color:var(--sub);border:0;font-size:13px;font-weight:600}
+  label{font-size:11.5px;font-weight:600;color:var(--sub)}
+  input,textarea{border-radius:9px;padding:10px 12px;font-size:14.5px}
+  input:focus,textarea:focus{outline:none;border-color:var(--ink)}
+  .card{border-radius:12px;padding:16px 18px}
+  .btn{border-radius:9px;padding:12px 16px;font-size:14px}
+  .btn.ghost{border-color:var(--line)}
+  .btn:active{transform:none}
+  .ptitle{font-size:11.5px;font-weight:600;color:var(--sub);letter-spacing:.02em;margin:18px 2px 8px}
+  .book,.rt,.stat,.caught,.wrongpanel{border-radius:12px}
+  .bookh{font-size:15px;font-weight:600;padding:14px 16px}
+  .unith{color:var(--sub);border-left:0;padding-left:0;font-weight:600;font-size:11.5px}
+  .psg{background:var(--card);border-radius:10px;font-size:14px;padding:12px 14px}
+  .psg:hover{border-color:var(--ink)}
+  .psg:active{transform:none}
+  .psg.hw{border-color:var(--line)}
+  .chip2{font-weight:600}
+  .rsent{border-radius:12px;background:var(--bg);border-color:var(--line2);font-size:18px;line-height:1.85;padding:18px 16px}
+  .rinput{border-radius:9px;font-size:14.5px;padding:10px 12px;min-height:68px}
+  .rinput:focus{border-color:var(--ink)}
+  .rprog .bar2{height:5px}
+  .tabbar{background:var(--bar-bg);backdrop-filter:blur(12px);border-top-color:var(--line2);padding:6px 6px calc(8px + env(safe-area-inset-bottom));gap:2px}
+  .tab{font-size:10px;padding:7px 2px;border-radius:8px;color:var(--sub);gap:3px}
+  .tab .ic{width:19px;height:19px}
+  .tab.active{color:var(--ink);background:var(--line2);font-weight:600}
+  .fb{border-left-width:1px;border-radius:12px;padding:13px 15px}
+  .fbsum{border-color:var(--line);background:var(--card);border-radius:12px}
+  .fbsum .t{color:var(--ink)}
+  .fblb{color:var(--sub)}
+  .done{background:var(--card);border-color:var(--line);border-radius:12px;color:var(--ink)}
+  .modal-card,.ob-card{border-radius:14px}
+  .sheet{border-radius:16px 16px 0 0}
+  /* 오늘의 루틴 · 숙제: 줄 전체가 누르는 곳, 끝낸 것은 접는다 */
+  .rt{padding:4px 15px 4px}
+  .rthead{padding:10px 0 4px;font-weight:600}
+  .rthead .n{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+  .rtrow{width:100%;background:none;border:0;color:var(--ink);text-align:left;font:inherit;cursor:pointer;min-height:56px}
+  .rtrow .bx{border-radius:999px;border:1.5px solid var(--grip);flex:0 0 18px;height:18px}
+  .rtrow.ok .bx{border:0;box-shadow:inset 0 0 0 4px var(--accent-soft)}
+  .rtrow.ok .bx .ic{display:none}
+  .rtrow .tx{flex:1;min-width:0}
+  .rtrow .k{display:block;font-weight:600}
+  .rtrow .v{display:block;font-size:12.5px}
+  .rtrow .chev{color:var(--grip);font-size:18px;flex:0 0 auto}
+  .rtrow .cont{font-size:11.5px;font-weight:600;color:var(--warn);flex:0 0 auto}
+  .fold{width:100%;min-height:40px;border:0;background:none;color:var(--sub);font:inherit;font-size:12.5px;font-weight:600;text-align:left;padding:0;cursor:pointer;border-top:1px solid var(--line2)}
+  .hwc{border:1px solid var(--line);border-radius:12px;padding:14px 15px 4px;margin-bottom:12px;background:var(--card)}
+  .hwc .hh{display:flex;align-items:baseline;gap:8px}
+  .hwc .hh h3{margin:0;font-size:14px;font-weight:600}
+  .hwc .hh .due{font-size:12.5px;color:var(--sub)}
+  .hwc .hh .due.near{color:var(--no);font-weight:600}
+  .hwc .hh .n{margin-left:auto;font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums}
+  .hwc .pbar{display:block;height:5px;border-radius:999px;background:var(--line);overflow:hidden;margin:10px 0 12px}
+  .hwc .pbar i{display:block;height:100%;background:var(--accent);border-radius:999px}
+  .hwgo{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:10px 14px;border:0;border-radius:10px;
+    background:var(--accent);color:#fff;font:inherit;text-align:left;cursor:pointer;margin-bottom:6px}
+  .hwgo .s{display:block;font-size:11.5px;font-weight:600;opacity:.82}
+  .hwgo .t{display:block;font-size:14.5px;font-weight:600}
+  .hwrow{display:flex;align-items:center;gap:12px;width:100%;min-height:46px;border:0;border-bottom:1px solid var(--line2);
+    background:none;color:var(--ink);font:inherit;font-size:14px;text-align:left;cursor:pointer;padding:0}
+  .hwrow .bx{flex:0 0 18px;height:18px;border-radius:999px;border:1.5px solid var(--grip)}
+  .hwrow.ok{color:var(--sub);cursor:default}
+  .hwrow.ok .bx{border:0;background:var(--accent);box-shadow:inset 0 0 0 4px var(--accent-soft)}
+  .hwrow .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .hwrow .st{font-size:12px;color:var(--sub);flex:0 0 auto}
+  .hwrow .chev{color:var(--grip);font-size:18px;flex:0 0 auto}
+  /* 독해 단계선 */
+  .rsteps{display:flex;flex-direction:column;margin-top:4px}
+  .rstep{display:grid;grid-template-columns:16px minmax(0,1fr);column-gap:12px}
+  .rstep .rail{display:flex;flex-direction:column;align-items:center}
+  .rstep .nd{width:16px;height:16px;margin-top:3px;border-radius:999px;border:2px solid var(--grip);background:var(--card);
+    box-sizing:border-box;display:flex;align-items:center;justify-content:center;flex:0 0 auto;transition:border-color .15s,background .15s}
+  .rstep .ln{width:2px;flex:1;background:var(--line);margin:4px 0}
+  .rstep.done .nd{border:0;background:var(--accent)}
+  .rstep.done .nd::after{content:"";width:5px;height:8px;border:solid #fff;border-width:0 2px 2px 0;transform:translateY(-1px) rotate(45deg)}
+  .rstep.done .ln{background:var(--accent)}
+  .rstep.now .nd{border-color:var(--accent)}
+  .rstep.now .nd::after{content:"";width:6px;height:6px;border-radius:999px;background:var(--accent)}
+  .rstep .bd{display:flex;flex-direction:column;gap:6px;padding-bottom:16px}
+  .rstep:last-child .bd{padding-bottom:0}
+  .rstep .t{font-size:13px;font-weight:600;line-height:22px;color:var(--sub);margin:0}
+  .rstep.now .t{font-size:15px;font-weight:700;color:var(--ink)}
+  /* 다시 볼 문장: 문장 밑 AI 진단 */
+  .rdiag{border:1px solid var(--line2);border-top:0;border-radius:0 0 12px 12px;padding:11px 16px 12px;margin:-4px 0 16px;
+    display:flex;flex-direction:column;gap:6px;font-size:13px;line-height:1.6}
+  .rsent.withdiag{border-radius:12px 12px 0 0;margin-bottom:4px}
+  .rdiag .hd{font-size:11.5px;font-weight:600;color:var(--sub)}
+  .rdiag .lb{font-size:11.5px;font-weight:600;color:var(--sub);margin-right:6px}
+  .rdiag .cause{display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:999px;margin-right:6px;background:var(--warn-bg);color:var(--warn)}
+  .rdiag .cause.ok{background:var(--ok-bg);color:var(--ok)}
+  .rdiag .cause.no{background:var(--no-bg);color:var(--no)}
+  .rword.err{background:var(--no-bg);box-shadow:inset 0 -2px 0 var(--no)}
+  /* 진단 막대: 누르면 그 문장만 */
+  .fbbars{display:grid;gap:4px;margin:4px 0 8px}
+  .fbbar{display:flex;flex-direction:column;align-items:center;gap:4px;min-height:44px;padding:6px 0 2px;border:0;border-radius:8px;
+    background:none;color:var(--sub);font:inherit;font-size:11px;font-variant-numeric:tabular-nums;cursor:pointer}
+  .fbbar i{display:block;width:100%;height:8px;border-radius:3px}
+  .fbbar.on{background:var(--line2);color:var(--ink);font-weight:700}
+  .fbbars.pick .fbbar:not(.on){color:var(--grip)}
+  .fbbars.pick .fbbar:not(.on) i{opacity:.3}
+  .fbbar:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
   /* 폰: 겹치는 안쪽 여백 줄이기 (맨 끝에 둬야 앞 규칙을 이긴다) */
   @media (max-width:480px){
     .wrap{padding-left:12px;padding-right:12px}
+    header{margin:0 -12px 16px;padding:0 12px}
+    .topmenu{right:12px}
     .card{padding:14px}
     .rsent{padding:16px 14px}
     .sheet{padding-left:14px;padding-right:14px}
@@ -562,6 +676,7 @@ const PATHS={
   edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/>',
   cursor:'<path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/>',
   bookmark:'<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>',
+  chevron:'<path d="M9 6l6 6-6 6"/>',
   moon:'<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>',
   exit:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>'
 };
@@ -933,6 +1048,8 @@ function routineDoneDays(){
   for(const [k,e] of per) if(e.total&&e.done===e.total) days.add(k);
   return days;
 }
+let rtFoldOpen=false;   // 루틴에서 끝낸 줄 펼침 (기본 접힘)
+const hwDoneOpen=new Set();   // 숙제 카드에서 끝낸 지문 펼친 차시
 function routineCardHTML(){
   if(routineMissing) return '';
   const kinds=['reading','retry','vocab'];
@@ -944,6 +1061,7 @@ function routineCardHTML(){
   const allDone=!noPassage&&live.length===kinds.length&&doneN===live.length;
   if(allDone) return `<div class="rt"><div class="rthead" style="padding:15px 0">${ic('check','ok')} 오늘의 루틴 완료<span class="n">${doneN}/${live.length}</span></div></div>`;
   let h=`<div class="rt"><div class="rthead">오늘의 루틴<span class="n">${doneN}/${noPassage?kinds.length:live.length}</span></div>`;
+  let doneH='', doneC=0;
   for(const {k,d} of rows){
     if(k==='reading'&&noPassage){
       h+=`<div class="rtempty">읽을 지문이 떨어졌어요. 선생님이 곧 채워줄 거예요</div>`;
@@ -951,12 +1069,13 @@ function routineCardHTML(){
     }
     if(!d) continue;
     const done=routineDone(d), auto=!d.payload;
-    h+=`<div class="rtrow${done?' ok':''}${auto?' auto':''}">`
-      +`<span class="bx">${done?ic('check'):''}</span>`
-      +`<span class="k">${RT[k].k}</span>`
-      +`<span class="v">${routineLine(k,d,done,auto)}</span>`
-      +`${done||auto?'':routineGoHTML(k,d)}</div>`;
+    const row=`<span class="bx">${done?ic('check'):''}</span>`
+      +`<span class="tx"><span class="k">${RT[k].k}</span><span class="v">${routineLine(k,d,done,auto)}</span></span>`;
+    if(done||auto){ doneH+=`<div class="rtrow ok${auto?' auto':''}">${row}</div>`; doneC++; continue; }
+    h+=`<button class="rtrow" onclick="startRoutine('${k}')">${row}${routineGoHTML(k,d)}<span class="chev">›</span></button>`;
   }
+  // 끝낸 것은 기본으로 접어 둔다
+  if(doneC) h+=(rtFoldOpen?doneH:'')+`<button class="fold" onclick="rtFoldOpen=!rtFoldOpen;renderHome()">끝낸 ${doneC}개 ${rtFoldOpen?'접기 ⌃':'⌄'}</button>`;
   return h+`</div>`;
 }
 function pLabel(pid){
@@ -971,7 +1090,7 @@ function routineLine(k,d,done,auto){
     :`막혔던 문장 ${(d.payload.indexes||[]).length}개`+tail;
   if(auto) return '오늘 복습할 단어가 없어요';
   const left=todayVocabDeck().length;   // 이미 맞힌 건 빠진 실제 남은 개수
-  return left?`복습 ${left}단어`:'다 했어요';
+  return `${left}개`;
 }
 // 쓰다 만 독해가 있으면 "시작" 대신 "이어서"로 바꿔 부담을 줄인다
 function routineGoHTML(k,d){
@@ -982,7 +1101,7 @@ function routineGoHTML(k,d){
     if(fb) key=draftKeyOf(d.payload.passage_id,fb,d.payload.indexes||[]);
   }
   const cont=key&&draftExists(key);
-  return `<button class="go${cont?' soft':''}" onclick="startRoutine('${k}')">${cont?'이어서':'시작'}</button>`;
+  return cont?`<span class="cont">이어서</span>`:'';
 }
 // 재독해 힌트·성장 비교에 쓸 진단 (myFeedback은 최신순)
 function retryFbFor(pl){
@@ -1132,26 +1251,13 @@ function renderHome(){
       <div class="hint" style="margin:6px 0 0">이번 주 ${weekDone}/7</div>
     </div></div>`;
   html+=routineCardHTML();
-  // 이번 차시 숙제
+  // 숙제: 차시별 카드. 이어서 하기 → 남은 지문(늘 펼침) → 끝낸 지문(기본 접힘)
   const open=myAsg.filter(a=>!asgStatus(a).done);
   const doneAsg=myAsg.filter(a=>asgStatus(a).done);
-  html+=`<div class="ptitle">이번 차시 숙제</div>`;
+  html+=`<div class="ptitle">숙제</div>`;
   if(!myAsg.length) html+=`<div class="empty" style="padding:20px 0">아직 받은 숙제가 없어요.<br>학습 탭에서 자유롭게 골라 풀 수 있어요.</div>`;
-  else if(!open.length) html+=`<div class="done">${ic('check','ok')} 이번 차시 숙제를 전부 끝냈어요!</div>`;
-  for(const a of open){
-    const p=allP.find(x=>x.id===a.passage_id); if(!p) continue;
-    const st=asgStatus(a);
-    const label=[p.book,p.unit,p.title].filter(Boolean).join(' · ');
-    const stepsHtml=(a.steps||[]).map(s=>
-      `<span class="chip2 ${st[s]?'ok':''}">${st[s]?'✓ ':''}${stepName(s)}</span>`).join('');
-    html+=`<button class="psg hw" onclick="openCourse('${p.id}')">
-      <span style="flex:1;min-width:0">
-        <span style="display:block;font-weight:600">${esc(label)}</span>
-        <span style="display:flex;gap:6px;margin-top:5px">${stepsHtml}</span>
-      </span>
-      <span class="cnt">${a.round_label?esc(a.round_label):''}${a.due_date?`<br>~${esc(a.due_date.slice(5))}`:''}</span>
-    </button>`;
-  }
+  else if(!open.length) html+=`<div class="done">${ic('check','ok')} 숙제를 전부 끝냈어요</div>`;
+  html+=homeworkCardsHTML();
   // 오늘의 처방
   const due=vocabLegacy?0:dueWords().length;
   const retries=readingRetryList();
@@ -1163,9 +1269,57 @@ function renderHome(){
       html+=`<button class="psg wrong" onclick="showFeedback('${fb.id}')">${esc(label)} 다시 읽기<span class="cnt">${(fb.flagged||[]).length}문장</span></button>`;
     }
   }
-  if(doneAsg.length) html+=`<div class="hint" style="margin:14px 2px 0">끝낸 숙제 ${doneAsg.length}개는 기록 탭에 있어요</div>`;
   app.innerHTML=html+`<div style="height:20px"></div>`;
 }
+
+function asgLabel(p){ return [p.book,p.unit,p.title].filter(Boolean).join(' · '); }
+function homeworkCardsHTML(){
+  const groups=new Map();
+  for(const a of myAsg){
+    if(!allP.some(p=>p.id===a.passage_id)) continue;
+    const k=a.round_label||'숙제';
+    if(!groups.has(k)) groups.set(k,[]);
+    groups.get(k).push(a);
+  }
+  let h='';
+  for(const [round,list] of groups){
+    const left=list.filter(a=>!asgStatus(a).done), fin=list.filter(a=>asgStatus(a).done);
+    if(!left.length) continue;   // 다 끝낸 차시는 홈에서 뺀다
+    const due=list.map(a=>a.due_date).filter(Boolean).sort()[0];
+    let dueTxt='', near=false;
+    if(due){
+      const dd=Math.round((new Date(due+'T00:00:00')-new Date(dstr(new Date())+'T00:00:00'))/864e5);
+      near=dd<=1;
+      dueTxt=dd<0?`마감 ${-dd}일 지남`:dd===0?'마감 오늘':dd===1?'마감 내일':`마감 ${due.slice(5).replace('-','/')}`;
+    }
+    const pct=Math.round(fin.length/list.length*100);
+    const stepsOf=a=>(a.steps||[]).map(stepName).join('+');
+    const [first,...rest]=left;
+    const fp=allP.find(p=>p.id===first.passage_id);
+    h+=`<div class="hwc"><div class="hh"><h3>${esc(round==='숙제'?'숙제':round+' 숙제')}</h3>`
+      +(dueTxt?`<span class="due${near?' near':''}">${dueTxt}</span>`:'')
+      +`<span class="n">${fin.length}/${list.length}</span></div>`
+      +`<span class="pbar"><i style="width:${pct}%"></i></span>`
+      +`<button class="hwgo" onclick="openCourse('${fp.id}')"><span style="flex:1;min-width:0"><span class="s">이어서 하기</span>`
+      +`<span class="t">${esc(asgLabel(fp))} ${stepsOf(first)}</span></span>${ic('chevron')}</button>`;
+    for(const a of rest){
+      const p=allP.find(x=>x.id===a.passage_id);
+      h+=`<button class="hwrow" onclick="openCourse('${p.id}')"><span class="bx"></span><span class="nm">${esc(asgLabel(p))}</span>`
+        +`<span class="st">${stepsOf(a)}</span><span class="chev">›</span></button>`;
+    }
+    if(fin.length){
+      const on=hwDoneOpen.has(round);
+      if(on) for(const a of fin){
+        const p=allP.find(x=>x.id===a.passage_id);
+        h+=`<div class="hwrow ok"><span class="bx"></span><span class="nm">${esc(asgLabel(p))}</span></div>`;
+      }
+      h+=`<button class="fold" style="border-top:0" onclick="hwDoneOpen.${on?'delete':'add'}('${esc(jsq(round))}');renderHome()">끝낸 ${fin.length}개 ${on?'접기 ⌃':'⌄'}</button>`;
+    } else h+=`<div style="height:10px"></div>`;
+    h+=`</div>`;
+  }
+  return h;
+}
+function jsq(s){ return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
 
 // ---------- 학습: 교재 → 지문 → 코스 ----------
 function renderLearn(){
@@ -1367,21 +1521,28 @@ function growthBadge(fb){
   const d=cnt(fb)-cnt(prev);
   return d>0?`잘 읽은 문장 +${d}`:null;
 }
+function fbPick(btn){
+  const wrap=btn.closest('.fbwrap'); if(!wrap) return;
+  const i=btn.dataset.i, on=btn.classList.contains('on');
+  wrap.querySelectorAll('.fbbar').forEach(b=>{ const s=!on&&b.dataset.i===i; b.classList.toggle('on',s); b.setAttribute('aria-pressed',s); });
+  wrap.querySelector('.fbbars').classList.toggle('pick',!on);
+  wrap.querySelectorAll('.fb[data-i]').forEach(f=>{ f.style.display=(on||f.dataset.i===i)?'':'none'; });
+}
 // 진단 본문 — 오답노트 상세와 독해 제출 직후 화면에서 공용
 function feedbackBodyHTML(fb,opts){
   opts=opts||{};
   const p=allP.find(x=>x.id===fb.passage_id)||{sentences:[]};
   const reading=myReadings.find(r=>r.id===fb.reading_id);
   const flagged=(fb.flagged||[]);
-  // 이해 판정 원인 이름표 색: 통과 단계=초록, 재탕=주황, 뜻 어긋남=빨강
-  const UTYPE_CLS={'예시':'ok','바꿔 말하기':'ok','짧은 문장':'ok','재탕':'','빠뜨림':'no','헛짚음':'no','예시 어긋남':'no'};
   const notes=(fb.sentence_notes||[]).slice().sort((a,b)=>a.index-b.index);
   // 스코어 헤더: 문장 판정 세그먼트 + 성장 배지
   const segColor={good:'var(--ok)',partial:'var(--warn)',missed:'var(--no)'};
-  const seg=notes.length?`<div class="fbseg">${notes.map(n=>`<i style="background:${segColor[n.verdict]||segColor.partial}"></i>`).join('')}</div>`:'';
+  // 막대를 누르면 그 문장 진단만, 한 번 더 누르면 전체 (처음엔 전체)
+  const seg=notes.length?`<div class="fbbars" style="grid-template-columns:repeat(${notes.length},minmax(0,1fr))">${notes.map(n=>
+    `<button class="fbbar" data-i="${n.index}" onclick="fbPick(this)" aria-pressed="false" aria-label="${n.index+1}번째 문장 ${(VERDICT[n.verdict]||VERDICT.partial).lb}"><i style="background:${segColor[n.verdict]||segColor.partial}"></i>${n.index+1}</button>`).join('')}</div>`:'';
   const counts=['good','partial','missed'].map(v=>notes.filter(n=>n.verdict===v).length);
   const badge=growthBadge(fb);
-  let html=`<div class="fbsum"><div class="t">AI 선생님 진단
+  let html=`<div class="fbwrap"><div class="fbsum"><div class="t">AI 선생님 진단
       ${badge?`<span style="margin-left:auto;font-size:11px;font-weight:700;background:var(--ok);color:#fff;border-radius:999px;padding:2px 10px">${badge}</span>`:''}</div>
     ${seg}
     ${notes.length?`<div style="font-size:12px;color:var(--sub);margin-bottom:9px">잘 읽음 ${counts[0]} · 절반쯤 ${counts[1]} · 다시 보기 ${counts[2]}</div>`:''}
@@ -1396,7 +1557,7 @@ function feedbackBodyHTML(fb,opts){
   for(const n of notes){
     const v=VERDICT[n.verdict]||VERDICT.partial;
     const my=reading&&(reading.interpretations||[]).find(it=>it.index===n.index);
-    html+=`<div class="fb ${v.cls}"><span class="vlb">${v.lb}</span>
+    html+=`<div class="fb ${v.cls}" data-i="${n.index}"><span class="vlb">${v.lb}</span><span class="hint" style="margin-left:8px">${n.index+1}번째 문장</span>
       <div class="en">${espHTML(n.sentence||p.sentences[n.index]||'',n.error_spans)}</div>
       ${my&&my.my_reading?`<div class="my"><span class="lb">내 해석</span>${esc(my.my_reading)}</div>`:''}
       ${my&&my.my_understanding?`<div class="my"><span class="lb">내 말로</span>${esc(my.my_understanding)}</div>`:''}
@@ -1405,6 +1566,7 @@ function feedbackBodyHTML(fb,opts){
       ${n.understanding_note?`<div class="note" style="border-top:none;padding-top:0"><span class="lb">이해</span>${n.understanding_type?`<span class="cause ${UTYPE_CLS[n.understanding_type]||''}">${esc(n.understanding_type)}</span>`:''}${esc(n.understanding_note)}</div>`:''}
       ${n.note?`<div class="note"><span class="lb">코치</span>${esc(n.note)}</div>`:''}</div>`;
   }
+  html+=`</div>`;   // .fbwrap
   // AI가 발견해 단어장에 자동 등록한 단어들
   const mwSeen=new Set(), mwList=[];
   for(const n of notes) for(const mw of (n.missed_words||[])){
@@ -2371,18 +2533,17 @@ function renderReadStep(){
   const N=rSeq.length, si=rSeq[rIdx];
   const toks=rP.sentences[si].split(/\s+/);
   const marked=new Set((rMarks[rIdx]||[]).map(m=>m.i));
+  const rn=rRetryFb?(rRetryFb.sentence_notes||[]).find(x=>x.index===si):null;
+  const errW=errWordSet(rP.sentences[si],toks,rn&&rn.error_spans);
   const words=toks.map((t,wi)=>{
     const mean=vocabMeaningOf(t);
     const known=mean?` known" data-mean="${esc(mean)}`:'';
-    return `<span class="rword${marked.has(wi)?' mark':''}${known}" onclick="toggleWord(${wi})">${esc(t)}</span>`;
+    return `<span class="rword${marked.has(wi)?' mark':''}${errW.has(wi)?' err':''}${known}" onclick="toggleWord(${wi})">${esc(t)}</span>`;
   }).join(' ');
   const head=[rP.book,rP.unit,rP.title].filter(Boolean).join(' · ');
   const last=rIdx+1>=N;
-  let retryNote='';
-  if(rRetryFb){
-    const n=(rRetryFb.sentence_notes||[]).find(x=>x.index===si);
-    retryNote=`<div class="retryhint"><span class="lb">다시 독해 (${si+1}번째 문장)</span>${n&&n.note?esc(n.note):'지난번에 막혔던 문장이에요. 힌트를 떠올리며 다시 읽어봐요.'}</div>`;
-  }
+  // 다시 볼 문장이면 그 문장의 AI 진단을 문장 바로 밑에 붙인다
+  const diag=rRetryFb?rdiagHTML(rn):'';
   const draftNote=rDraftLoaded
     ? `<div class="msg okmsg" style="display:flex;align-items:center;gap:10px">쓰다 만 내용을 불러왔어요. 이어서 쓰면 돼요
         <span class="mlink" style="margin-left:auto;flex:0 0 auto;color:inherit" onclick="draftRestart()">처음부터 새로</span></div>`
@@ -2391,25 +2552,62 @@ function renderReadStep(){
     <button class="back" onclick="leaveRead()">‹ ${rRetryFb?'오답노트':'지문 목록'}</button>
     <div style="font-weight:600;margin:0 2px 12px">${esc(head)}</div>
     <div class="rprog"><div class="bar2"><div class="fill2" style="width:${rIdx/N*100}%"></div></div><span class="cnt">${rIdx+1} / ${N}</span></div>
-    ${draftNote}${retryNote}
-    <div class="rsent" id="rsent">${words}</div>
+    ${draftNote}
+    <div class="rsent${diag?' withdiag':''}" id="rsent">${words}</div>
+    ${diag}
     <div class="rhelp" id="rhelp"></div>
-    <label style="margin-top:2px">① 이 문장 해석해보기 <span class="hint">(끊어 읽어도 돼요)</span></label>
-    <textarea class="rinput" id="rinput" placeholder="예: 이 문장은 ~라는 뜻인 것 같아 (엔터 → 다음 칸)">${esc(rInterp[rIdx]||'')}</textarea>
-    <label style="margin-top:12px">② 쉬운 내 말로 바꾸면? <span class="hint">(친구한테 설명하듯, 해석과 다른 단어로)</span></label>
-    <textarea class="rinput" id="runder" placeholder="예: 기록이 거의 없는 평범한 사람들 얘기도 소설은 다룰 수 있다는 거">${esc(rUnder[rIdx]||'')}</textarea>
-    <label style="margin-top:12px">③ 예를 들면? 또는 내 생각 <span class="hint">(안 써도 돼요, 엔터로 다음 문장)</span></label>
-    <textarea class="rinput" id="rreact" placeholder="예: 영화 '명량'도 기록에 없는 장면을 지어냈지 / 왜 그럴까? / 아까 내 질문의 답이 나왔네!">${esc(rReact[rIdx]||'')}</textarea>
+    <div class="rsteps">
+      <div class="rstep" data-f="rinput"><div class="rail"><span class="nd"></span><span class="ln"></span></div>
+        <div class="bd"><label class="t" for="rinput">해석</label><textarea class="rinput" id="rinput">${esc(rInterp[rIdx]||'')}</textarea></div></div>
+      <div class="rstep" data-f="runder"><div class="rail"><span class="nd"></span><span class="ln"></span></div>
+        <div class="bd"><label class="t" for="runder">쉬운 말로 바꾸면?</label><textarea class="rinput" id="runder">${esc(rUnder[rIdx]||'')}</textarea></div></div>
+      <div class="rstep" data-f="rreact"><div class="rail"><span class="nd"></span></div>
+        <div class="bd"><label class="t" for="rreact">예를 들면?</label><textarea class="rinput" id="rreact">${esc(rReact[rIdx]||'')}</textarea></div></div>
+    </div>
     <div id="rmsg"></div>
     <button class="btn primary full" style="margin-top:12px" onclick="readNext()">${last?(rRetryFb?'다시 독해 제출하기':'주제 쓰러 가기 →'):'다음 문장 →'}</button>
     ${rIdx>0?`<button class="btn ghost full" style="margin-top:8px" onclick="readPrev()">← 이전 문장</button>`:''}
     <div style="height:40px"></div>`;
   updateMarkHelp();
   const inp=$('rinput'), und=$('runder'), rea=$('rreact');
-  if(inp){ inp.addEventListener('keydown',readKey); inp.addEventListener('input',saveDraftSoon); inp.focus(); placeCaretEnd(inp); }
-  if(und){ und.addEventListener('keydown',readKey); und.addEventListener('input',saveDraftSoon); }
-  if(rea){ rea.addEventListener('keydown',readKey); rea.addEventListener('input',saveDraftSoon); }
+  for(const el of [inp,und,rea]) if(el){
+    el.addEventListener('keydown',readKey); el.addEventListener('input',saveDraftSoon);
+    el.addEventListener('focus',updSteps); el.addEventListener('blur',()=>setTimeout(updSteps,0)); el.addEventListener('input',updSteps);
+  }
+  if(inp){ inp.focus(); placeCaretEnd(inp); }
+  updSteps();
   saveDraft(); rDraftLoaded=false;
+}
+// 단계선: 지금 쓰는 칸 = 초록 점, 채운 칸 = 체크, 빈 칸 = 회색
+function updSteps(){
+  for(const st of document.querySelectorAll('.rstep')){
+    const f=$(st.dataset.f); if(!f) continue;
+    const now=document.activeElement===f, done=!now&&f.value.trim();
+    st.classList.toggle('now',now); st.classList.toggle('done',!!done);
+  }
+}
+// 진단 원인 이름표 (진단 화면·다시 볼 문장 공용)
+const UTYPE_CLS={'예시':'ok','바꿔 말하기':'ok','짧은 문장':'ok','재탕':'','빠뜨림':'no','헛짚음':'no','예시 어긋남':'no'};
+function rdiagHTML(n){
+  if(!n) return `<div class="rdiag"><span class="hd">AI 진단</span>지난번에 막혔던 문장이에요</div>`;
+  let h=`<div class="rdiag"><span class="hd">AI 진단</span>`;
+  if(n.reading_note) h+=`<div><span class="lb">독해</span>${n.skill_detail?`<span class="cause ${n.verdict==='missed'?'no':''}">${esc(n.skill_tag?n.skill_tag+' · '+n.skill_detail:n.skill_detail)}</span>`:''}${esc(n.reading_note)}</div>`;
+  if(n.understanding_note) h+=`<div><span class="lb">이해</span>${n.understanding_type?`<span class="cause ${UTYPE_CLS[n.understanding_type]||''}">${esc(n.understanding_type)}</span>`:''}${esc(n.understanding_note)}</div>`;
+  if(n.note) h+=`<div>${esc(n.note)}</div>`;
+  return h+`</div>`;
+}
+// 오독 구간(error_spans)에 걸치는 단어 번호
+function errWordSet(sent,toks,spans){
+  const out=new Set();
+  if(!spans||!spans.length) return out;
+  const pos=[...String(sent).matchAll(/\S+/g)];
+  if(pos.length!==toks.length) return out;
+  for(const sp of spans){
+    const i=String(sent).indexOf(sp.text||''); if(!sp.text||i<0) continue;
+    const j=i+sp.text.length;
+    pos.forEach((m,wi)=>{ if(m.index<j&&m.index+m[0].length>i) out.add(wi); });
+  }
+  return out;
 }
 // ----- 형광펜 뜻 말풍선 -----
 // 단어장에 있는 단어면 품사별 뜻을, 처음 보는 단어면 담아둔다는 것만 알려준다.
