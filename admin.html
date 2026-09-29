@@ -73,6 +73,44 @@
     border-radius:10px;background:var(--bg);margin-bottom:7px}
   .pi .t{flex:1;font-size:14px}.pi .c{font-size:11px;color:var(--sub);margin-left:6px}
 
+  /* 지문 탐색기 (왼쪽 교재·강, 오른쪽 지문) */
+  .pvhead{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+  .pvhead #pmsg .msg{margin:0;padding:6px 12px;font-size:13px}
+  .pexp{display:grid;grid-template-columns:250px 1fr;gap:14px;height:calc(100vh - 190px);min-height:440px}
+  .ptree{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:auto;padding:8px}
+  .ptcat{font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--sub);margin:12px 8px 4px}
+  .ptcat:first-child{margin-top:4px}
+  .tn{display:flex;align-items:center;gap:6px;width:100%;padding:6px 8px;border:0;background:none;border-radius:8px;
+    font-size:13px;color:var(--ink);text-align:left;cursor:pointer}
+  .tn:hover{background:var(--bg)}
+  .tn.on{background:var(--accent-soft);color:var(--accent);font-weight:700}
+  .tn .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .tn .n{font-size:11px;color:var(--sub);font-variant-numeric:tabular-nums}
+  .tn .chev{width:10px;color:var(--sub);transition:transform .15s;flex:0 0 auto}
+  .tn .chev.open{transform:rotate(90deg)}
+  .tn.u{padding-left:24px}
+  .ppane{background:var(--card);border:1px solid var(--line);border-radius:14px;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+  .pph{display:flex;align-items:baseline;gap:8px;padding:13px 16px;border-bottom:1px solid var(--line)}
+  .pph b{font-size:15px}
+  .pph .cnt{font-size:12px;color:var(--sub)}
+  .pplist{overflow:auto;flex:1;padding:12px 14px}
+  .pplist .pi .t{font-weight:600}
+  .pstats{margin-top:18px}
+  .pstats summary{cursor:pointer;font-size:14px;font-weight:700;padding:6px 2px;color:var(--ink)}
+  .pdrawer-bg{position:fixed;inset:0;background:rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .2s;z-index:40}
+  .pdrawer{position:fixed;top:0;right:0;bottom:0;width:min(640px,100%);background:var(--card);border-left:1px solid var(--line);
+    box-shadow:var(--shadow);padding:20px 22px 40px;overflow:auto;transform:translateX(105%);transition:transform .22s;z-index:41}
+  .pform-on .pdrawer{transform:none}
+  .pform-on .pdrawer-bg{opacity:1;pointer-events:auto}
+  .pdh{display:flex;align-items:center;margin-bottom:6px}
+  .pdh b{font-size:16px}
+  @media (max-width:760px){
+    .pexp{grid-template-columns:1fr;height:auto;min-height:0}
+    .ptree{max-height:240px}
+    .ppane{min-height:360px}
+  }
+  @media (prefers-reduced-motion:reduce){.pdrawer,.pdrawer-bg,.tn .chev{transition:none}}
+
   /* 풀이 기록 / 오답 */
   .rec{border:1px solid #eecbc4;background:var(--no-bg);border-radius:14px;padding:14px 16px;margin-bottom:12px}
   .rec.solved{border-color:#bfe0cf;background:var(--accent-soft)}
@@ -250,18 +288,31 @@
         </section>
 
         <section class="view" data-view="passages">
-          <h2 class="vtitle">지문 출제·관리</h2>
-          <div class="card">
+          <div class="pvhead"><h2 class="vtitle" style="margin:0">지문</h2><span id="pmsg"></span>
+            <button class="btn primary small" style="margin-left:auto" onclick="openPForm()">+ 새 지문</button></div>
+          <div class="pexp">
+            <nav class="ptree" id="ptree" aria-label="교재와 강"></nav>
+            <div class="ppane">
+              <div class="pph"><b id="ppTitle"></b><span class="cnt" id="ppCnt"></span></div>
+              <div class="pplist" id="list"></div>
+            </div>
+          </div>
+          <details class="pstats"><summary>지문별 난이도 (어려운 순)</summary><div id="stats" style="margin-top:12px"></div></details>
+
+          <div class="pdrawer-bg" id="pformBg" onclick="closePForm()"></div>
+          <aside class="pdrawer" id="pform" aria-label="지문 입력">
+            <div class="pdh"><b id="pformTitle">새 지문</b><button class="btn ghost small" style="margin-left:auto" onclick="closePForm()">닫기</button></div>
             <div class="row">
               <div>
                 <label>교재</label>
-                <input id="book" placeholder="예: 수능특강" autocomplete="off" oninput="renderUnitChips()">
+                <input id="book" placeholder="예: 수능특강" autocomplete="off" list="bookList" oninput="renderUnitChips()">
+                <datalist id="bookList"></datalist>
                 <div class="chips" id="bookChips"></div>
               </div>
               <div>
                 <label>강 · 챕터</label>
-                <input id="unit" placeholder="예: 3강" autocomplete="off">
-                <div class="chips" id="unitChips"></div>
+                <input id="unit" placeholder="예: 3강" autocomplete="off" list="unitList">
+                <datalist id="unitList"></datalist>
               </div>
             </div>
             <label>지문 번호 · 제목</label>
@@ -278,15 +329,11 @@
               <div class="row" style="margin-top:12px">
                 <button class="btn primary" onclick="save()">저장하기</button>
                 <button class="btn ghost" onclick="save(true)">저장하고 바로 숙제 내주기</button>
-                <button class="btn ghost" onclick="resetForm()">취소</button>
+                <button class="btn ghost" onclick="closePForm()">취소</button>
               </div>
             </div>
-          </div>
-
-          <h3 class="subt"><svg class="ic muted" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg> 등록된 지문</h3>
-          <div id="list"></div>
-          <h3 class="subt">지문별 난이도 (어려운 순)</h3>
-          <div id="stats"></div>
+          
+          </aside>
         </section>
 
         <section class="view" data-view="homework">
@@ -472,9 +519,9 @@ async function save(goHw){
     if(!res.error&&res.data&&res.data[0]) newId=res.data[0].id;
   }
   if(res.error){ msg('formmsg',res.error.message,'err'); return; }
-  msg('formmsg','저장됐어요 ✓','ok');
-  $('title').value=''; $('raw').value=''; $('sentCards').innerHTML='';
-  $('splitwrap').style.display='none'; editingId=null;
+  pSel={b:book, u:unit};
+  closePForm();
+  msg('pmsg','저장됐어요 ✓','ok'); setTimeout(()=>{ if($('pmsg')) $('pmsg').innerHTML=''; },3000);
   if(goHw===true&&newId) _pendingHwPid=newId;
   loadAll();
 }
@@ -1521,45 +1568,106 @@ async function loadStats(){
   $('stats').innerHTML=html;
 }
 
-// ---------- 자동완성 클립 ----------
+// ---------- 교재 이름·묶음 ----------
+// 긴 기출 이름은 목록에서만 짧게 보여준다(저장된 이름은 그대로)
+function shortBook(b){
+  let m=String(b||'').match(/^(\d{4})학년도 대학수학능력시험 (\d+)월 모의평가$/); if(m) return `${m[1]} ${m[2]}월 모평`;
+  m=String(b||'').match(/^(\d{4})학년도 대학수학능력시험$/); if(m) return `${m[1]} 수능`;
+  return b||'미분류';
+}
+function bookCat(b){ if(/수능특강|수능완성|EBS/.test(b)) return 'EBS 교재'; if(/대학수학능력시험|학력평가|모의평가/.test(b)) return '기출'; return '사설·기타'; }
+const BOOK_CATS=['EBS 교재','기출','사설·기타'];
+
+// ---------- 자동완성 (칩 대신 드롭다운 + 최근 교재 3개만 칩) ----------
 function renderChips(){
   const books=[...new Set(allP.map(p=>p.book).filter(Boolean))].sort(nat);
-  $('bookChips').innerHTML = books.length
-    ? books.map(b=>`<span class="chip" onclick="setField('book','${jsStr(b)}')">${esc(b)}</span>`).join('')
-    : `<span class="chip empty">새로 입력하면 다음부터 여기 떠요</span>`;
+  $('bookList').innerHTML=books.map(b=>`<option value="${esc(b)}">`).join('');
+  const recent=[];
+  for(const p of [...allP].sort((x,y)=>String(y.created_at).localeCompare(String(x.created_at))))
+    if(p.book&&!recent.includes(p.book)){ recent.push(p.book); if(recent.length===3) break; }
+  $('bookChips').innerHTML=recent.map(b=>`<span class="chip" onclick="setField('book','${jsStr(b)}')">${esc(shortBook(b))}</span>`).join('');
   renderUnitChips();
 }
 function renderUnitChips(){
   const book=$('book').value.trim();
-  const pool=book ? allP.filter(p=>p.book===book) : allP;
+  const pool=book ? allP.filter(p=>p.book===book) : [];
   const units=[...new Set(pool.map(p=>p.unit).filter(Boolean))].sort(nat);
-  $('unitChips').innerHTML = units.length
-    ? units.map(u=>`<span class="chip" onclick="setField('unit','${jsStr(u)}')">${esc(u)}</span>`).join('')
-    : `<span class="chip empty">${book?'이 교재의 강 없음':'교재 선택 시 해당 강이 떠요'}</span>`;
+  $('unitList').innerHTML=units.map(u=>`<option value="${esc(u)}">`).join('');
 }
 function setField(id,val){ $(id).value=val; if(id==='book') renderUnitChips(); }
 
-// ---------- 등록된 지문(도서관) ----------
+// ---------- 지문 탐색기 ----------
+// 왼쪽에서 교재·강을 고르면 오른쪽에 그 지문만. pSel.u가 null이면 교재 전체
+let pSel=null; const pOpen=new Set();
 function renderList(){
-  if(!allP.length){ $('list').innerHTML='<p class="sub">아직 없어요. 위에서 추가해보세요.</p>'; return; }
+  if(!allP.length){ $('ptree').innerHTML=''; $('ppTitle').textContent=''; $('ppCnt').textContent='';
+    $('list').innerHTML='<p class="sub">아직 없어요. + 새 지문으로 추가해보세요.</p>'; return; }
   const groups=buildGroups(allP);
-  let html='';
-  for(const [book,units] of groups){
-    const total=Object.values(units).reduce((n,a)=>n+a.length,0);
-    html+=`<div class="book open"><button class="bookh" onclick="this.closest('.book').classList.toggle('open')">
-      <span class="chev">›</span> ${ic('book','muted')} ${esc(book)} <span class="cnt">${total}개</span></button><div class="bookbody">`;
-    for(const unit of Object.keys(units)){
-      if(unit) html+=`<div class="unith">${esc(unit)}</div>`;
-      for(const p of units[unit]){
-        html+=`<div class="pi"><span class="t">${esc(p.title)}</span><span class="c">문장 ${p.sentences.length}</span>
-          <button class="btn ghost small" onclick='edit("${p.id}")'>수정</button>
-          <button class="btn danger small" onclick='del("${p.id}")'>삭제</button></div>`;
-      }
+  if(!pSel||!groups.has(pSel.b)){   // 처음엔 가장 최근에 등록한 지문의 교재·강
+    const last=[...allP].sort((x,y)=>String(y.created_at).localeCompare(String(x.created_at)))[0];
+    pSel={b:last.book||'미분류', u:last.unit||''};
+  }
+  if(pSel.u!==null&&!(pSel.u in groups.get(pSel.b))) pSel.u=null;
+  pOpen.add(pSel.b);
+  const books=[...groups.keys()].sort((a,b)=>nat(shortBook(b),shortBook(a)));   // 최근 연도 먼저
+  let h='';
+  for(const c of BOOK_CATS){
+    const bs=books.filter(b=>bookCat(b)===c); if(!bs.length) continue;
+    h+=`<div class="ptcat">${c}</div>`;
+    for(const b of bs){
+      const units=Object.keys(groups.get(b)).sort(nat);
+      const flat=units.length===1;   // 강이 하나뿐(기출 등)이면 펼칠 게 없다
+      const n=units.reduce((k,u)=>k+groups.get(b)[u].length,0);
+      const on=pSel.b===b&&(flat||pSel.u===null);
+      h+=`<button class="tn ${on?'on':''}" onclick="pPick('${jsStr(b)}',null)" title="${esc(b)}">`
+        +(flat?'<span class="chev"></span>':`<span class="chev ${pOpen.has(b)?'open':''}">›</span>`)
+        +`<span class="nm">${esc(shortBook(b))}</span><span class="n">${n}</span></button>`;
+      if(!flat&&pOpen.has(b)) for(const u of units)
+        h+=`<button class="tn u ${pSel.b===b&&pSel.u===u?'on':''}" onclick="pPick('${jsStr(b)}','${jsStr(u)}')"><span class="nm">${esc(u||'강 없음')}</span><span class="n">${groups.get(b)[u].length}</span></button>`;
     }
-    html+='</div></div>';
+  }
+  $('ptree').innerHTML=h;
+  const units=groups.get(pSel.b);
+  const shown=pSel.u===null?Object.keys(units).sort(nat):[pSel.u];
+  const n=shown.reduce((k,u)=>k+units[u].length,0);
+  $('ppTitle').textContent=shortBook(pSel.b)+(pSel.u?` · ${pSel.u}`:'');
+  $('ppCnt').textContent=`${n}개`;
+  let html='';
+  for(const u of shown){
+    if(shown.length>1&&u) html+=`<div class="unith">${esc(u)}</div>`;
+    for(const p of units[u]){
+      html+=`<div class="pi"><span class="t">${esc(p.title)}</span><span class="c">문장 ${p.sentences.length}</span>
+        <button class="btn ghost small" onclick='edit("${p.id}")'>수정</button>
+        <button class="btn danger small" onclick='del("${p.id}")'>삭제</button></div>`;
+    }
   }
   $('list').innerHTML=html;
 }
+function pPick(b,u){
+  const units=Object.keys(buildGroups(allP).get(b)||{});
+  if(u===null&&units.length>1){   // 교재 줄: 펼치기/접기 + 교재 전체 보기
+    if(pSel&&pSel.b===b&&pSel.u===null) pOpen.delete(b); else pOpen.add(b);
+  }
+  pSel={b, u:u===null&&units.length===1?units[0]:u};
+  renderList();
+}
+
+// ---------- 입력 서랍 ----------
+function openPForm(){
+  resetForm();
+  $('pformTitle').textContent='새 지문';
+  if(pSel){   // 지금 보고 있는 교재·강을 미리 채우고, 번호는 다음 번호로
+    $('book').value=pSel.b==='미분류'?'':pSel.b; $('unit').value=pSel.u||'';
+    const nums=allP.filter(p=>p.book===pSel.b&&(p.unit||'')===(pSel.u||'')).map(p=>parseInt(p.title,10)).filter(x=>!isNaN(x));
+    $('title').value=nums.length?String(Math.max(...nums)+1):'';
+  }
+  renderUnitChips();
+  document.body.classList.add('pform-on');
+  setTimeout(()=>$('raw').focus(),50);
+}
+function closePForm(){ resetForm(); document.body.classList.remove('pform-on'); }
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&document.body.classList.contains('pform-on')) closePForm(); });
+
 function buildGroups(list){
   const sorted=[...list].sort((a,b)=> nat(a.book,b.book)||nat(a.unit,b.unit)||nat(a.title,b.title));
   const map=new Map();
@@ -1740,8 +1848,10 @@ function edit(id){
   $('book').value=p.book||''; $('unit').value=p.unit||''; $('title').value=p.title||'';
   $('raw').value=''; renderSentCards(p.sentences||[]);
   $('splitwrap').style.display='block'; renderUnitChips();
-  showView('passages');
-  window.scrollTo({top:0,behavior:'smooth'});
+  $('pformTitle').textContent='지문 수정';
+  pSel={b:p.book||'미분류', u:p.unit||''};
+  showView('passages'); renderList();
+  document.body.classList.add('pform-on');
 }
 async function del(id){
   const p=allP.find(x=>x.id===id); if(!p) return;
