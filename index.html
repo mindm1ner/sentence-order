@@ -571,15 +571,15 @@
   .rstep .nd{width:16px;height:16px;margin-top:3px;border-radius:999px;border:2px solid var(--grip);background:var(--card);
     box-sizing:border-box;display:flex;align-items:center;justify-content:center;flex:0 0 auto;transition:border-color .15s,background .15s}
   .rstep .ln{width:2px;flex:1;background:var(--line);margin:4px 0}
-  .rstep.done .nd{border:0;background:var(--accent)}
-  .rstep.done .nd::after{content:"";width:5px;height:8px;border:solid #fff;border-width:0 2px 2px 0;transform:translateY(-1px) rotate(45deg)}
-  .rstep.done .ln{background:var(--accent)}
-  .rstep.now .nd{border-color:var(--accent)}
-  .rstep.now .nd::after{content:"";width:6px;height:6px;border-radius:999px;background:var(--accent)}
+  .rstep.is-done .nd{border:0;background:var(--accent)}
+  .rstep.is-done .nd::after{content:"";width:5px;height:8px;border:solid #fff;border-width:0 2px 2px 0;transform:translateY(-1px) rotate(45deg)}
+  .rstep.is-done .ln{background:var(--accent)}
+  .rstep.is-now .nd{border-color:var(--accent)}
+  .rstep.is-now .nd::after{content:"";width:6px;height:6px;border-radius:999px;background:var(--accent)}
   .rstep .bd{display:flex;flex-direction:column;gap:6px;padding-bottom:16px}
   .rstep:last-child .bd{padding-bottom:0}
   .rstep .t{font-size:13px;font-weight:600;line-height:22px;color:var(--sub);margin:0}
-  .rstep.now .t{font-size:15px;font-weight:700;color:var(--ink)}
+  .rstep.is-now .t{font-size:15px;font-weight:700;color:var(--ink)}
   /* 다시 볼 문장: 문장 밑 AI 진단 */
   .rdiag{border:1px solid var(--line2);border-top:0;border-radius:0 0 12px 12px;padding:11px 16px 12px;margin:-4px 0 16px;
     display:flex;flex-direction:column;gap:6px;font-size:13px;line-height:1.6}
@@ -599,6 +599,26 @@
   .fbbars.pick .fbbar:not(.on){color:var(--grip)}
   .fbbars.pick .fbbar:not(.on) i{opacity:.3}
   .fbbar:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+  /* 넓은 화면: 아래 탭바 → 왼쪽 사이드바 (Reviewer와 같은 뼈대). 폰은 위 제목줄 + 아래 탭바 */
+  .tbrand{display:none}
+  @media (min-width:861px){
+    body{padding-left:232px}
+    .tabbar{top:0;bottom:0;right:auto;width:232px;max-width:none;margin:0;flex-direction:column;justify-content:flex-start;
+      gap:2px;padding:14px 12px;border-top:0;border-right:1px solid var(--line2);background:var(--side);backdrop-filter:none}
+    .tbrand{display:block;font-family:'HsSummerWaterLight',Batang,serif;font-size:21px;color:var(--accent);letter-spacing:.08em;padding:6px 9px 0;margin-bottom:18px}
+    .tab{flex:0 0 auto;flex-direction:row;justify-content:flex-start;gap:9px;width:100%;padding:7px 9px;font-size:13px;font-weight:500;color:#5B5B62}
+    .tab .ic{width:16px;height:16px}
+    .tab:hover{background:var(--hover)}
+    .tab.active{background:var(--line2);color:var(--ink);font-weight:600}
+    header{position:fixed;left:232px;right:0;top:0;height:55px;margin:0;padding:0 24px}
+    header h1{visibility:hidden}
+    .wrap{padding-top:79px}
+    .topmenu{top:10px;right:24px}
+    .bar,.qban{left:232px;bottom:0}
+    .sheet{max-width:560px}
+    body.notab{padding-left:0}
+    body.notab header,body.notab .bar,body.notab .qban{left:0}
+  }
   /* 폰: 겹치는 안쪽 여백 줄이기 (맨 끝에 둬야 앞 규칙을 이긴다) */
   @media (max-width:480px){
     .wrap{padding-left:12px;padding-right:12px}
@@ -610,7 +630,7 @@
   }
 </style>
 </head>
-<body>
+<body class="notab">
 <div class="wrap">
   <header>
     <h1>온고지신</h1>
@@ -642,6 +662,7 @@
 
 <!-- 하단 탭바 -->
 <div id="tabbar" class="tabbar" style="display:none">
+  <div class="tbrand">온고지신</div>
   <button class="tab active" data-t="home" onclick="navTab('home')"><svg class="ic" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>홈</span></button>
   <button class="tab" data-t="learn" onclick="navTab('learn')"><svg class="ic" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg><span>학습</span></button>
   <button class="tab" data-t="vocab" onclick="navTab('vocab')"><svg class="ic" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><span>단어장</span></button>
@@ -822,7 +843,7 @@ async function loadData(){
   await ensureRoutine();
   showTab(curTab);
 }
-function showTabBar(on){ const t=$('tabbar'); if(t) t.style.display=on?'flex':'none'; }
+function showTabBar(on){ const t=$('tabbar'); if(t) t.style.display=on?'flex':'none'; document.body.classList.toggle('notab',!on); }
 function showTab(t){
   curTab=t;
   document.querySelectorAll('#tabbar .tab').forEach(b=>b.classList.toggle('active',b.dataset.t===t));
@@ -1272,7 +1293,13 @@ function renderHome(){
   app.innerHTML=html+`<div style="height:20px"></div>`;
 }
 
-function asgLabel(p){ return [p.book,p.unit,p.title].filter(Boolean).join(' · '); }
+// 긴 기출 이름은 홈 카드에서만 짧게 (저장된 이름은 그대로)
+function shortBook(b){
+  let m=String(b||'').match(/^(\d{4})학년도 대학수학능력시험 (\d+)월 모의평가$/); if(m) return `${m[1]} ${m[2]}월 모평`;
+  m=String(b||'').match(/^(\d{4})학년도 대학수학능력시험$/); if(m) return `${m[1]} 수능`;
+  return b||'';
+}
+function asgLabel(p){ return [shortBook(p.book),p.unit,p.title].filter(Boolean).join(' · '); }
 function homeworkCardsHTML(){
   const groups=new Map();
   for(const a of myAsg){
@@ -2583,7 +2610,7 @@ function updSteps(){
   for(const st of document.querySelectorAll('.rstep')){
     const f=$(st.dataset.f); if(!f) continue;
     const now=document.activeElement===f, done=!now&&f.value.trim();
-    st.classList.toggle('now',now); st.classList.toggle('done',!!done);
+    st.classList.toggle('is-now',now); st.classList.toggle('is-done',!!done);
   }
 }
 // 진단 원인 이름표 (진단 화면·다시 볼 문장 공용)
