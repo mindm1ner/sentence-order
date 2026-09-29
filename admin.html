@@ -100,29 +100,29 @@
   .pdrawer-bg{position:fixed;inset:0;background:rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .2s;z-index:40}
   .pdrawer{position:fixed;top:0;right:0;bottom:0;width:min(640px,100%);background:var(--card);border-left:1px solid var(--line);
     box-shadow:var(--shadow);padding:20px 22px 40px;overflow:auto;transform:translateX(105%);transition:transform .22s;z-index:41}
-  .pform-on #pform,.pk-on #pk{transform:none}
-  .pform-on #pformBg,.pk-on #pkBg{opacity:1;pointer-events:auto}
-  /* 숙제 탭: 지문 고르기 서랍 */
-  #pk{display:flex;flex-direction:column;gap:10px;overflow:hidden;padding-bottom:18px}
-  .pkbody{display:grid;grid-template-columns:210px 1fr;gap:10px;flex:1;min-height:0}
-  .pklist{overflow:auto;border:1px solid var(--line);border-radius:14px;padding:6px}
-  .pkhead{display:flex;align-items:center;gap:8px;padding:6px 8px 8px;font-size:13px;color:var(--sub)}
-  .pkrow{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:14px;margin:0;color:var(--ink)}
-  .pkrow:hover{background:var(--bg)}
-  .pkrow input{width:auto;margin:0}
-  .pkrow .c{margin-left:auto;font-size:11px;color:var(--sub);white-space:nowrap}
-  .pkrow.dis{opacity:.45;cursor:default}
-  .pkfoot{display:flex;align-items:center;gap:8px}
-  .pkfoot .n{margin-right:auto;font-size:13px;font-weight:700;color:var(--accent)}
-  .pkfield{width:100%;display:flex;align-items:center;gap:8px;text-align:left;border:1px solid var(--line);border-radius:11px;
+  .pform-on #pform,.hp-on #hp{transform:none}
+  .pform-on #pformBg,.hp-on #hpBg{opacity:1;pointer-events:auto}
+  /* 숙제 탭: 지문 고르기 서랍 (루틴 탭 pk 고르기와 이름이 겹치지 않게 hp) */
+  #hp{display:flex;flex-direction:column;gap:10px;overflow:hidden;padding-bottom:18px}
+  .hpbody{display:grid;grid-template-columns:210px 1fr;gap:10px;flex:1;min-height:0}
+  .hplist{overflow:auto;border:1px solid var(--line);border-radius:14px;padding:6px}
+  .hphead{display:flex;align-items:center;gap:8px;padding:6px 8px 8px;font-size:13px;color:var(--sub)}
+  .hprow{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:14px;margin:0;color:var(--ink)}
+  .hprow:hover{background:var(--bg)}
+  .hprow input{width:auto;margin:0}
+  .hprow .c{margin-left:auto;font-size:11px;color:var(--sub);white-space:nowrap}
+  .hprow.dis{opacity:.45;cursor:default}
+  .hpfoot{display:flex;align-items:center;gap:8px}
+  .hpfoot .n{margin-right:auto;font-size:13px;font-weight:700;color:var(--accent)}
+  .hpfield{width:100%;display:flex;align-items:center;gap:8px;text-align:left;border:1px solid var(--line);border-radius:11px;
     padding:12px;font-size:15px;background:var(--card);color:var(--ink);cursor:pointer}
-  .pkfield:hover{border-color:var(--accent)}
-  .pkfield .ph{color:var(--sub)}
-  .pkfield .go{margin-left:auto;color:var(--sub);flex:0 0 auto}
-  .pkfield .sel{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .hpfield:hover{border-color:var(--accent)}
+  .hpfield .ph{color:var(--sub)}
+  .hpfield .go{margin-left:auto;color:var(--sub);flex:0 0 auto}
+  .hpfield .sel{display:flex;flex-direction:column;gap:2px;min-width:0}
   @media (max-width:760px){
-    .pkbody{grid-template-columns:1fr;grid-template-rows:auto 1fr}
-    .pkbody .ptree{max-height:170px}
+    .hpbody{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+    .hpbody .ptree{max-height:170px}
   }
   .pdh{display:flex;align-items:center;margin-bottom:6px}
   .pdh b{font-size:16px}
@@ -366,7 +366,7 @@
               <div><label>차시 라벨 (선택)</label><input id="hwRound" placeholder="예: 7월 4주차"></div>
             </div>
             <label>지문 <span class="hint">(여러 개 골라도 돼요)</span></label>
-            <button type="button" class="pkfield" id="hwPassageBtn" onclick="openHwPicker()"></button>
+            <button type="button" class="hpfield" id="hwPassageBtn" onclick="openHwPicker()"></button>
             <div class="row" style="margin-top:14px;align-items:end">
               <div>
                 <label>시킬 것</label>
@@ -383,17 +383,17 @@
           <h3 class="subt">내준 숙제</h3>
           <div id="hwList"></div>
 
-          <div class="pdrawer-bg" id="pkBg" onclick="closePicker()"></div>
-          <aside class="pdrawer" id="pk" aria-label="지문 고르기">
-            <div class="pdh"><b id="pkTitle">지문 고르기</b><button class="btn ghost small" style="margin-left:auto" onclick="closePicker()">닫기</button></div>
-            <input id="pkQ" placeholder="검색 (예: 3강, 9월 모평, 2024)" autocomplete="off" oninput="pk.q=this.value;renderPickerList()">
-            <div class="pkbody">
-              <nav class="ptree" id="pkTree" aria-label="교재와 강"></nav>
-              <div class="pklist" id="pkList"></div>
+          <div class="pdrawer-bg" id="hpBg" onclick="closeHp()"></div>
+          <aside class="pdrawer" id="hp" aria-label="지문 고르기">
+            <div class="pdh"><b id="hpTitle">지문 고르기</b><button class="btn ghost small" style="margin-left:auto" onclick="closeHp()">닫기</button></div>
+            <input id="hpQ" placeholder="검색 (예: 3강, 9월 모평, 2024)" autocomplete="off" oninput="hp.q=this.value;renderHpList()">
+            <div class="hpbody">
+              <nav class="ptree" id="hpTree" aria-label="교재와 강"></nav>
+              <div class="hplist" id="hpList"></div>
             </div>
-            <div class="pkfoot"><span class="n" id="pkCnt"></span>
-              <button class="btn ghost small" onclick="pk.sel.clear();renderPickerList()">비우기</button>
-              <button class="btn primary small" onclick="pkDone()">고르기 완료</button></div>
+            <div class="hpfoot"><span class="n" id="hpCnt"></span>
+              <button class="btn ghost small" onclick="hp.sel.clear();renderHpList()">비우기</button>
+              <button class="btn primary small" onclick="hpDone()">고르기 완료</button></div>
           </aside>
         </section>
 
@@ -957,7 +957,7 @@ function hwEditAdd(){
   const e=gHwEdit;
   if(!e.addSteps.length){ msg('hwEdMsg','순서/독해 중 최소 하나는 체크해야 해요','err'); return; }
   const have=e.rows.filter(r=>!r.del).map(r=>r.passage_id);
-  openPicker([],ids=>{
+  openHp([],ids=>{
     for(const pid of ids) for(const sid of e.students){
       if(e.rows.some(r=>!r.del&&r.student_id===sid&&r.passage_id===pid)) continue;
       e.rows.push({ id:null, student_id:sid, passage_id:pid, steps:[...e.addSteps].sort((a,b)=>a==='order'?-1:1), del:false });
@@ -1021,15 +1021,15 @@ async function saveAssignment(){
 // ---------- 지문 고르기 서랍 ----------
 // 지문 탭과 같은 교재·강 탐색기로 고르고, 여러 개를 체크해 한 번에 넘긴다
 let hwPicked=[];
-const pk={ sel:new Set(), cur:null, open:new Set(), q:'', onDone:null, have:new Set() };
-function pkSort(ids){
+const hp={ sel:new Set(), cur:null, open:new Set(), q:'', onDone:null, have:new Set() };
+function hpSort(ids){
   return ids.map(id=>allP.find(p=>p.id===id)).filter(Boolean)
     .sort((a,b)=>nat(a.book,b.book)||nat(a.unit,b.unit)||nat(a.title,b.title)).map(p=>p.id);
 }
 // 고른 지문을 "교재 · 강 5, 6, 7" 묶음으로
-function pkGroupLabels(ids){
+function hpGroupLabels(ids){
   const m=new Map();
-  for(const id of pkSort(ids)){
+  for(const id of hpSort(ids)){
     const p=allP.find(x=>x.id===id); const k=shortBook(p.book)+(p.unit?' · '+p.unit:'');
     if(!m.has(k)) m.set(k,[]); m.get(k).push(p.title);
   }
@@ -1039,59 +1039,59 @@ function renderHwPicked(){
   const el=$('hwPassageBtn'); if(!el) return;
   const arrow='<span class="go">›</span>';
   if(!hwPicked.length){ el.innerHTML='<span class="ph">눌러서 교재·강에서 고르기</span>'+arrow; return; }
-  el.innerHTML=`<span class="sel">${pkGroupLabels(hwPicked).map(s=>`<span>${esc(s)}</span>`).join('')}</span>`
+  el.innerHTML=`<span class="sel">${hpGroupLabels(hwPicked).map(s=>`<span>${esc(s)}</span>`).join('')}</span>`
     +`<span class="cnt" style="margin-left:auto;font-size:12px;color:var(--accent);font-weight:700;white-space:nowrap">${hwPicked.length}개</span>`+arrow;
 }
-function openHwPicker(){ openPicker(hwPicked,ids=>{ hwPicked=ids; renderHwPicked(); },[],'지문 고르기'); }
-function openPicker(initial,onDone,have,title){
-  pk.sel=new Set(initial||[]); pk.onDone=onDone; pk.have=new Set(have||[]); pk.q='';
-  $('pkQ').value=''; $('pkTitle').textContent=title||'지문 고르기';
+function openHwPicker(){ openHp(hwPicked,ids=>{ hwPicked=ids; renderHwPicked(); },[],'지문 고르기'); }
+function openHp(initial,onDone,have,title){
+  hp.sel=new Set(initial||[]); hp.onDone=onDone; hp.have=new Set(have||[]); hp.q='';
+  $('hpQ').value=''; $('hpTitle').textContent=title||'지문 고르기';
   const groups=buildGroups(allP);
-  const first=allP.find(p=>p.id===[...pk.sel][0]);
-  if(first) pk.cur={b:first.book||'미분류', u:first.unit||''};
-  else if(!pk.cur||!groups.has(pk.cur.b)) pk.cur=pSel?{...pSel}:null;
-  if(!pk.cur&&allP.length){ const last=[...allP].sort((x,y)=>String(y.created_at).localeCompare(String(x.created_at)))[0]; pk.cur={b:last.book||'미분류',u:last.unit||''}; }
-  if(pk.cur) pk.open.add(pk.cur.b);
-  renderPickerList();
-  document.body.classList.add('pk-on');
+  const first=allP.find(p=>p.id===[...hp.sel][0]);
+  if(first) hp.cur={b:first.book||'미분류', u:first.unit||''};
+  else if(!hp.cur||!groups.has(hp.cur.b)) hp.cur=pSel?{...pSel}:null;
+  if(!hp.cur&&allP.length){ const last=[...allP].sort((x,y)=>String(y.created_at).localeCompare(String(x.created_at)))[0]; hp.cur={b:last.book||'미분류',u:last.unit||''}; }
+  if(hp.cur) hp.open.add(hp.cur.b);
+  renderHpList();
+  document.body.classList.add('hp-on');
 }
-function closePicker(){ document.body.classList.remove('pk-on'); }
-function pkPick(b,u){ pk.cur=treeNext(buildGroups(allP),pk.cur,pk.open,b,u); pk.q=''; $('pkQ').value=''; renderPickerList(); }
-function renderPickerList(){
+function closeHp(){ document.body.classList.remove('hp-on'); }
+function hpPick(b,u){ hp.cur=treeNext(buildGroups(allP),hp.cur,hp.open,b,u); hp.q=''; $('hpQ').value=''; renderHpList(); }
+function renderHpList(){
   const groups=buildGroups(allP);
-  if(!pk.cur||!groups.has(pk.cur.b)){ $('pkTree').innerHTML=''; $('pkList').innerHTML='<p class="sub">등록된 지문이 없어요</p>'; return; }
-  if(pk.cur.u!==null&&!(pk.cur.u in groups.get(pk.cur.b))) pk.cur.u=null;
-  $('pkTree').innerHTML=treeHTML(groups,pk.cur,pk.open,'pkPick');
-  const q=pk.q.trim().toLowerCase();
+  if(!hp.cur||!groups.has(hp.cur.b)){ $('hpTree').innerHTML=''; $('hpList').innerHTML='<p class="sub">등록된 지문이 없어요</p>'; return; }
+  if(hp.cur.u!==null&&!(hp.cur.u in groups.get(hp.cur.b))) hp.cur.u=null;
+  $('hpTree').innerHTML=treeHTML(groups,hp.cur,hp.open,'hpPick');
+  const q=hp.q.trim().toLowerCase();
   let list, head;
   if(q){
     list=[...allP].sort((a,b)=>nat(a.book,b.book)||nat(a.unit,b.unit)||nat(a.title,b.title))
       .filter(p=>[p.book,shortBook(p.book),p.unit,p.title].join(' ').toLowerCase().includes(q));
     head=`검색 결과 ${list.length}개`;
   }else{
-    const units=groups.get(pk.cur.b);
-    const shown=pk.cur.u===null?Object.keys(units).sort(nat):[pk.cur.u];
+    const units=groups.get(hp.cur.b);
+    const shown=hp.cur.u===null?Object.keys(units).sort(nat):[hp.cur.u];
     list=shown.flatMap(u=>units[u]);
-    head=esc(shortBook(pk.cur.b)+(pk.cur.u?' · '+pk.cur.u:''));
+    head=esc(shortBook(hp.cur.b)+(hp.cur.u?' · '+hp.cur.u:''));
   }
-  const free=list.filter(p=>!pk.have.has(p.id));
-  const allOn=free.length&&free.every(p=>pk.sel.has(p.id));
-  let h=`<div class="pkhead"><b style="color:var(--ink)">${head}</b>`
-    +(free.length?`<button class="btn ghost small" style="margin-left:auto" onclick="pkAll(${allOn?0:1})">${allOn?'전부 빼기':'전부 고르기'}</button>`:'')+`</div>`;
+  const free=list.filter(p=>!hp.have.has(p.id));
+  const allOn=free.length&&free.every(p=>hp.sel.has(p.id));
+  let h=`<div class="hphead"><b style="color:var(--ink)">${head}</b>`
+    +(free.length?`<button class="btn ghost small" style="margin-left:auto" onclick="hpAll(${allOn?0:1})">${allOn?'전부 빼기':'전부 고르기'}</button>`:'')+`</div>`;
   h+=list.map(p=>{
-    const had=pk.have.has(p.id);
+    const had=hp.have.has(p.id);
     const nm=q?`${esc(shortBook(p.book))}${p.unit?' · '+esc(p.unit):''} · <b>${esc(p.title)}</b>`:`<b>${esc(p.title)}</b>`;
-    return `<label class="pkrow ${had?'dis':''}"><input type="checkbox" ${had||pk.sel.has(p.id)?'checked':''} ${had?'disabled':''} onchange="pkToggle('${p.id}',this.checked)">`
+    return `<label class="hprow ${had?'dis':''}"><input type="checkbox" ${had||hp.sel.has(p.id)?'checked':''} ${had?'disabled':''} onchange="hpToggle('${p.id}',this.checked)">`
       +`<span>${nm}</span><span class="c">${had?'이미 들어 있음':'문장 '+p.sentences.length}</span></label>`;
   }).join('')||'<p class="sub" style="padding:8px">맞는 지문이 없어요</p>';
-  $('pkList').innerHTML=h;
-  $('pkList').dataset.ids=free.map(p=>p.id).join(',');
-  $('pkCnt').textContent=pk.sel.size?`${pk.sel.size}개 고름`:'';
+  $('hpList').innerHTML=h;
+  $('hpList').dataset.ids=free.map(p=>p.id).join(',');
+  $('hpCnt').textContent=hp.sel.size?`${hp.sel.size}개 고름`:'';
 }
-function pkToggle(id,on){ if(on) pk.sel.add(id); else pk.sel.delete(id); renderPickerList(); }
-function pkAll(on){ for(const id of ($('pkList').dataset.ids||'').split(',').filter(Boolean)) on?pk.sel.add(id):pk.sel.delete(id); renderPickerList(); }
-function pkDone(){ const ids=pkSort([...pk.sel]); closePicker(); if(pk.onDone) pk.onDone(ids); }
-document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&document.body.classList.contains('pk-on')) closePicker(); });
+function hpToggle(id,on){ if(on) hp.sel.add(id); else hp.sel.delete(id); renderHpList(); }
+function hpAll(on){ for(const id of ($('hpList').dataset.ids||'').split(',').filter(Boolean)) on?hp.sel.add(id):hp.sel.delete(id); renderHpList(); }
+function hpDone(){ const ids=hpSort([...hp.sel]); closeHp(); if(hp.onDone) hp.onDone(ids); }
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&document.body.classList.contains('hp-on')) closeHp(); });
 
 async function delAssignment(id){
   if(!confirm('이 숙제를 삭제할까요?')) return;
