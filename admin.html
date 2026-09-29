@@ -27,7 +27,7 @@
   body{margin:0;background:var(--bg);color:var(--ink);
     font-family:'87mmDailyRegular',-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR",sans-serif;line-height:1.6}
   .wm{font-family:'HsSummerWaterLight',Batang,serif;font-weight:normal;color:var(--accent);letter-spacing:.08em}
-  .wrap{max-width:900px;margin:0 auto;padding:24px 18px 60px}
+  .wrap{max-width:1180px;margin:0 auto;padding:24px 18px 60px}
   h1{font-size:19px;margin:0 0 2px}
   .sub{font-size:13px;color:var(--sub);margin:0 0 22px}
   label{display:block;font-size:13px;color:var(--sub);margin:14px 2px 5px}
@@ -307,7 +307,6 @@
                 <label>교재</label>
                 <input id="book" placeholder="예: 수능특강" autocomplete="off" list="bookList" oninput="renderUnitChips()">
                 <datalist id="bookList"></datalist>
-                <div class="chips" id="bookChips"></div>
               </div>
               <div>
                 <label>강 · 챕터</label>
@@ -315,6 +314,7 @@
                 <datalist id="unitList"></datalist>
               </div>
             </div>
+            <div class="chips" id="bookChips" style="margin-top:8px"></div>
             <label>지문 번호 · 제목</label>
             <input id="title" placeholder="예: 2번 지문">
 
