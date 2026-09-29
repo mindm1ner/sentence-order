@@ -783,6 +783,7 @@ function renderHwList(){
   }
   let html='';
   for(const [round,list] of groups){
+    if(gHwEdit&&gHwEdit.round===round){ html+=hwEditCard(); continue; }
     const doneN=list.filter(a=>hwStatus(a).done).length;
     const pct=Math.round(doneN/list.length*100);
     const rows=list.map(a=>{
@@ -805,12 +806,122 @@ function renderHwList(){
         <b style="font-size:14px">${esc(round)}</b>
         <span style="flex:1;height:7px;background:var(--bg);border-radius:999px;overflow:hidden"><span style="display:block;height:100%;width:${pct}%;background:var(--accent);border-radius:999px"></span></span>
         <span style="font-size:12px;color:var(--sub);font-weight:700">${doneN}/${list.length} 완료</span>
+        <button class="btn ghost small" onclick="editRound('${jsStr(round)}')">수정</button>
         <button class="btn ghost small" onclick="reuseRound('${jsStr(round)}')">이 차시 재사용</button>
       </div>
       ${rows}
     </div>`;
   }
   $('hwList').innerHTML=html;
+}
+
+// ---------- 숙제 수정 (차시 단위) ----------
+// 바꾼 내용은 gHwEdit에 모아 두었다가 [저장]에서 한 번에 반영한다. [취소]면 버린다.
+let gHwEdit=null;
+function editRound(round){
+  const list=gAsg.filter(a=>(a.round_label||'차시 미지정')===round);
+  if(!list.length) return;
+  gHwEdit={ round, label:list[0].round_label||'', due:(list.find(a=>a.due_date)||{}).due_date||'',
+    students:[...new Set(list.map(a=>a.student_id))],
+    rows:list.map(a=>({ id:a.id, student_id:a.student_id, passage_id:a.passage_id, steps:[...(a.steps||[])], del:false })),
+    q:'', addPid:'', addSteps:['reading'] };
+  renderHwList();
+}
+function hwEditCard(){
+  const e=gHwEdit;
+  const stepBox=(checked,on)=>`<input type="checkbox" ${checked?'checked':''} onchange="${on}" style="width:auto;margin:0">`;
+  const rows=e.rows.map((r,i)=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 2px;border-top:1px solid #eee9df;font-size:13px;${r.del?'opacity:.45;text-decoration:line-through':''}">
+      ${e.students.length>1?`<b style="flex:0 0 auto">${esc(stuNameOf(r.student_id))}</b>`:''}
+      <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.id?'':'<b style="color:var(--accent)">새 </b>'}${pLabelOf(r.passage_id)}</span>
+      <label style="display:flex;align-items:center;gap:4px;margin:0;font-size:12px;color:var(--ink);white-space:nowrap">${stepBox(r.steps.includes('order'),`hwEditStep(${i},'order',this.checked)`)}순서</label>
+      <label style="display:flex;align-items:center;gap:4px;margin:0;font-size:12px;color:var(--ink);white-space:nowrap">${stepBox(r.steps.includes('reading'),`hwEditStep(${i},'reading',this.checked)`)}독해</label>
+      <a style="flex:0 0 auto;color:${r.del?'var(--accent)':'#c0584b'};cursor:pointer;font-size:12px;text-decoration:none;white-space:nowrap" onclick="hwEditDel(${i})">${r.del?'되살리기':'빼기'}</a>
+    </div>`).join('');
+  const q=e.q.trim().toLowerCase();
+  const opts=[...allP].sort((a,b)=>nat(a.book,b.book)||nat(a.unit,b.unit)||nat(a.title,b.title))
+    .map(p=>({ id:p.id, t:[p.book,p.unit,p.title].filter(Boolean).join(' · ') }))
+    .filter(p=>!q||p.t.toLowerCase().includes(q));
+  const sel='border:1px solid var(--line);border-radius:11px;padding:10px;font-size:14px;font-family:inherit;background:var(--card)';
+  return `<div class="card" style="margin-bottom:12px;border-color:var(--accent)">
+    <div class="row" style="align-items:end">
+      <div><label>숙제 이름</label><input id="hwEdLabel" value="${esc(e.label)}" placeholder="예: 9/27" oninput="gHwEdit.label=this.value"></div>
+      <div><label>마감일</label><input id="hwEdDue" type="date" value="${esc(e.due)}" oninput="gHwEdit.due=this.value"></div>
+    </div>
+    <div style="margin-top:14px">${rows||'<p class="sub" style="margin:8px 0">지문이 없어요</p>'}</div>
+    <div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)">
+      <label>지문 추가</label>
+      <input placeholder="검색 (예: 수능특강 3강)" value="${esc(e.q)}" oninput="gHwEdit.q=this.value;hwEditFilter()" style="margin-bottom:8px">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <select id="hwEdAdd" onchange="gHwEdit.addPid=this.value" style="flex:1;min-width:200px;${sel}">
+          ${opts.map(p=>`<option value="${p.id}" ${p.id===e.addPid?'selected':''}>${esc(p.t)}</option>`).join('')||'<option value="">검색 결과 없음</option>'}
+        </select>
+        <label style="display:flex;align-items:center;gap:4px;margin:0;font-size:13px;color:var(--ink);white-space:nowrap">${stepBox(e.addSteps.includes('order'),`hwEditAddStep('order',this.checked)`)}순서</label>
+        <label style="display:flex;align-items:center;gap:4px;margin:0;font-size:13px;color:var(--ink);white-space:nowrap">${stepBox(e.addSteps.includes('reading'),`hwEditAddStep('reading',this.checked)`)}독해</label>
+        <button class="btn ghost small" onclick="hwEditAdd()">추가</button>
+      </div>
+    </div>
+    <div id="hwEdMsg"></div>
+    <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end">
+      <button class="btn ghost small" onclick="gHwEdit=null;renderHwList()">취소</button>
+      <button class="btn primary small" onclick="saveRoundEdit()">저장</button>
+    </div>
+  </div>`;
+}
+function hwEditFilter(){   // 검색칸 포커스를 잃지 않게 select만 다시 그린다
+  const pos=document.activeElement.selectionStart;
+  renderHwList();
+  const inp=[...document.querySelectorAll('#hwList input')].find(x=>x.placeholder.startsWith('검색'));
+  if(inp){ inp.focus(); inp.setSelectionRange(pos,pos); }
+}
+function hwEditStep(i,s,on){
+  const r=gHwEdit.rows[i];
+  r.steps=on?[...new Set([...r.steps,s])]:r.steps.filter(x=>x!==s);
+  r.steps.sort((a,b)=>a==='order'?-1:1);
+}
+function hwEditAddStep(s,on){
+  const e=gHwEdit; e.addSteps=on?[...new Set([...e.addSteps,s])]:e.addSteps.filter(x=>x!==s);
+}
+function hwEditDel(i){
+  const r=gHwEdit.rows[i];
+  if(!r.id) gHwEdit.rows.splice(i,1); else r.del=!r.del;
+  renderHwList();
+}
+function hwEditAdd(){
+  const e=gHwEdit, pid=$('hwEdAdd').value;
+  if(!pid){ msg('hwEdMsg','지문을 고르세요','err'); return; }
+  if(!e.addSteps.length){ msg('hwEdMsg','순서/독해 중 최소 하나는 체크해야 해요','err'); return; }
+  let n=0;
+  for(const sid of e.students){
+    if(e.rows.some(r=>!r.del&&r.student_id===sid&&r.passage_id===pid)) continue;
+    e.rows.push({ id:null, student_id:sid, passage_id:pid, steps:[...e.addSteps].sort((a,b)=>a==='order'?-1:1), del:false }); n++;
+  }
+  e.addPid=pid;
+  renderHwList();
+  if(!n) msg('hwEdMsg','이미 들어 있는 지문이에요','err');
+}
+async function saveRoundEdit(){
+  const e=gHwEdit;
+  const live=e.rows.filter(r=>!r.del);
+  if(live.some(r=>!r.steps.length)){ msg('hwEdMsg','순서/독해가 하나도 체크 안 된 지문이 있어요','err'); return; }
+  const round_label=e.label.trim()||null, due_date=e.due||null;
+  const orig=new Map(gAsg.map(a=>[a.id,a]));
+  const ops=[];
+  for(const r of e.rows){
+    if(r.del&&r.id){ ops.push(db.from('assignments').delete().eq('id',r.id)); continue; }
+    if(r.del) continue;
+    if(!r.id){ ops.push(db.from('assignments').insert({ student_id:r.student_id, passage_id:r.passage_id, steps:r.steps, round_label, due_date })); continue; }
+    const o=orig.get(r.id);
+    if(!o) continue;   // 그 사이 다른 곳에서 지워진 행
+    if(o.round_label!==round_label||o.due_date!==due_date||(o.steps||[]).join()!==r.steps.join())
+      ops.push(db.from('assignments').update({ round_label, due_date, steps:r.steps }).eq('id',r.id));
+  }
+  if(!ops.length){ gHwEdit=null; renderHwList(); return; }
+  const res=await Promise.all(ops);
+  const err=res.find(x=>x.error);
+  if(err){ msg('hwEdMsg','저장 실패: '+esc(err.error.message),'err'); return; }
+  gHwEdit=null;
+  msg('hwMsg','숙제를 고쳤어요 ✓','ok');
+  loadHomework();
 }
 async function reuseRound(round){
   const list=gAsg.filter(a=>(a.round_label||'차시 미지정')===round);
