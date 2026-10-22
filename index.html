@@ -401,10 +401,11 @@
   .crail{flex:0 0 28px;display:flex;flex-direction:column;align-items:center}
   .cnd{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;
     font-size:12px;font-weight:800;background:var(--line);color:var(--sub);flex:0 0 auto}
-  .cnd.done{background:var(--accent);color:#fff}
+  /* 전역 .done(완료 배너)과 겹치지 않게 fin */
+  .cnd.fin{background:var(--accent);color:#fff}
   .cnd.now{background:var(--card);border:2px solid var(--accent);color:var(--accent)}
   .cbar{width:2px;flex:1;background:var(--line);min-height:14px}
-  .cbar.done{background:var(--accent)}
+  .cbar.fin{background:var(--accent)}
   .cbody{flex:1;min-width:0;padding-bottom:12px}
   /* AI 진단 */
   .fb{border:1px solid var(--line);border-left:4px solid var(--line);background:var(--card);
@@ -564,6 +565,15 @@
   .hwrow .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .hwrow .st{font-size:12px;color:var(--sub);flex:0 0 auto}
   .hwrow .chev{color:var(--grip);font-size:18px;flex:0 0 auto}
+  /* 숙제 오답노트 */
+  .wn-q{margin-bottom:10px}
+  .wn-k{font-weight:600;font-size:14px;margin-bottom:10px}
+  .wn-nums{display:flex;gap:8px}
+  .wn-n{flex:1;min-width:0;height:44px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);
+    font:inherit;font-size:18px;cursor:pointer}
+  .wn-n.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  .wn-fold{border-top:0;margin:0 2px 8px;width:auto}
+  .wn-p{margin-bottom:12px;font-size:14px;line-height:1.75}
   /* 독해 단계선 */
   .rsteps{display:flex;flex-direction:column;margin-top:4px}
   .rstep{display:grid;grid-template-columns:16px minmax(0,1fr);column-gap:12px}
@@ -738,6 +748,8 @@ let qDeck=[], qIdx=0, qCur=null, qRight=[], qWrongList=[], qSoftList=[], qActive
 let myFeedback=[];
 // 숙제·코스
 let myAsg=[], curCourse=null;
+// 숙제 오답노트 (지문마다 교사가 켤 때만 독해 앞에 붙는다)
+let myWn=[], wnMissing=false, wnDraft=null;
 
 function nat(a,b){return String(a||'').localeCompare(String(b||''),'ko',{numeric:true,sensitivity:'base'});}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -862,7 +874,7 @@ function $(id){return document.getElementById(id);}
 let curTab='home';
 async function loadData(){
   app.innerHTML=`<div class="loading"><span class="spinner"></span>불러오는 중…</div>`;
-  const [pRes,aRes,rRes,vRes,fRes,gRes,dRes,poRes]=await Promise.all([
+  const [pRes,aRes,rRes,vRes,fRes,gRes,dRes,poRes,wnRes]=await Promise.all([
     db.from('passages').select('*'),
     db.from('attempts').select('*').order('created_at',{ascending:false}),
     db.from('readings').select('*').order('created_at',{ascending:false}),
@@ -870,9 +882,12 @@ async function loadData(){
     db.from('reading_feedback').select('*').order('created_at',{ascending:false}),
     db.from('assignments').select('*').order('created_at',{ascending:false}),
     db.from('routine_days').select('*').eq('user_id',session.user.id),
-    db.from('routine_pool').select('*').eq('student_id',session.user.id)
+    db.from('routine_pool').select('*').eq('student_id',session.user.id),
+    db.from('wrong_notes').select('*').eq('user_id',session.user.id).order('created_at',{ascending:false})
   ]);
   myAsg=(!gRes.error&&gRes.data)?gRes.data.filter(a=>a.student_id===session.user.id):[];
+  wnMissing=!!wnRes.error;                             // wrong_notes 표 없으면 오답노트 단계는 건너뛴다
+  myWn=(!wnRes.error&&wnRes.data)?wnRes.data:[];
   if(pRes.error){ app.innerHTML=`<div class="empty">불러오기 실패 😢<br>${pRes.error.message}</div>`; return; }
   allP=pRes.data||[];
   myAtts=(!aRes.error&&aRes.data)?aRes.data:[];
@@ -1285,10 +1300,18 @@ function streakCount(days){
   while(days.has(dstr(d))){ n++; d.setDate(d.getDate()-1); }
   return n;
 }
+// 표가 없으면 오답노트 단계를 빼고 본다 (숙제가 영영 안 끝나는 것 방지)
+function asgSteps(a){ const s=(a&&a.steps)||[]; return wnMissing?s.filter(x=>x!=='wrongnote'):s; }
+function wnFor(a){
+  if(!a) return null;
+  return myWn.find(n=>n.assignment_id===a.id)
+    ||myWn.find(n=>n.passage_id===a.passage_id&&new Date(n.created_at)>=new Date(a.created_at))||null;
+}
 function asgStatus(a){
   const after=t=>t&&new Date(t)>=new Date(a.created_at);
-  const steps=a.steps||[];
+  const steps=asgSteps(a);
   const st={};
+  if(steps.includes('wrongnote')) st.wrongnote=!!wnFor(a);
   if(steps.includes('order'))
     st.order=myAtts.some(x=>x.user_id===session.user.id&&x.passage_id===a.passage_id&&x.is_correct&&after(x.created_at));
   if(steps.includes('reading'))
@@ -1296,7 +1319,7 @@ function asgStatus(a){
   st.done=steps.length>0&&steps.every(s=>st[s]);
   return st;
 }
-function stepName(s){ return s==='order'?'순서':'독해'; }
+function stepName(s){ return s==='wrongnote'?'오답노트':s==='order'?'순서':'독해'; }
 function renderHome(){
   // 루틴 표가 살아 있으면 스트릭은 루틴 기준. 없으면 예전 활동 기준으로 돈다.
   const days=routineMissing?activityDays():routineDoneDays(), sk=streakCount(days);
@@ -1370,7 +1393,7 @@ function homeworkCardsHTML(){
       dueTxt=dd<0?`마감 ${-dd}일 지남`:dd===0?'마감 오늘':dd===1?'마감 내일':`마감 ${due.slice(5).replace('-','/')}`;
     }
     const pct=Math.round(fin.length/list.length*100);
-    const stepsOf=a=>(a.steps||[]).map(stepName).join('+');
+    const stepsOf=a=>asgSteps(a).map(stepName).join('+');
     const [first,...rest]=left;
     const fp=allP.find(p=>p.id===first.passage_id);
     h+=`<div class="hwc"><div class="hh"><h3>${esc(round==='숙제'?'숙제':round+' 숙제')}</h3>`
@@ -1488,8 +1511,9 @@ function renderCourse(){
   removeBar(); showTabBar(true);
   const uid=session.user.id;
   const asg=asgForPassage(p.id);
-  const steps=asg?(asg.steps||[]):['order','reading'];
+  const steps=asg?asgSteps(asg):['order','reading'];
   const label=[p.book,p.unit,p.title].filter(Boolean).join(' · ');
+  const wnNeed=steps.includes('wrongnote'), wn=wnNeed?wnFor(asg):null, wnDone=!wnNeed||!!wn;
   const orderDone=myAtts.some(x=>x.user_id===uid&&x.passage_id===p.id&&x.is_correct&&(!asg||new Date(x.created_at)>=new Date(asg.created_at)));
   const readDone=myReadings.some(r=>r.user_id===uid&&r.passage_id===p.id&&!r.is_retry&&(!asg||new Date(r.created_at)>=new Date(asg.created_at)));
   const latestFb=myFeedback.find(f=>f.passage_id===p.id);
@@ -1499,20 +1523,30 @@ function renderCourse(){
     <div class="hint" style="margin:0 2px 14px">${asg?`숙제${asg.round_label?` · ${esc(asg.round_label)}`:''}${asg.due_date?` · ~${esc(asg.due_date.slice(5))}`:''}`:'자유 학습'} · 문장 ${p.sentences.length}개</div>`;
   let n=0; const N=steps.length+(latestFb?1:0)+(pVocab.length?1:0);
   const rail=(state,inner,last)=>`<div class="cstep">
-    <div class="crail"><div class="cnd ${state}">${state==='done'?'✓':++n}</div>${last?'':`<div class="cbar ${state==='done'?'done':''}"></div>`}</div>
+    <div class="crail"><div class="cnd ${state==='done'?'fin':state}">${++n,state==='done'?'✓':n}</div>${last?'':`<div class="cbar ${state==='done'?'fin':''}"></div>`}</div>
     <div class="cbody">${inner}</div></div>`;
   let idx=0; const total=steps.length+2;
   const parts=[];
+  if(wnNeed){
+    parts.push({state:wn?'done':'now',inner:`<div class="card" style="padding:12px 14px${wn?';opacity:.75':''}">
+      <div style="font-weight:700;font-size:14px">오답노트</div>
+      <div class="hint" style="margin:2px 0 ${wn?'0':'10px'}">${wn?`처음 고른 답 ${esc(wn.chosen||'')}`:'처음 고른 답 · 고른 이유 · 고칠 점'}</div>
+      ${wn?`<button class="btn ghost" style="margin-top:8px;padding:8px 14px;font-size:13px" onclick="openWrongNote('${p.id}')">다시 보기</button>`
+        :`<button class="btn primary full" style="margin-top:0" onclick="openWrongNote('${p.id}')">쓰기</button>`}</div>`});
+  }
+  const locked=`<div class="hint" style="margin:2px 0 0">오답노트를 쓰면 열려요</div></div>`;
   if(steps.includes('order')){
-    parts.push({state:orderDone?'done':'now',inner:`<div class="card" style="padding:12px 14px${orderDone?';opacity:.75':''}">
+    parts.push({state:orderDone?'done':(wnDone?'now':'wait'),inner:!wnDone?`<div class="card" style="padding:12px 14px;opacity:.65">
+      <div style="font-weight:700;font-size:14px">순서 맞추기</div>${locked}`:`<div class="card" style="padding:12px 14px${orderDone?';opacity:.75':''}">
       <div style="font-weight:700;font-size:14px">순서 맞추기</div>
       <div class="hint" style="margin:2px 0 ${orderDone?'0':'10px'}">${orderDone?'완료했어요':'흩어진 문장을 배열해요'}</div>
       ${orderDone?'':`<button class="btn primary full" style="margin-top:0" onclick="pick('${p.id}')">풀기</button>`}
       ${orderDone?`<button class="btn ghost" style="margin-top:8px;padding:8px 14px;font-size:13px" onclick="pick('${p.id}')">다시 풀기</button>`:''}</div>`});
   }
   if(steps.includes('reading')){
-    const active=!steps.includes('order')||orderDone;
-    parts.push({state:readDone?'done':(active?'now':'wait'),inner:`<div class="card" style="padding:12px 14px${readDone?';opacity:.75':''}">
+    const active=wnDone&&(!steps.includes('order')||orderDone);
+    parts.push({state:readDone?'done':(active?'now':'wait'),inner:!wnDone?`<div class="card" style="padding:12px 14px;opacity:.65">
+      <div style="font-weight:700;font-size:14px">한줄 독해</div>${locked}`:`<div class="card" style="padding:12px 14px${readDone?';opacity:.75':''}">
       <div style="font-weight:700;font-size:14px">한줄 독해</div>
       <div class="hint" style="margin:2px 0 ${readDone?'0':'10px'}">${readDone?'제출 완료! AI 진단을 확인해요':'해석하고, 쉬운 내 말로 바꾸기'}</div>
       ${readDone?`<button class="btn ghost" style="margin-top:8px;padding:8px 14px;font-size:13px" onclick="pickRead('${p.id}')">다시 독해하기</button>`
@@ -1528,6 +1562,75 @@ function renderCourse(){
     ${pVocab.length?`<button class="btn ghost" style="margin-top:8px;padding:8px 14px;font-size:13px" onclick="navTab('vocab')">단어장 열기</button>`:''}</div>`});
   parts.forEach((pt,i)=>{ html+=rail(pt.state,pt.inner,i===parts.length-1); });
   app.innerHTML=html+`<div style="height:20px"></div>`;
+}
+// ---- 숙제 오답노트 ----
+// 교사가 지문마다 켠 숙제에만 붙는다. 처음 풀 때 고른 답·고를 수밖에 없던 이유·고칠 점을 적고 나면 원래 숙제로 넘어간다.
+const WN_NUMS=['①','②','③','④','⑤'];
+function wnKey(pid){ return `so_wndraft_${session.user.id}_${pid}`; }
+function wnSaveDraft(){
+  const d=wnDraft; if(!d||d.id) return;   // 이미 낸 노트를 고칠 땐 초안을 안 남긴다
+  try{ localStorage.setItem(wnKey(d.pid),JSON.stringify({chosen:d.chosen,why:d.why,fix:d.fix})); }catch(_){}
+}
+function openWrongNote(pid){
+  const p=allP.find(x=>x.id===pid); if(!p) return;
+  const asg=asgForPassage(pid), ex=wnFor(asg);
+  let dr=null; if(!ex){ try{ dr=JSON.parse(localStorage.getItem(wnKey(pid))||'null'); }catch(_){} }
+  const src=ex||dr||{};
+  wnDraft={ pid, asgId:asg?asg.id:null, id:ex?ex.id:null, chosen:src.chosen||'', why:src.why||'', fix:src.fix||'' };
+  removeBar(); showTabBar(true);
+  const label=[p.book,p.unit,p.title].filter(Boolean).join(' · ');
+  const steps=asgSteps(asg);
+  const next=steps.includes('order')?'순서 맞추기':steps.includes('reading')?'한줄 독해':'';
+  const btn=ex?'고친 내용 저장':next?`저장하고 ${next}로`:'저장';
+  app.innerHTML=`<button class="back" onclick="renderCourse()">‹ 코스</button>
+    <div style="font-weight:600;margin:0 2px 4px">${esc(label)}</div>
+    <div class="hint" style="margin:0 2px 14px">오답노트 · 처음 풀었을 때 기준</div>
+    <button class="fold wn-fold" onclick="wnTogglePassage(this)">지문 펼쳐 보기 ⌄</button>
+    <div class="card wn-p" id="wnP" style="display:none">${p.sentences.map(esc).join(' ')}</div>
+    <div class="card wn-q"><div class="wn-k">처음에 고른 답</div>
+      <div class="wn-nums">${WN_NUMS.map(n=>`<button class="wn-n${wnDraft.chosen===n?' on':''}" onclick="wnPick(this,'${n}')">${n}</button>`).join('')}</div></div>
+    <div class="card wn-q"><div class="wn-k">왜 그 답을 고를 수밖에 없었나요?</div>
+      <textarea id="wnWhy" rows="3" placeholder="예: However 뒤를 못 읽고 앞 내용이 그대로 이어진다고 생각했어요" oninput="wnDraft.why=this.value;wnSaveDraft()">${esc(wnDraft.why)}</textarea></div>
+    <div class="card wn-q"><div class="wn-k">다음엔 어떻게 풀래요?</div>
+      <textarea id="wnFix" rows="3" placeholder="예: 연결어가 나오면 앞뒤가 같은 말인지 반대인지 먼저 표시할게요" oninput="wnDraft.fix=this.value;wnSaveDraft()">${esc(wnDraft.fix)}</textarea></div>
+    <div id="wnMsg"></div>
+    <button class="btn primary full" onclick="saveWrongNote(this)">${btn}</button>
+    <div style="height:20px"></div>`;
+}
+function wnTogglePassage(b){
+  const el=$('wnP'), on=el.style.display==='none';
+  el.style.display=on?'block':'none';
+  b.textContent=on?'지문 접기 ⌃':'지문 펼쳐 보기 ⌄';
+}
+function wnPick(b,n){
+  wnDraft.chosen=n; wnSaveDraft();
+  b.parentNode.querySelectorAll('.wn-n').forEach(x=>x.classList.toggle('on',x===b));
+}
+async function saveWrongNote(btn){
+  const d=wnDraft; if(!d) return;
+  const why=d.why.trim(), fix=d.fix.trim();
+  const err=t=>{ $('wnMsg').innerHTML=`<div class="msg err">${t}</div>`; };
+  if(!d.chosen) return err('처음 고른 답 번호를 골라요');
+  if(why.length<5) return err('고른 이유를 한 문장 이상 적어요');
+  if(fix.length<5) return err('다음엔 어떻게 풀지 한 문장 이상 적어요');
+  setBusy(btn,true,'저장 중…');
+  const studentName=(session.user.user_metadata&&session.user.user_metadata.name)||session.user.email;
+  const res=d.id
+    ? await db.from('wrong_notes').update({ chosen:d.chosen, why, fix, updated_at:new Date().toISOString() }).eq('id',d.id).select()
+    : await db.from('wrong_notes').insert({ user_id:session.user.id, student_name:studentName,
+        passage_id:d.pid, assignment_id:d.asgId, chosen:d.chosen, why, fix }).select();
+  if(res.error){ setBusy(btn,false); err('저장 실패: '+esc(res.error.message)); return; }
+  const row=(res.data&&res.data[0])||{ id:d.id, user_id:session.user.id, passage_id:d.pid, assignment_id:d.asgId,
+    chosen:d.chosen, why, fix, created_at:new Date().toISOString() };
+  myWn=[row,...myWn.filter(n=>n.id!==row.id)];
+  try{ localStorage.removeItem(wnKey(d.pid)); }catch(_){}
+  wnDraft=null;
+  if(d.id){ renderCourse(); return; }
+  // 처음 쓴 거면 원래 숙제로 바로 넘어간다
+  const steps=asgSteps(asgForPassage(d.pid));
+  if(steps.includes('order')) pick(d.pid);
+  else if(steps.includes('reading')) pickRead(d.pid);
+  else renderCourse();
 }
 // ---- 다시 읽을 문장 창고 ----
 // 표를 새로 만들지 않는다. reading_feedback.sentence_notes를 (지문, 문장번호)로 접어 매번 계산한다.

@@ -445,6 +445,7 @@
               </div>
               <div><label>마감일 (선택)</label><input id="hwDue" type="date"></div>
             </div>
+            <div id="hwWnBox"></div>
             <div id="hwMsg"></div>
             <button class="btn primary" style="margin-top:12px" onclick="saveAssignment()">숙제 내주기</button>
           </div>
@@ -689,11 +690,21 @@ function renderToday(){
       view:()=>{ markSeen(r.id); openReading(rgOwner(r),r.passage_id,r.id); },
       ok:()=>markSeen(r.id) });
   }
+  for(const n of gWn){
+    if(seen.includes('wn'+n.id)) continue;
+    const a=gAsg.find(x=>x.id===n.assignment_id);
+    items.push({ stu:n.student_name||stuNameOf(n.user_id), kind:'sub',
+      ic:['제출','var(--accent-soft)','var(--accent)'],
+      t:`${pLabelOf(n.passage_id)} 오답노트를 썼어요`,
+      s:`${fmt(n.created_at)}${a&&a.round_label?` · ${esc(a.round_label)} 숙제`:''}`,
+      view:()=>{ markSeen('wn'+n.id); if(a) gWnOpen.add(a.id); showView('homework'); renderHwList(); },
+      ok:()=>markSeen('wn'+n.id) });
+  }
   for(const a of gAsg){
     const st=hwStatus(a); if(st.done) continue;
     if(!a.due_date||ddays(a.due_date)>1) continue;
     const key='hw'+a.id; if(isDis(key)) continue;
-    const remain=(a.steps||[]).filter(s2=>!st[s2]).map(s2=>s2==='order'?'순서 맞추기':'한줄 독해').join('와 ');
+    const remain=(a.steps||[]).filter(s2=>!st[s2]).map(stepLong).join('와 ');
     items.push({ stu:stuNameOf(a.student_id), kind:'hw',
       ic:['숙제','#f8efdd','#c98a2b'],
       t:`${pLabelOf(a.passage_id)}의 ${remain}가 아직이에요`,
@@ -883,14 +894,24 @@ const _renderToday0=renderToday;
 renderToday=function(){ _renderToday0(); renderStuProfile(); renderInsight(); };
 
 // ---------- 숙제 내주기 ----------
-let gAsg=[], gStuAtts=[], gStuReads=[];
+let gAsg=[], gStuAtts=[], gStuReads=[], gWn=[], gWnMissing=false;
+const STEP_RANK={wrongnote:0,order:1,reading:2};
+function sortSteps(a){ return [...new Set(a)].sort((x,y)=>STEP_RANK[x]-STEP_RANK[y]); }
+function stepNm(s){ return s==='wrongnote'?'오답노트':s==='order'?'순서':'독해'; }
+function stepLong(s){ return s==='wrongnote'?'오답노트':s==='order'?'순서 맞추기':'한줄 독해'; }
+function wnOf(a){
+  return gWn.find(n=>n.assignment_id===a.id)
+    ||gWn.find(n=>n.user_id===a.student_id&&n.passage_id===a.passage_id&&new Date(n.created_at)>=new Date(a.created_at))||null;
+}
 async function loadHomework(){
-  const [aRes,rRes,gRes]=await Promise.all([
+  const [aRes,rRes,gRes,wRes]=await Promise.all([
     db.from('attempts').select('user_id,student_name,passage_id,is_correct,created_at'),
     db.from('readings').select('id,user_id,student_name,passage_id,is_retry,created_at'),
-    db.from('assignments').select('*').order('created_at',{ascending:false})
+    db.from('assignments').select('*').order('created_at',{ascending:false}),
+    db.from('wrong_notes').select('*').order('created_at',{ascending:false})
   ]);
   gStuAtts=aRes.data||[]; gStuReads=rRes.data||[]; gAsg=(!gRes.error&&gRes.data)?gRes.data:[];
+  gWnMissing=!!wRes.error; gWn=(!wRes.error&&wRes.data)?wRes.data:[];
   loadRoutine();   // 학생 목록이 채워진 뒤에 루틴 화면도 같이 갱신
   if(gRes.error){
     $('hwList').innerHTML=`<p class="sub">숙제 표(assignments)가 아직 없어요. redesign-plan.md의 SQL을 SQL Editor에서 실행해주세요.<br><span style="font-size:12px">${esc(gRes.error.message)}</span></p>`;
@@ -913,7 +934,8 @@ async function loadHomework(){
 }
 function hwStatus(a){
   const after=t=>t&&new Date(t)>=new Date(a.created_at);
-  const st={}; const steps=a.steps||[];
+  const st={}; const steps=(a.steps||[]).filter(s=>!(gWnMissing&&s==='wrongnote'));
+  if(steps.includes('wrongnote')) st.wrongnote=!!wnOf(a);
   if(steps.includes('order'))
     st.order=gStuAtts.some(x=>x.user_id===a.student_id&&x.passage_id===a.passage_id&&x.is_correct&&after(x.created_at));
   if(steps.includes('reading'))
@@ -937,7 +959,7 @@ function renderHwList(){
     const pct=Math.round(doneN/list.length*100);
     const rows=list.map(a=>{
       const st=hwStatus(a);
-      const stepNm=(a.steps||[]).map(s=>s==='order'?'순서':'독해').join('+');
+      const stepsTxt=(a.steps||[]).map(stepNm).join('+'), wn=wnOf(a);
       const due=a.due_date
         ? `<span class="dline" title="${dLabel(ddays(a.due_date))}">${esc(a.due_date.slice(5).replace('-','/'))}</span>`
         : '<span style="color:var(--sub)">없음</span>';
@@ -945,10 +967,11 @@ function renderHwList(){
         <span title="${st.done?'완료':'미완료'}" style="flex:0 0 16px;height:16px;border-radius:999px;box-sizing:border-box;${st.done?'background:var(--accent);box-shadow:inset 0 0 0 4px var(--accent-soft)':'border:1.5px solid #C9C9D0'}"></span>
         <b style="flex:0 0 auto;font-weight:600">${esc(stuNameOf(a.student_id))}</b>
         <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${st.done?'color:var(--sub)':''}">${pLabelOf(a.passage_id)}</span>
-        <span style="flex:0 0 auto;color:var(--sub);font-size:12px">${stepNm}</span>
+        <span style="flex:0 0 auto;color:var(--sub);font-size:12px">${stepsTxt}</span>
+        ${wn?`<a style="flex:0 0 auto;color:var(--accent);cursor:pointer;font-size:12px;font-weight:600" onclick="toggleWn('${a.id}')">오답노트 ${gWnOpen.has(a.id)?'접기':'보기'}</a>`:''}
         <span style="flex:0 0 auto;font-size:12px">마감 ${due}</span>
         <a style="flex:0 0 auto;color:var(--no);cursor:pointer;font-size:12px" onclick="delAssignment('${a.id}')">삭제</a>
-      </div>`;
+      </div>${wn&&gWnOpen.has(a.id)?wnCard(wn):''}`;
     }).join('');
     html+=`<div class="card" style="margin-bottom:12px">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
@@ -983,6 +1006,7 @@ function hwEditCard(){
   const rows=e.rows.map((r,i)=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 2px;border-top:1px solid #eee9df;font-size:13px;${r.del?'opacity:.45;text-decoration:line-through':''}">
       ${e.students.length>1?`<b style="flex:0 0 auto">${esc(stuNameOf(r.student_id))}</b>`:''}
       <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.id?'':'<b style="color:var(--accent)">새 </b>'}${pLabelOf(r.passage_id)}</span>
+      <label style="display:flex;align-items:center;gap:4px;margin:0;font-size:12px;color:var(--ink);white-space:nowrap">${stepBox(r.steps.includes('wrongnote'),`hwEditStep(${i},'wrongnote',this.checked)`)}오답노트</label>
       <label style="display:flex;align-items:center;gap:4px;margin:0;font-size:12px;color:var(--ink);white-space:nowrap">${stepBox(r.steps.includes('order'),`hwEditStep(${i},'order',this.checked)`)}순서</label>
       <label style="display:flex;align-items:center;gap:4px;margin:0;font-size:12px;color:var(--ink);white-space:nowrap">${stepBox(r.steps.includes('reading'),`hwEditStep(${i},'reading',this.checked)`)}독해</label>
       <a style="flex:0 0 auto;color:${r.del?'var(--accent)':'#c0584b'};cursor:pointer;font-size:12px;text-decoration:none;white-space:nowrap" onclick="hwEditDel(${i})">${r.del?'되살리기':'빼기'}</a>
@@ -997,6 +1021,7 @@ function hwEditCard(){
       <label>지문 추가</label>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span class="hint" style="margin-right:auto">새로 넣을 지문에 시킬 것</span>
+        <label style="display:flex;align-items:center;gap:4px;margin:0;font-size:13px;color:var(--ink);white-space:nowrap">${stepBox(e.addSteps.includes('wrongnote'),`hwEditAddStep('wrongnote',this.checked)`)}오답노트</label>
         <label style="display:flex;align-items:center;gap:4px;margin:0;font-size:13px;color:var(--ink);white-space:nowrap">${stepBox(e.addSteps.includes('order'),`hwEditAddStep('order',this.checked)`)}순서</label>
         <label style="display:flex;align-items:center;gap:4px;margin:0;font-size:13px;color:var(--ink);white-space:nowrap">${stepBox(e.addSteps.includes('reading'),`hwEditAddStep('reading',this.checked)`)}독해</label>
         <button class="btn ghost small" onclick="hwEditAdd()">지문 고르기</button>
@@ -1011,8 +1036,7 @@ function hwEditCard(){
 }
 function hwEditStep(i,s,on){
   const r=gHwEdit.rows[i];
-  r.steps=on?[...new Set([...r.steps,s])]:r.steps.filter(x=>x!==s);
-  r.steps.sort((a,b)=>a==='order'?-1:1);
+  r.steps=sortSteps(on?[...r.steps,s]:r.steps.filter(x=>x!==s));
 }
 function hwEditAddStep(s,on){
   const e=gHwEdit; e.addSteps=on?[...new Set([...e.addSteps,s])]:e.addSteps.filter(x=>x!==s);
@@ -1024,12 +1048,12 @@ function hwEditDel(i){
 }
 function hwEditAdd(){
   const e=gHwEdit;
-  if(!e.addSteps.length){ msg('hwEdMsg','순서/독해 중 최소 하나는 체크해야 해요','err'); return; }
+  if(!e.addSteps.some(s=>s!=='wrongnote')){ msg('hwEdMsg','순서/독해 중 최소 하나는 체크해야 해요','err'); return; }
   const have=e.rows.filter(r=>!r.del).map(r=>r.passage_id);
   openHp([],ids=>{
     for(const pid of ids) for(const sid of e.students){
       if(e.rows.some(r=>!r.del&&r.student_id===sid&&r.passage_id===pid)) continue;
-      e.rows.push({ id:null, student_id:sid, passage_id:pid, steps:[...e.addSteps].sort((a,b)=>a==='order'?-1:1), del:false });
+      e.rows.push({ id:null, student_id:sid, passage_id:pid, steps:sortSteps(e.addSteps), del:false });
     }
     renderHwList();
   },have,'지문 추가');
@@ -1037,7 +1061,7 @@ function hwEditAdd(){
 async function saveRoundEdit(){
   const e=gHwEdit;
   const live=e.rows.filter(r=>!r.del);
-  if(live.some(r=>!r.steps.length)){ msg('hwEdMsg','순서/독해가 하나도 체크 안 된 지문이 있어요','err'); return; }
+  if(live.some(r=>!r.steps.some(s=>s!=='wrongnote'))){ msg('hwEdMsg','순서/독해가 하나도 체크 안 된 지문이 있어요','err'); return; }
   const round_label=e.label.trim()||null, due_date=e.due||null;
   const orig=new Map(gAsg.map(a=>[a.id,a]));
   const ops=[];
@@ -1079,17 +1103,18 @@ async function saveAssignment(){
   if(!hwPicked.length){ msg('hwMsg','지문을 고르세요','err'); return; }
   if(!steps.length){ msg('hwMsg','순서/독해 중 최소 하나는 체크해야 해요','err'); return; }
   const round_label=$('hwRound').value.trim()||null, due_date=$('hwDue').value||null;
-  const rows=hwPicked.map(passage_id=>({ student_id, passage_id, steps, round_label, due_date }));
+  const rows=hwPicked.map(passage_id=>({ student_id, passage_id,
+    steps:hwWn.has(passage_id)?sortSteps(['wrongnote',...steps]):steps, round_label, due_date }));
   const { error } = await db.from('assignments').insert(rows);
   if(error){ msg('hwMsg','저장 실패: '+error.message,'err'); return; }
   msg('hwMsg',`숙제 ${rows.length}개를 내줬어요 ✓ 학생 홈에 바로 떠요`,'ok');
-  hwPicked=[]; renderHwPicked();
+  hwPicked=[]; hwWn=new Set(); renderHwPicked();
   loadHomework();
 }
 
 // ---------- 지문 고르기 서랍 ----------
 // 지문 탭과 같은 교재·강 탐색기로 고르고, 여러 개를 체크해 한 번에 넘긴다
-let hwPicked=[];
+let hwPicked=[], hwWn=new Set();   // hwWn: 오답노트를 먼저 쓰게 할 지문
 const hp={ sel:new Set(), cur:null, open:new Set(), q:'', onDone:null, have:new Set() };
 function hpSort(ids){
   return ids.map(id=>allP.find(p=>p.id===id)).filter(Boolean)
@@ -1106,6 +1131,7 @@ function hpGroupLabels(ids){
 }
 function renderHwPicked(){
   const el=$('hwPassageBtn'); if(!el) return;
+  renderHwWn();
   const arrow='<span class="go">›</span>';
   if(!hwPicked.length){ el.innerHTML='<span class="ph">눌러서 교재·강에서 고르기</span>'+arrow; return; }
   el.innerHTML=`<span class="sel">${hpGroupLabels(hwPicked).map(s=>`<span>${esc(s)}</span>`).join('')}</span>`
@@ -1161,6 +1187,31 @@ function hpToggle(id,on){ if(on) hp.sel.add(id); else hp.sel.delete(id); renderH
 function hpAll(on){ for(const id of ($('hpList').dataset.ids||'').split(',').filter(Boolean)) on?hp.sel.add(id):hp.sel.delete(id); renderHpList(); }
 function hpDone(){ const ids=hpSort([...hp.sel]); closeHp(); if(hp.onDone) hp.onDone(ids); }
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&document.body.classList.contains('hp-on')) closeHp(); });
+
+// 오답노트: 지문마다 켠다. 켠 지문은 학생이 독해 전에 처음 고른 답·이유·고칠 점을 쓴다.
+function renderHwWn(){
+  const box=$('hwWnBox'); if(!box) return;
+  for(const id of [...hwWn]) if(!hwPicked.includes(id)) hwWn.delete(id);
+  if(!hwPicked.length){ box.innerHTML=''; return; }
+  if(gWnMissing){ box.innerHTML='<p class="hint" style="margin-top:12px">오답노트를 쓰려면 wrong-notes.sql을 SQL Editor에서 먼저 실행해 주세요</p>'; return; }
+  const rows=hwPicked.map(id=>{
+    const p=allP.find(x=>x.id===id); if(!p) return '';
+    return `<label style="display:flex;align-items:center;gap:8px;margin:0;padding:7px 2px;border-top:1px solid #F1F1F4;font-size:13px;color:var(--ink);font-weight:400;cursor:pointer">`
+      +`<input type="checkbox" ${hwWn.has(id)?'checked':''} onchange="hwWnToggle('${id}',this.checked)" style="width:auto;margin:0">`
+      +`<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${pLabelOf(id)}</span></label>`;
+  }).join('');
+  box.innerHTML=`<div style="margin-top:14px"><label style="display:flex;align-items:baseline;gap:8px">오답노트 먼저 <span class="hint">처음 고른 답·이유·고칠 점</span>`
+    +`<span style="margin-left:auto;font-size:12px;color:var(--sub);font-weight:600">${hwWn.size}/${hwPicked.length}</span></label>${rows}</div>`;
+}
+function hwWnToggle(id,on){ if(on) hwWn.add(id); else hwWn.delete(id); renderHwWn(); }
+const gWnOpen=new Set();
+function toggleWn(aid){ if(gWnOpen.has(aid)) gWnOpen.delete(aid); else gWnOpen.add(aid); renderHwList(); }
+function wnCard(n){
+  const row=(k,v)=>`<div style="display:grid;grid-template-columns:96px minmax(0,1fr);gap:10px;padding:5px 0"><span style="color:var(--sub);font-size:12px">${k}</span><span style="white-space:pre-wrap">${esc(v||'')}</span></div>`;
+  return `<div style="margin:0 0 10px 26px;padding:10px 14px;border:1px solid var(--line);border-radius:10px;font-size:13px;line-height:1.6">`
+    +row('처음 고른 답',n.chosen)+row('고른 이유',n.why)+row('고칠 점',n.fix)
+    +`<div style="color:var(--sub);font-size:11.5px;margin-top:4px">${fmt(n.updated_at||n.created_at)}</div></div>`;
+}
 
 async function delAssignment(id){
   if(!confirm('이 숙제를 삭제할까요?')) return;
